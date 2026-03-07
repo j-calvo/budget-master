@@ -1,0 +1,143 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime @default(now())
+  
+  settings    Setting?
+  accounts    Account[]
+  creditCards CreditCard[]
+  categories  Category[]
+  budgets     Budget[]
+  loans       Loan[]
+  currencies  Currency[]
+}
+
+model Account {
+  id          String   @id @default(uuid())
+  userId      String
+  name        String
+  type        String   // checking, savings, investment
+  currency    String   @default("USD")
+  balance     Float    @default(0)
+  institution String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+}
+
+model CreditCard {
+  id        String   @id @default(uuid())
+  userId    String
+  name      String
+  limit     Float
+  balance   Float    @default(0)
+  dueDate   Int      // day of the month (1-31)
+  apr       Float
+  currency  String   @default("USD")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Category {
+  id        String   @id @default(uuid())
+  userId    String
+  name      String
+  type      String   // income, fixed_expense, variable_expense, savings_goal
+  color     String   @default("#3b82f6")
+  createdAt DateTime @default(now())
+  
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+  budgets      Budget[]
+}
+
+model Transaction {
+  id          String   @id @default(uuid())
+  accountId   String
+  categoryId  String
+  amount      Float
+  date        DateTime @default(now())
+  description String
+  payee       String?
+  type        String   // income, expense, transfer
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  account  Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id])
+}
+
+model Budget {
+  id         String   @id @default(uuid())
+  userId     String
+  categoryId String
+  amount     Float
+  month      Int      // 1-12
+  year       Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id])
+
+  @@unique([userId, categoryId, month, year])
+}
+
+model Loan {
+  id             String   @id @default(uuid())
+  userId         String
+  name           String
+  balance        Float
+  interestRate   Float
+  termMonths     Int
+  monthlyPayment Float
+  insuranceCost  Float    @default(0)
+  nextDueDate    DateTime
+  currency       String   @default("USD")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Setting {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  defaultCurrency String   @default("USD")
+  language        String   @default("en-US")
+  theme           String   @default("light")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Currency {
+  id        String   @id @default(uuid())
+  userId    String
+  code      String   // e.g., 'USD', 'EUR'
+  symbol    String   // e.g., '$', '€'
+  name      String   // e.g., 'US Dollar'
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, code])
+}
