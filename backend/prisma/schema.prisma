@@ -100,21 +100,43 @@ model Budget {
 }
 
 model Loan {
-  id             String   @id @default(uuid())
-  userId         String
-  name           String
-  balance        Float
-  interestRate   Float
-  termMonths     Int
-  monthlyPayment Float
-  insuranceCost  Float    @default(0)
-  nextDueDate    DateTime
-  currency       String   @default("USD")
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id                   String   @id @default(uuid())
+  userId               String
+  name                 String
+  originalBalance      Float    // original loan amount at start
+  balance              Float    // current remaining balance
+  interestRate         Float    // current APR
+  termMonths           Int
+  monthlyPayment       Float    // computed: stored as cache
+  insuranceCost        Float    @default(0)
+  startDate            DateTime // beginning of the loan
+  nextDueDate          DateTime // next payment due date
+  isVariableRate       Boolean  @default(false)
+  earlyPaymentStrategy String   @default("reduce_term") // 'reduce_term' | 'reduce_payment'
+  aprHistory           String   @default("[]") // JSON array: [{date, apr}]
+  currency             String   @default("USD")
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
   
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user     User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payments LoanPayment[]
 }
+
+model LoanPayment {
+  id            String   @id @default(uuid())
+  loanId        String
+  type          String   // 'installment' | 'early_payment'
+  amount        Float    // total amount paid
+  principal     Float    // principal portion
+  interest      Float    // interest portion
+  insuranceCost Float    @default(0)
+  paymentDate   DateTime @default(now())
+  notes         String?  @default("")
+  createdAt     DateTime @default(now())
+
+  loan Loan @relation(fields: [loanId], references: [id], onDelete: Cascade)
+}
+
 
 model Setting {
   id              String   @id @default(uuid())

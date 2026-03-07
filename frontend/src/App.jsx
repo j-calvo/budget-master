@@ -1,11 +1,12 @@
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { Home, CreditCard as CardIcon, LayoutDashboard, PieChart, Settings, Wallet } from 'lucide-react';
+import { Home, CreditCard as CardIcon, LayoutDashboard, PieChart, Settings, Wallet, Landmark } from 'lucide-react';
 import Dashboard from './pages/Dashboard';
 import Accounts from './pages/Accounts';
 import Transactions from './pages/Transactions';
 import Budgets from './pages/Budgets';
 import SettingsPage from './pages/Settings';
 import CreditCards from './pages/CreditCards';
+import Loans from './pages/Loans';
 
 function Sidebar() {
   const location = useLocation();
@@ -14,6 +15,7 @@ function Sidebar() {
     { path: '/', name: 'Dashboard', icon: <LayoutDashboard size={20} /> },
     { path: '/accounts', name: 'Accounts', icon: <Wallet size={20} /> },
     { path: '/credit-cards', name: 'Credit Cards', icon: <CardIcon size={20} /> },
+    { path: '/loans', name: 'Loans', icon: <Landmark size={20} /> },
     { path: '/transactions', name: 'Transactions', icon: <CardIcon size={20} /> },
     { path: '/budgets', name: 'Budgets', icon: <PieChart size={20} /> },
   ];
@@ -78,6 +80,7 @@ function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/accounts" element={<Accounts />} />
           <Route path="/credit-cards" element={<CreditCards />} />
+          <Route path="/loans" element={<Loans />} />
           <Route path="/transactions" element={<Transactions />} />
           <Route path="/budgets" element={<Budgets />} />
           <Route path="/settings" element={<SettingsPage />} />

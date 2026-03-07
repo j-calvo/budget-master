@@ -9,6 +9,7 @@ const settingsRoutes = require('./src/routes/settingsRoutes');
 const budgetRoutes = require('./src/routes/budgetRoutes');
 const currencyRoutes = require('./src/routes/currencyRoutes');
 const creditCardRoutes = require('./src/routes/creditCardRoutes');
+const loanRoutes = require('./src/routes/loanRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -24,6 +25,7 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/budgets', budgetRoutes);
 app.use('/api/currencies', currencyRoutes);
 app.use('/api/credit-cards', creditCardRoutes);
+app.use('/api/loans', loanRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date() });
