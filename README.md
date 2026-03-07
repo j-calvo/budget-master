@@ -1,2 +1,187 @@
-# budget-master
-Node/React repository for a budget management application
+# Budget Master 💰
+
+A comprehensive personal finance management application built with React and Node.js. Track your income, expenses, budgets, loans, and credit cards all in one place.
+
+## 🚀 Features
+
+### Core Financial Management
+- **Dashboard Overview**: Real-time financial metrics including net worth, income, expenses, and savings rate
+- **Account Management**: Track multiple bank accounts (checking, savings, investment) with different currencies
+- **Transaction Tracking**: Record and categorize income and expenses with detailed transaction history
+- **Budget Planning**: Set monthly budgets by category and track spending against targets
+- **Category Management**: Organize transactions with customizable categories (income, fixed expenses, variable expenses, savings goals)
+
+### Advanced Features
+- **Credit Card Management**: Track multiple credit cards with limits, balances, due dates, and APR
+- **Loan Management**: Comprehensive loan tracking with amortization calculations
+  - Support for fixed and variable rate loans
+  - Early payment strategies (reduce term or reduce payment)
+  - Payment history and interest tracking
+  - Insurance cost tracking
+- **Multi-Currency Support**: Handle multiple currencies with custom symbols and formatting
+- **Settings & Preferences**: Customizable themes, languages, and default currency settings
+
+## 🛠️ Tech Stack
+
+### Frontend
+- **React 19** - Modern React with hooks and context
+- **Vite** - Fast build tool and development server
+- **Tailwind CSS 4** - Utility-first CSS framework
+- **React Router DOM** - Client-side routing
+- **Axios** - HTTP client for API requests
+- **Lucide React** - Beautiful icon library
+- **Recharts** - Charting library for financial visualizations
+
+### Backend
+- **Node.js** - JavaScript runtime
+- **Express.js** - Web application framework
+- **Prisma** - Modern database toolkit and ORM
+- **SQLite** - Lightweight database for development
+- **CORS** - Cross-origin resource sharing
+- **dotenv** - Environment variable management
+
+## 📁 Project Structure
+
+```
+budget-master/
+├── frontend/                 # React frontend application
+│   ├── src/
+│   │   ├── components/      # Reusable UI components
+│   │   ├── context/         # React context providers
+│   │   ├── pages/           # Main application pages
+│   │   └── App.jsx          # Main application component
+│   ├── package.json
+│   └── vite.config.js
+├── backend/                 # Node.js backend API
+│   ├── src/
+│   │   ├── controllers/     # Business logic controllers
+│   │   ├── routes/          # API route definitions
+│   │   └── db.js           # Database configuration
+│   ├── prisma/
+│   │   └── schema.prisma   # Database schema
+│   ├── server.js           # Express server setup
+│   └── package.json
+└── README.md
+```
+
+## 🚦 Getting Started
+
+### Prerequisites
+- Node.js (v18 or higher)
+- npm or yarn package manager
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd budget-master
+   ```
+
+2. **Install backend dependencies**
+   ```bash
+   cd backend
+   npm install
+   ```
+
+3. **Set up the database**
+   ```bash
+   npx prisma generate
+   npx prisma db push
+   ```
+
+4. **Seed the database (optional)**
+   ```bash
+   node seed.js
+   ```
+
+5. **Install frontend dependencies**
+   ```bash
+   cd ../frontend
+   npm install
+   ```
+
+### Running the Application
+
+1. **Start the backend server**
+   ```bash
+   cd backend
+   npm start
+   # Server runs on http://localhost:5001
+   ```
+
+2. **Start the frontend development server**
+   ```bash
+   cd frontend
+   npm run dev
+   # Frontend runs on http://localhost:5173
+   ```
+
+3. **Access the application**
+   Open your browser and navigate to `http://localhost:5173`
+
+## 📊 Database Schema
+
+The application uses Prisma with SQLite and includes the following main entities:
+
+- **Users**: User accounts and authentication
+- **Accounts**: Bank accounts with balances and transaction history
+- **Transactions**: Income and expense records with categorization
+- **Categories**: Customizable transaction categories
+- **Budgets**: Monthly budget allocations by category
+- **Credit Cards**: Credit card tracking with limits and due dates
+- **Loans**: Loan management with amortization calculations
+- **Currencies**: Multi-currency support
+- **Settings**: User preferences and configuration
+
+## 🔧 API Endpoints
+
+The backend provides RESTful API endpoints for:
+
+- `/api/accounts` - Account management
+- `/api/transactions` - Transaction operations
+- `/api/categories` - Category management
+- `/api/budgets` - Budget planning
+- `/api/credit-cards` - Credit card tracking
+- `/api/loans` - Loan management
+- `/api/currencies` - Currency operations
+- `/api/settings` - User settings
+- `/api/health` - Health check endpoint
+
+## 🎨 UI Features
+
+- **Responsive Design**: Works seamlessly on desktop and mobile devices
+- **Modern Interface**: Clean, intuitive design with Tailwind CSS
+- **Dark/Light Theme**: Customizable theme preferences
+- **Interactive Charts**: Visual representation of financial data
+- **Real-time Updates**: Live data synchronization across components
+
+## 🔮 Future Enhancements
+
+- Investment portfolio tracking
+- Bill reminders and notifications
+- Financial goal setting and tracking
+- Data export and reporting
+- Mobile app development
+- Bank account integration
+- Advanced analytics and insights
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📝 License
+
+This project is licensed under the ISC License.
+
+## 🆘 Support
+
+If you encounter any issues or have questions, please open an issue on the repository or contact the development team.
+
+---
+
+**Budget Master** - Take control of your finances with confidence! 🎯
