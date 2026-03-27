@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { Home, CreditCard as CardIcon, LayoutDashboard, PieChart, Settings, Wallet, Landmark } from 'lucide-react';
+import { Home, CreditCard as CardIcon, LayoutDashboard, PieChart, Settings, Wallet, Landmark, Activity } from 'lucide-react';
 import Dashboard from './pages/Dashboard';
 import Accounts from './pages/Accounts';
 import Transactions from './pages/Transactions';
@@ -7,70 +7,154 @@ import Budgets from './pages/Budgets';
 import SettingsPage from './pages/Settings';
 import CreditCards from './pages/CreditCards';
 import Loans from './pages/Loans';
+import Analytics from './pages/Analytics';
+import { useTranslation } from 'react-i18next';
+
+const navItems = [
+  { path: '/', name: 'Dashboard', icon: <LayoutDashboard size={22} /> },
+  { path: '/accounts', name: 'Accounts', icon: <Wallet size={22} /> },
+  { path: '/credit-cards', name: 'Cards', icon: <CardIcon size={22} /> },
+  { path: '/loans', name: 'Loans', icon: <Landmark size={22} /> },
+  { path: '/transactions', name: 'Activity', icon: <Activity size={22} /> },
+  { path: '/budgets', name: 'Budgets', icon: <PieChart size={22} /> },
+  { path: '/analytics', name: 'Analytics', icon: <PieChart size={22} /> },
+];
 
 function Sidebar() {
   const location = useLocation();
-  
-  const navItems = [
-    { path: '/', name: 'Dashboard', icon: <LayoutDashboard size={20} /> },
-    { path: '/accounts', name: 'Accounts', icon: <Wallet size={20} /> },
-    { path: '/credit-cards', name: 'Credit Cards', icon: <CardIcon size={20} /> },
-    { path: '/loans', name: 'Loans', icon: <Landmark size={20} /> },
-    { path: '/transactions', name: 'Transactions', icon: <CardIcon size={20} /> },
-    { path: '/budgets', name: 'Budgets', icon: <PieChart size={20} /> },
-  ];
+  const { t } = useTranslation();
 
   return (
-    <div className="w-64 bg-slate-900 h-screen fixed top-0 left-0 flex flex-col pt-6 z-10 text-slate-300">
-      <div className="px-6 mb-8 flex items-center gap-2 text-white font-bold text-xl">
-        <Home className="text-primary-500" />
+    <div className="hidden md:flex flex-col w-64 glass-panel h-screen fixed top-0 left-0 z-50 text-slate-300 border-r border-brand-600/30">
+      <div className="px-8 mt-8 mb-10 flex items-center gap-3 text-white font-serif italic font-bold tracking-wide text-2xl">
+        <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-gold-400 to-gold-600 flex items-center justify-center text-brand-900 shadow-[0_0_15px_rgba(212,175,55,0.4)]">
+          <Home size={16} />
+        </div>
         <span>FinTrack</span>
       </div>
-      <nav className="flex-1 px-4 space-y-2">
+      <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
           return (
             <Link
               key={item.path}
               to={item.path}
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+              className={`flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-300 ${
                 isActive 
-                  ? 'bg-primary-600 text-white font-medium' 
-                  : 'hover:bg-slate-800 hover:text-white'
+                  ? 'bg-gradient-to-r from-brand-600/40 to-transparent text-white font-medium border-l-2 border-gold-500 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]' 
+                  : 'text-slate-400 hover:bg-brand-600/20 hover:text-white hover:translate-x-1'
               }`}
             >
-              {item.icon}
-              {item.name}
+              <div className={isActive ? 'text-gold-500 drop-shadow-[0_0_8px_rgba(212,175,55,0.5)]' : ''}>
+                {item.icon}
+              </div>
+              <span className="text-[15px]">{t(item.name)}</span>
             </Link>
           );
         })}
       </nav>
-      <div className="p-4 mt-auto">
-        <Link to="/settings" className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+      <div className="p-4 mt-auto mb-4 border-t border-brand-600/30">
+        <Link to="/settings" className={`flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-300 ${
           location.pathname === '/settings'
-            ? 'bg-primary-600 text-white font-medium'
-            : 'hover:bg-slate-800 hover:text-white'
+            ? 'bg-gradient-to-r from-brand-600/40 to-transparent text-white font-medium border-l-2 border-gold-500'
+            : 'text-slate-400 hover:bg-brand-600/20 hover:text-white'
         }`}>
-          <Settings size={20} />
-          <span>Settings</span>
+          <div className={location.pathname === '/settings' ? 'text-gold-500 drop-shadow-[0_0_8px_rgba(212,175,55,0.5)]' : ''}>
+            <Settings size={22} />
+          </div>
+          <span className="text-[15px]">{t('Settings')}</span>
         </Link>
       </div>
     </div>
   );
 }
 
-function Layout({ children }) {
+function MobileNav() {
+  const location = useLocation();
+  const { t } = useTranslation();
+
+  const primaryNav = navItems.slice(0, 4);
+  
   return (
-    <div className="flex min-h-screen bg-slate-50 font-sans">
-      <Sidebar />
-      <main className="ml-64 flex-1 p-8">
-        {children}
-      </main>
+    <div className="md:hidden fixed bottom-6 left-4 right-4 z-50">
+      <div className="glass-card shadow-lg shadow-brand-900/50 flex justify-between items-center px-4 py-3 rounded-2xl border border-white/5 backdrop-blur-2xl">
+        {primaryNav.map((item) => {
+          const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
+          return (
+            <Link
+              key={item.path}
+              to={item.path}
+              className={`flex flex-col items-center gap-1 transition-all duration-300 ${
+                isActive ? 'text-gold-400 -translate-y-1' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <div className={isActive ? 'drop-shadow-[0_0_10px_rgba(212,175,55,0.6)]' : ''}>
+                {item.icon}
+              </div>
+              <span className="text-[10px] font-medium tracking-wide">{t(item.name)}</span>
+              {isActive && <div className="absolute -bottom-2 w-1 h-1 rounded-full bg-gold-500 shadow-[0_0_8px_rgba(212,175,55,1)]"></div>}
+            </Link>
+          );
+        })}
+        <Link
+          to="/settings"
+          className={`flex flex-col items-center gap-1 transition-all duration-300 ${
+            location.pathname === '/settings' ? 'text-gold-400 -translate-y-1' : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          <div className={location.pathname === '/settings' ? 'drop-shadow-[0_0_10px_rgba(212,175,55,0.6)]' : ''}>
+            <Settings size={22} />
+          </div>
+          <span className="text-[10px] font-medium tracking-wide">{t('Settings')}</span>
+          {location.pathname === '/settings' && <div className="absolute -bottom-2 w-1 h-1 rounded-full bg-gold-500 shadow-[0_0_8px_rgba(212,175,55,1)]"></div>}
+        </Link>
+      </div>
     </div>
   );
 }
 
-// removed mock components
+function GlobalHeader() {
+  const { t } = useTranslation();
+  const location = useLocation();
+  
+  // Find current view name
+  let title = 'Dashboard';
+  if (location.pathname !== '/') {
+    const match = [...navItems, { path: '/settings', name: 'Settings' }].find(i => location.pathname.startsWith(i.path));
+    if (match) title = match.name;
+  }
+
+  return (
+    <header className="sticky top-0 z-40 md:mb-6 mb-4 glass-panel border-b border-brand-600/30">
+      <div className="flex items-center justify-between px-6 py-4 md:px-10">
+        <div>
+          <h1 className="text-xl md:text-2xl font-serif text-white tracking-wide">{t(title)}</h1>
+          <p className="text-xs text-gold-400 font-medium tracking-widest uppercase mt-0.5 opacity-80">{t('Overview')}</p>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="w-10 h-10 rounded-full border border-gold-500/30 flex items-center justify-center bg-brand-700/50 text-gold-500 shadow-[0_0_15px_rgba(212,175,55,0.1)]">
+            <span className="font-serif font-bold italic">JC</span>
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function Layout({ children }) {
+  return (
+    <div className="flex min-h-screen selection:bg-gold-500/30 selection:text-white text-slate-200">
+      <Sidebar />
+      <div className="flex-1 md:ml-64 flex flex-col pb-24 md:pb-0">
+        <GlobalHeader />
+        <main className="flex-1 px-4 md:px-10 max-w-7xl mx-auto w-full">
+          {children}
+        </main>
+      </div>
+      <MobileNav />
+    </div>
+  );
+}
 
 function App() {
   return (
@@ -83,6 +167,7 @@ function App() {
           <Route path="/loans" element={<Loans />} />
           <Route path="/transactions" element={<Transactions />} />
           <Route path="/budgets" element={<Budgets />} />
+          <Route path="/analytics" element={<Analytics />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Routes>
       </Layout>

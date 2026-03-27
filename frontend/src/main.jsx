@@ -4,6 +4,7 @@ import './index.css'
 import App from './App.jsx'
 
 import { SettingsProvider } from './context/SettingsContext.jsx'
+import './i18n.js'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

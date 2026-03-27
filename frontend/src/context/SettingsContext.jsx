@@ -1,5 +1,7 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import axios from 'axios';
+import api from '../api';
+import { useTranslation } from 'react-i18next';
+import i18n from '../i18n';
 
 const SettingsContext = createContext();
 
@@ -13,8 +15,9 @@ export function SettingsProvider({ children }) {
 
   const fetchSettings = async () => {
     try {
-      const res = await axios.get('http://localhost:5001/api/settings');
+      const res = await api.get('/settings');
       setSettings(res.data);
+      if (res.data.language) i18n.changeLanguage(res.data.language);
     } catch (err) {
       console.error('Failed to load settings', err);
     } finally {
@@ -28,8 +31,9 @@ export function SettingsProvider({ children }) {
 
   const updateSettings = async (newSettings) => {
     try {
-      const res = await axios.put('http://localhost:5001/api/settings', newSettings);
+      const res = await api.put('/settings', newSettings);
       setSettings(res.data);
+      if (res.data.language) i18n.changeLanguage(res.data.language);
       return true;
     } catch (err) {
       console.error('Failed to update settings', err);

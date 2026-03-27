@@ -1,20 +1,106 @@
 @import "tailwindcss";
-
-:root {
-  --background: #ffffff;
-  --foreground: #0f172a;
-}
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap');
 
 @theme {
-  --color-primary-50: #eff6ff;
-  --color-primary-100: #dbeafe;
-  --color-primary-500: #3b82f6;
-  --color-primary-600: #2563eb;
-  --color-primary-700: #1d4ed8;
+  --color-brand-900: #060913; /* Deepest black/blue */
+  --color-brand-800: #0A0F1C; /* Main midnight bg */
+  --color-brand-700: #121A2F; /* Lighter midnight for cards */
+  --color-brand-600: #1C2641; /* Borders and hovers */
+  
+  --color-gold-400: #F3E5AB; /* Light Champagne Gold */
+  --color-gold-500: #D4AF37; /* Primary Gold */
+  --color-gold-600: #AA8C2C; /* Dark Gold for active states */
+
+  --font-sans: 'Outfit', sans-serif;
+  --font-serif: 'Playfair Display', serif;
+}
+
+:root {
+  --background: var(--color-brand-800);
+  --foreground: #F8FAFC;
 }
 
 body {
   background-color: var(--background);
   color: var(--foreground);
-  font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  background-image: radial-gradient(circle at top right, rgba(28, 38, 65, 0.4), transparent 400px),
+                    radial-gradient(circle at bottom left, rgba(212, 175, 55, 0.03), transparent 400px);
+  background-attachment: fixed;
+  min-height: 100vh;
+}
+
+/* Glassmorphism & Luxury Utilities */
+@utility glass-card {
+  background-color: rgb(18 26 47 / 0.6);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgb(28 38 65 / 0.5);
+  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.4);
+  border-radius: 1rem;
+}
+
+@utility glass-panel {
+  background-color: rgb(6 9 19 / 0.8);
+  backdrop-filter: blur(24px);
+  border-top: 1px solid rgb(28 38 65 / 0.3);
+}
+
+@utility text-gradient-gold {
+  background-image: linear-gradient(to right, var(--color-gold-400), var(--color-gold-600));
+  background-clip: text;
+  color: transparent;
+}
+
+@utility btn-gold {
+  position: relative;
+  overflow: hidden;
+  background-image: linear-gradient(to right, var(--color-gold-500), var(--color-gold-600));
+  color: var(--color-brand-900);
+  font-weight: 500;
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 15px -3px rgb(212 175 55 / 0.2);
+  transition: all 0.2s;
+  
+  &:hover {
+    box-shadow: 0 20px 25px -5px rgb(212 175 55 / 0.4);
+  }
+  
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
+@utility btn-glass {
+  background-color: rgb(28 38 65 / 0.4);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgb(28 38 65 / 0.5);
+  color: white;
+  font-weight: 500;
+  border-radius: 0.5rem;
+  transition: all 0.2s;
+  
+  &:hover {
+    background-color: rgb(28 38 65 / 0.6);
+  }
+  
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
+/* Custom Scrollbar for Dark Theme */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-brand-600);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-gold-600);
 }

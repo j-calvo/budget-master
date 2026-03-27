@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../api';
 import { useSettings } from '../context/SettingsContext';
+import { useTranslation } from 'react-i18next';
 
-const API_URL = 'http://localhost:5001/api/credit-cards';
-const CURR_URL = 'http://localhost:5001/api/currencies';
+const API_URL = '/credit-cards';
+const CURR_URL = '/currencies';
 
 export default function CreditCards() {
+  const { t } = useTranslation();
   const { settings } = useSettings();
   const [cards, setCards] = useState([]);
   const [currencies, setCurrencies] = useState([]);
@@ -23,8 +25,8 @@ export default function CreditCards() {
   const fetchData = async () => {
     try {
       const [cardRes, currRes] = await Promise.all([
-        axios.get(API_URL),
-        axios.get(CURR_URL)
+        api.get(API_URL),
+        api.get(CURR_URL)
       ]);
       setCards(cardRes.data);
       setCurrencies(currRes.data);
@@ -42,9 +44,9 @@ export default function CreditCards() {
     e.preventDefault();
     try {
       if (formData.id) {
-        await axios.put(`${API_URL}/${formData.id}`, formData);
+        await api.put(`${API_URL}/${formData.id}`, formData);
       } else {
-        await axios.post(API_URL, formData);
+        await api.post(API_URL, formData);
       }
       setShowModal(false);
       setFormData({ id: null, name: '', limit: '', balance: 0, dueDate: 1, apr: 0, currency: currencies[0]?.code || 'USD' });
@@ -56,7 +58,7 @@ export default function CreditCards() {
 
   const handleDeleteCard = async () => {
     try {
-      if(deleteData.id) await axios.delete(`${API_URL}/${deleteData.id}`);
+      if(deleteData.id) await api.delete(`${API_URL}/${deleteData.id}`);
       setDeleteData({ id: null, name: null });
       fetchData();
     } catch (err) {
@@ -77,76 +79,89 @@ export default function CreditCards() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 animate-in fade-in duration-700">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-slate-800">Credit Cards</h1>
+        <div>
+          <h1 className="text-3xl font-serif text-white tracking-wide">{t('Credit Cards')}</h1>
+          <p className="text-sm font-medium text-slate-400 mt-1">{t('Track your credit utilization and bills')}</p>
+        </div>
         <button 
           onClick={() => {
             setFormData({ id: null, name: '', limit: '', balance: 0, dueDate: 1, apr: 0, currency: currencies.length ? currencies[0].code : 'USD' });
             setShowModal(true);
           }} 
-          className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg font-medium transition-colors shadow-sm"
+          className="btn-gold px-5 py-2 text-sm shadow-md flex items-center gap-1"
         >
-          + Add Credit Card
+          <span className="text-lg leading-none">+</span> {t('Add Card')}
         </button>
       </div>
 
       {isLoading ? (
-        <div className="text-slate-500">Loading your cards...</div>
+        <div className="flex justify-center items-center h-48">
+          <div className="w-8 h-8 rounded-full border-t-2 border-gold-500 animate-spin"></div>
+        </div>
       ) : cards.length === 0 ? (
-        <div className="bg-white p-12 rounded-xl border border-slate-200 border-dashed text-center">
-          <p className="text-slate-500 text-lg mb-4">No credit cards added yet.</p>
+        <div className="glass-card p-16 text-center border border-dashed border-brand-600">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-brand-600/30 flex items-center justify-center text-gold-400/50">
+            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+          </div>
+          <p className="text-slate-400 font-serif italic text-lg mb-6">{t('No credit cards added yet.')}</p>
           <button 
             onClick={() => {
               setFormData({ id: null, name: '', limit: '', balance: 0, dueDate: 1, apr: 0, currency: currencies.length ? currencies[0].code : 'USD' });
               setShowModal(true);
             }} 
-            className="bg-primary-600 hover:bg-primary-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
+            className="btn-glass px-6 py-2"
           >
-            Add Your First Card
+            {t('Add Your First Card')}
           </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
           {cards.map(card => {
             const utilization = Math.min(100, Math.round((card.balance / card.limit) * 100)) || 0;
-            const isHighUtil = utilization > 30; // Standard credit utilization warning threshold
+            const isHighUtil = utilization > 30;
             
             return (
-              <div key={card.id} className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 relative group flex flex-col justify-between hover:border-primary-300 transition-colors">
+              <div key={card.id} className="glass-card p-6 relative group flex flex-col justify-between hover:border-gold-500/30 hover:shadow-[0_0_20px_rgba(212,175,55,0.05)] transition-all overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-gold-500/5 rounded-full blur-2xl -z-10 mix-blend-screen transition-all group-hover:bg-gold-500/10"></div>
+                
                 <div className="absolute top-4 right-4 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => openEditModal(card)} className="text-slate-300 hover:text-primary-600 p-1">
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                  <button onClick={() => openEditModal(card)} className="text-slate-400 hover:text-gold-400 p-1 transition-colors">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                   </button>
-                  <button onClick={() => setDeleteData({ id: card.id, name: card.name })} className="text-slate-300 hover:text-red-600 p-1">
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                  <button onClick={() => setDeleteData({ id: card.id, name: card.name })} className="text-slate-400 hover:text-rose-400 p-1 transition-colors">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                   </button>
                 </div>
 
-                <div className="mb-4 pr-16">
-                  <h3 className="font-bold text-slate-800 text-lg">{card.name}</h3>
-                  <p className="text-sm font-medium text-slate-500 mt-1">Due Date: {card.dueDate}{['st','nd','rd'][((card.dueDate+90)%100-10)%10-1]||'th'} • APR: {card.apr}%</p>
+                <div className="mb-6 pr-16">
+                  <h3 className="font-serif italic text-white text-xl tracking-wide line-clamp-1">{card.name}</h3>
+                  <div className="flex gap-3 text-xs font-medium uppercase tracking-widest mt-2">
+                    <span className="text-slate-400">Due: <span className="text-slate-300">{card.dueDate}{['st','nd','rd'][((card.dueDate+90)%100-10)%10-1]||'th'}</span></span>
+                    <span className="text-brand-600">•</span>
+                    <span className="text-slate-400">APR: <span className="text-slate-300">{card.apr}%</span></span>
+                  </div>
                 </div>
 
                 <div>
-                  <div className="mb-4">
-                    <p className="text-3xl font-bold text-slate-800 mb-1">
+                  <div className="mb-5">
+                    <p className="text-3xl font-light font-serif text-white mb-1 tracking-wide">
                       {formatCurrency(card.balance, card.currency)}
                     </p>
-                    <p className="text-sm text-slate-500">
+                    <p className="text-xs text-slate-500 uppercase tracking-widest">
                       of {formatCurrency(card.limit, card.currency)} limit
                     </p>
                   </div>
                   
-                  <div className="w-full bg-slate-100 rounded-full h-2 mb-1">
-                    <div className={`${isHighUtil ? 'bg-red-500' : 'bg-primary-500'} h-2 rounded-full`} style={{ width: `${utilization}%` }}></div>
+                  <div className="w-full bg-brand-900/50 rounded-full h-1.5 mb-2 overflow-hidden border border-brand-600/30">
+                    <div className={`${isHighUtil ? 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.6)]' : 'bg-gold-500 shadow-[0_0_8px_rgba(212,175,55,0.6)]'} h-full rounded-full transition-all duration-1000`} style={{ width: `${utilization}%` }}></div>
                   </div>
-                  <div className="flex justify-between text-xs font-semibold">
-                    <span className={isHighUtil ? 'text-red-500' : 'text-slate-500'}>{utilization}% Utilized</span>
-                    <span className="text-slate-400">{formatCurrency(card.limit - card.balance, card.currency)} available</span>
+                  <div className="flex justify-between text-xs font-medium uppercase tracking-wider">
+                    <span className={isHighUtil ? 'text-rose-400' : 'text-gold-400'}>{utilization}% Utilized</span>
+                    <span className="text-slate-500">{formatCurrency(card.limit - card.balance, card.currency)} avl.</span>
                   </div>
                 </div>
-
               </div>
             );
           })}
@@ -155,51 +170,62 @@ export default function CreditCards() {
 
       {/* Credit Card Form Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center p-4 z-50 overflow-y-auto">
-          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md my-8">
-            <h2 className="text-2xl font-bold mb-6">{formData.id ? 'Edit' : 'Add'} Credit Card</h2>
+        <div className="fixed inset-0 bg-brand-900/80 backdrop-blur-md flex items-center justify-center p-4 z-50 overflow-y-auto animate-in fade-in duration-200">
+          <div className="glass-card p-8 w-full max-w-md shadow-2xl border-white/10 relative overflow-hidden my-8">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gold-500/10 rounded-full blur-2xl -z-10 mix-blend-screen"></div>
+            
+            <h2 className="text-2xl font-serif text-white mb-6 tracking-wide relative">
+              {formData.id ? t('Edit') : t('Add')} {t('Credit Card')}
+              <span className="absolute -bottom-2 left-0 w-12 h-[2px] bg-gold-500/50"></span>
+            </h2>
+            
             <form onSubmit={handleSaveCard} className="space-y-4">
-              
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Card Name</label>
-                <input required type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none" placeholder="e.g. Chase Sapphire Reserve" />
+                <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Card Name</label>
+                <input required type="text" value={formData.name || ''} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif" placeholder="e.g. Sapphire Reserve" />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Credit Limit</label>
-                  <input required type="number" step="0.01" value={formData.limit} onChange={e => setFormData({...formData, limit: e.target.value})} className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none" placeholder="0.00" />
+                  <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Credit Limit')}</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-serif">$</span>
+                    <input required type="number" step="0.01" value={formData.limit === 0 ? '' : formData.limit} onChange={e => setFormData({...formData, limit: e.target.value})} className="w-full pl-8 pr-3 py-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif" placeholder="0.00" />
+                  </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Current Balance</label>
-                  <input required type="number" step="0.01" value={formData.balance} onChange={e => setFormData({...formData, balance: e.target.value})} className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none" placeholder="0.00" />
+                  <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Current Balance')}</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-serif">$</span>
+                    <input required type="number" step="0.01" value={formData.balance === 0 ? '' : formData.balance} onChange={e => setFormData({...formData, balance: e.target.value})} className="w-full pl-8 pr-3 py-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif" placeholder="0.00" />
+                  </div>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">APR (%)</label>
-                  <input required type="number" step="0.01" value={formData.apr} onChange={e => setFormData({...formData, apr: e.target.value})} className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none" placeholder="19.99" />
+                  <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('APR (%)')}</label>
+                  <input required type="number" step="0.01" value={formData.apr === 0 ? '' : formData.apr} onChange={e => setFormData({...formData, apr: e.target.value})} className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif" placeholder="19.99" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Due Date (Day)</label>
-                  <input required type="number" min="1" max="31" value={formData.dueDate} onChange={e => setFormData({...formData, dueDate: e.target.value})} className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none" placeholder="15" />
+                  <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Due Date (Day)')}</label>
+                  <input required type="number" min="1" max="31" value={formData.dueDate || ''} onChange={e => setFormData({...formData, dueDate: e.target.value})} className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif" placeholder="15" />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Currency</label>
-                <select value={formData.currency} onChange={e => setFormData({...formData, currency: e.target.value})} className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none">
+                <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Currency</label>
+                <select value={formData.currency} onChange={e => setFormData({...formData, currency: e.target.value})} className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all appearance-none cursor-pointer">
                   {currencies.map(c => (
-                    <option key={c.id} value={c.code}>{c.code} ({c.symbol})</option>
+                    <option key={c.id} value={c.code} className="bg-brand-800">{c.code} ({c.symbol})</option>
                   ))}
-                  {currencies.length === 0 && <option value="USD">USD ($)</option>}
+                  {currencies.length === 0 && <option value="USD" className="bg-brand-800">USD ($)</option>}
                 </select>
               </div>
 
-              <div className="flex justify-end gap-3 mt-8">
-                <button type="button" onClick={() => setShowModal(false)} className="px-5 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors font-medium">Cancel</button>
-                <button type="submit" className="bg-primary-600 hover:bg-primary-700 text-white px-5 py-2 rounded-lg transition-colors font-medium shadow-sm">Save Card</button>
+              <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-brand-600/30">
+                <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 text-sm text-slate-400 hover:text-white transition-colors">{t('Cancel')}</button>
+                <button type="submit" className="btn-gold px-6 py-2 text-sm">{t('Save Card')}</button>
               </div>
             </form>
           </div>
@@ -208,19 +234,31 @@ export default function CreditCards() {
 
       {/* Delete Confirmation Modal */}
       {deleteData.id && (
-        <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm text-center">
-            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        <div className="fixed inset-0 bg-brand-900/80 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="glass-card p-8 w-full max-w-sm text-center border-rose-500/20 shadow-[0_0_30px_rgba(244,63,94,0.15)] relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500/10 rounded-full blur-2xl -z-10 mix-blend-screen"></div>
+            
+            <div className="w-16 h-16 bg-rose-500/10 border border-rose-500/20 rounded-full flex items-center justify-center mx-auto mb-5 shadow-inner">
+              <svg className="w-8 h-8 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
             </div>
-            <h3 className="text-xl font-bold text-slate-800 mb-2">Delete Credit Card?</h3>
-            <p className="text-slate-500 mb-6 font-medium">Are you sure you want to delete "{deleteData.name}"? This action cannot be undone.</p>
+            <h3 className="text-xl font-serif text-white mb-2 tracking-wide">{t('Delete Credit Card?')}</h3>
+            <p className="text-sm text-slate-400 mb-8 leading-relaxed">Are you sure you want to delete <span className="text-white font-medium">"{deleteData.name}"</span>? This action cannot be undone.</p>
             
             <div className="flex gap-3 justify-center">
-              <button onClick={() => setDeleteData({ id: null, name: null })} className="px-4 py-2 text-slate-600 hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors flex-1 font-medium">Cancel</button>
-              <button onClick={handleDeleteCard} className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors flex-1 font-medium shadow-sm border border-red-700">Delete</button>
+              <button 
+                onClick={() => setDeleteData({ id: null, name: null })} 
+                className="btn-glass px-4 py-2.5 flex-1 text-sm tracking-wide"
+              >
+                {t('Cancel')}
+              </button>
+              <button 
+                onClick={handleDeleteCard} 
+                className="bg-rose-600 hover:bg-rose-500 text-white px-4 py-2.5 rounded-lg transition-colors flex-1 text-sm font-medium shadow-[0_0_15px_rgba(244,63,94,0.3)] tracking-wide"
+              >
+                {t('Delete')}
+              </button>
             </div>
           </div>
         </div>
