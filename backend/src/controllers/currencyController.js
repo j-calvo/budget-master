@@ -8,7 +8,7 @@ exports.getCurrencies = async (req, res) => {
       where: { userId: USER_ID },
       orderBy: { code: 'asc' }
     });
-    
+
     // Seed default currencies if none exist
     if (currencies.length === 0) {
       // Ensure default user exists
@@ -21,13 +21,10 @@ exports.getCurrencies = async (req, res) => {
 
       const defaultCurrencies = [
         { userId: USER_ID, code: 'USD', symbol: '$', name: 'US Dollar' },
+        { userId: USER_ID, code: 'CRC', symbol: '₡', name: 'Costa Rican Colón' },
         { userId: USER_ID, code: 'EUR', symbol: '€', name: 'Euro' },
-        { userId: USER_ID, code: 'GBP', symbol: '£', name: 'British Pound' },
-        { userId: USER_ID, code: 'JPY', symbol: '¥', name: 'Japanese Yen' },
-        { userId: USER_ID, code: 'CAD', symbol: '$', name: 'Canadian Dollar' },
-        { userId: USER_ID, code: 'AUD', symbol: '$', name: 'Australian Dollar' }
       ];
-      
+
       // SQLite does not support skipDuplicates, use isolated createMany or catch on duplicate keys
       try {
         await prisma.currency.createMany({
@@ -36,14 +33,14 @@ exports.getCurrencies = async (req, res) => {
       } catch (err) {
         console.warn('Default currencies already seeded on conflict.');
       }
-      
+
       const newCurrencies = await prisma.currency.findMany({
         where: { userId: USER_ID },
         orderBy: { code: 'asc' }
       });
       return res.json(newCurrencies);
     }
-    
+
     res.json(currencies);
   } catch (error) {
     console.error('getCurrencies error:', error);

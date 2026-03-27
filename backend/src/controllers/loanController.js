@@ -138,8 +138,14 @@ exports.updateAPR = async (req, res) => {
     const history = JSON.parse(existing.aprHistory || '[]');
     history.push({ date: new Date().toISOString(), apr: parsedAPR });
 
-    // Recompute monthly payment based on remaining balance + new APR
-    const newPayment = calcMonthlyPayment(existing.balance, parsedAPR, existing.termMonths);
+    // Count how many installment payments have been made to find the remaining term
+    const paidInstallments = await prisma.loanPayment.count({
+      where: { loanId: id, type: 'installment' },
+    });
+    const remainingMonths = Math.max(1, existing.termMonths - paidInstallments);
+
+    // Recompute monthly payment based on remaining balance + new APR + remaining term
+    const newPayment = calcMonthlyPayment(existing.balance, parsedAPR, remainingMonths);
 
     const loan = await prisma.loan.update({
       where: { id, userId: USER_ID },

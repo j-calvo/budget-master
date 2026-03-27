@@ -104,7 +104,7 @@ exports.getAmortizationSchedule = async (req, res) => {
     });
 
     const earlyPayments = registeredPayments.filter(p => p.type === 'early_payment');
-    const installments  = registeredPayments.filter(p => p.type === 'installment');
+    const installments = registeredPayments.filter(p => p.type === 'installment');
 
     const {
       originalBalance,
@@ -116,13 +116,13 @@ exports.getAmortizationSchedule = async (req, res) => {
       earlyPaymentStrategy,
     } = loan;
 
-    const monthlyRate  = interestRate / 100 / 12;
-    const schedule     = [];
+    const monthlyRate = interestRate / 100 / 12;
+    const schedule = [];
 
     let remainingBalance = originalBalance;
     let effectivePayment = monthlyPayment; // may change under reduce_payment
-    let remainingMonths  = termMonths;
-    let earlyPayIdx      = 0;
+    let remainingMonths = termMonths;
+    let earlyPayIdx = 0;
     let installmentMonth = 0;
 
     for (let month = 1; month <= termMonths && remainingBalance > 0.01; month++) {
@@ -176,9 +176,9 @@ exports.getAmortizationSchedule = async (req, res) => {
 
       // ------ Standard installment ------
       installmentMonth++;
-      remainingMonths = Math.max(1, termMonths - installmentMonth + 1);
+      remainingMonths = termMonths - installmentMonth;
 
-      const interestCharge  = remainingBalance * monthlyRate;
+      const interestCharge = remainingBalance * monthlyRate;
       const principalPayment = Math.min(
         Math.max(0, effectivePayment - interestCharge),
         remainingBalance

@@ -22,6 +22,8 @@ model User {
   budgets     Budget[]
   loans       Loan[]
   currencies  Currency[]
+  banks       Bank[]
+  accountTypes AccountType[]
 }
 
 model Account {
@@ -162,4 +164,28 @@ model Currency {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   
   @@unique([userId, code])
+}
+
+model Bank {
+  id        String   @id @default(uuid())
+  userId    String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, name])
+}
+
+model AccountType {
+  id        String   @id @default(uuid())
+  userId    String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, name])
 }
