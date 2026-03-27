@@ -1,19 +1,24 @@
 const prisma = require('../db');
 
-const USER_ID = 'default-user-id';
 
 exports.getSettings = async (req, res) => {
   try {
     let settings = await prisma.setting.findUnique({
-      where: { userId: USER_ID }
+      where: { familyId: req.user.familyId }
     });
 
     if (!settings) {
       settings = await prisma.setting.create({
         data: {
-          userId: USER_ID,
+          familyId: req.user.familyId,
           defaultCurrency: 'USD',
           language: 'en-US',
+          fontFamily: 'Outfit',
+          payFrequency: 'monthly',
+          payDay: 15,
+          payDay2: null,
+          payDayOfWeek: null,
+          budgetStartDay: 1,
           theme: 'light'
         }
       });
@@ -28,10 +33,17 @@ exports.getSettings = async (req, res) => {
 
 exports.updateSettings = async (req, res) => {
   try {
-    const { defaultCurrency, language, theme } = req.body;
+    const { 
+      defaultCurrency, language, theme, fontFamily, budgetStartDay, 
+      payFrequency, payDay, payDay2, payDayOfWeek 
+    } = req.body;
+    
     const settings = await prisma.setting.update({
-      where: { userId: USER_ID },
-      data: { defaultCurrency, language, theme }
+      where: { familyId: req.user.familyId },
+      data: { 
+        defaultCurrency, language, theme, fontFamily, budgetStartDay, 
+        payFrequency, payDay, payDay2, payDayOfWeek 
+      }
     });
     res.json(settings);
   } catch (error) {

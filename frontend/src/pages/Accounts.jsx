@@ -98,7 +98,7 @@ export default function Accounts() {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this account?')) return;
+    if (!window.confirm(t('Are you sure you want to delete this account?'))) return;
     try {
       await api.delete(`${API_URL}/${id}`);
       fetchAccounts();

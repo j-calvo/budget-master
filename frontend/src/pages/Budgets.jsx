@@ -159,7 +159,7 @@ export default function Budgets() {
                     {formatCurrency(budget.spent)}
                   </span>
                   <span className="text-xs font-medium text-slate-500 uppercase tracking-widest mb-1">
-                    of {formatCurrency(budget.amount)}
+                    {t('of {{total}}', { total: formatCurrency(budget.amount) })}
                   </span>
                 </div>
 
@@ -169,8 +169,8 @@ export default function Budgets() {
 
                 <p className={`text-xs font-medium uppercase tracking-wider text-right ${textColor}`}>
                   {isOver 
-                    ? `Over by ${formatCurrency(budget.spent - budget.amount)}` 
-                    : `${pct}% Utilized`}
+                    ? t('Over by {{amount}}', { amount: formatCurrency(budget.spent - budget.amount) })
+                    : t('{{pct}}% Utilized', { pct })}
                 </p>
               </div>
             );
@@ -238,7 +238,7 @@ export default function Budgets() {
               </svg>
             </div>
             <h3 className="text-xl font-serif text-white mb-2 tracking-wide">{t('Delete Budget?')}</h3>
-            <p className="text-sm text-slate-400 mb-8 leading-relaxed">Are you sure you want to delete the <span className="text-white font-medium">"{deleteData.name}"</span> budget? This action cannot be undone.</p>
+            <p className="text-sm text-slate-400 mb-8 leading-relaxed">{t('Are you sure you want to delete the "{{name}}" budget? This action cannot be undone.', { name: deleteData.name })}</p>
             
             <div className="flex gap-3 justify-center">
               <button 

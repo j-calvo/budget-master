@@ -79,7 +79,7 @@ export default function Transactions() {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this transaction?')) return;
+    if (!window.confirm(t('Are you sure you want to delete this transaction?'))) return;
     try {
       await api.delete(`${API_URL}/${id}`);
       fetchData();
@@ -100,7 +100,7 @@ export default function Transactions() {
       link.parentNode.removeChild(link);
     } catch (err) {
       console.error('Failed to export transactions', err);
-      alert('Failed to export transactions.');
+      alert(t('Failed to export transactions.'));
     }
   };
 
@@ -109,7 +109,7 @@ export default function Transactions() {
     if (!file) return;
 
     if (accounts.length === 0) {
-      alert("Please create at least one Bank Account before importing transactions.");
+      alert(t('Please create at least one Bank Account before importing transactions.'));
       return;
     }
 
@@ -122,11 +122,11 @@ export default function Transactions() {
           'Content-Type': 'multipart/form-data'
         }
       });
-      alert(response.data.message || 'Import successful');
+      alert(t(response.data.message || 'Import successful'));
       fetchData();
     } catch (err) {
       console.error('Failed to import transactions', err);
-      alert(err.response?.data?.error || 'Failed to import transactions.');
+      alert(t(err.response?.data?.error || 'Failed to import transactions.'));
     } finally {
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
@@ -173,7 +173,7 @@ export default function Transactions() {
               <span className="text-lg leading-none">+</span> {t('New')}
             </button>
           ) : (
-            <p className="text-xs text-rose-400 bg-rose-500/10 px-3 py-1.5 rounded-full border border-rose-500/20 ml-2 shadow-[0_0_10px_rgba(244,63,94,0.1)]">Add an account first</p>
+            <p className="text-xs text-rose-400 bg-rose-500/10 px-3 py-1.5 rounded-full border border-rose-500/20 ml-2 shadow-[0_0_10px_rgba(244,63,94,0.1)]">{t('Add an account first')}</p>
           )}
         </div>
       </div>

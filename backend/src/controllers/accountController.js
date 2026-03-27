@@ -1,12 +1,11 @@
 const prisma = require('../db');
 
 // Hardcoded userId for now since we removed auth
-const USER_ID = 'default-user-id';
 
 exports.getAccounts = async (req, res) => {
   try {
     const accounts = await prisma.account.findMany({
-      where: { userId: USER_ID },
+      where: { familyId: req.user.familyId },
       orderBy: { createdAt: 'desc' }
     });
     res.json(accounts);
@@ -19,7 +18,7 @@ exports.getAccountById = async (req, res) => {
   try {
     const { id } = req.params;
     const account = await prisma.account.findUnique({
-      where: { id, userId: USER_ID }
+      where: { id, familyId: req.user.familyId }
     });
     if (!account) return res.status(404).json({ error: 'Account not found' });
     res.json(account);
@@ -42,7 +41,7 @@ exports.createAccount = async (req, res) => {
 
     const account = await prisma.account.create({
       data: {
-        userId: USER_ID,
+        familyId: req.user.familyId,
         name,
         type,
         currency: currency || 'USD',
@@ -62,7 +61,7 @@ exports.updateAccount = async (req, res) => {
     const { id } = req.params;
     const { name, type, balance, institution, currency } = req.body;
     const account = await prisma.account.update({
-      where: { id, userId: USER_ID },
+      where: { id, familyId: req.user.familyId },
       data: { name, type, balance, institution, currency }
     });
     res.json(account);
@@ -75,7 +74,7 @@ exports.deleteAccount = async (req, res) => {
   try {
     const { id } = req.params;
     await prisma.account.delete({
-      where: { id, userId: USER_ID }
+      where: { id, familyId: req.user.familyId }
     });
     res.json({ success: true });
   } catch (error) {

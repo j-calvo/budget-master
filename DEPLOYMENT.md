@@ -14,13 +14,30 @@ Step-by-step guide to deploy the application locally on MacOS using PM2 for pers
 
 ---
 
-## 1. Environment Setup
+## Automated Installation
+
+The easiest way to perform a fresh installation is to use the included `install.sh` script. This automates the environment setup, dependency installation, database generation, and PM2 startup.
+
+```bash
+# Make sure you have PM2 installed globally first
+npm install -g pm2
+
+# Run the automated installer
+./install.sh
+```
+
+---
+
+## Manual Installation (Alternative)
+
+### 1. Environment Setup
 
 Copy the environment template and configure it:
 
 ```bash
 cp backend/.env.example backend/.env
 ```
+
 
 Edit `backend/.env` with your preferred values:
 
@@ -45,12 +62,19 @@ cd frontend && npm install && cd ..
 
 ## 3. Database Setup
 
-Generate the Prisma client and run migrations:
+Generate the Prisma client, run migrations, and optionally seed the database with defaults:
 
 ```bash
 cd backend
 npx prisma generate
 npx prisma migrate deploy
+
+# Optional: Seed the database with default categories, currencies, and languages
+node seed.js
+
+# Optional: If you need to completely wipe the existing database before seeding
+node seed.js --flush
+
 cd ..
 ```
 
@@ -110,6 +134,25 @@ pm2 startup
 ```
 
 Follow the instructions printed by `pm2 startup` — it will output a command you need to copy and run with `sudo`.
+
+---
+
+## Updating the Application
+
+When new features or bug fixes are pushed to the main repository, you can safely update your local deployment using the included `update.sh` script.
+
+Run the script from the application root:
+
+```bash
+./update.sh
+```
+
+This script will automatically:
+1. Pull the latest code from `origin main`.
+2. Install any new dependencies for both the frontend and backend.
+3. Apply database schema updates safely (using `prisma db push`).
+4. Rebuild the frontend static production bundle.
+5. Restart the PM2 process.
 
 ---
 

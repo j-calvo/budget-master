@@ -1,0 +1,26 @@
+{
+  "name": "personal-finance-app",
+  "version": "1.0.0",
+  "description": "A comprehensive personal finance management application built with React and Node.js. Track your income, expenses, budgets, loans, and credit cards all in one place.",
+  "main": "migrate-controllers.js",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && npm run dev",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/j-calvo/budget-master.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/j-calvo/budget-master/issues"
+  },
+  "homepage": "https://github.com/j-calvo/budget-master#readme",
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}

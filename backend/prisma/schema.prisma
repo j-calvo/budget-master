@@ -11,10 +11,22 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  name      String
-  createdAt DateTime @default(now())
+  id            String   @id @default(uuid())
+  name          String
+  email         String   @unique
+  password      String?  // nullable for seeding or OAuth options
+  createdAt     DateTime @default(now())
   
+  familyMembers FamilyMember[]
+}
+
+model Family {
+  id          String   @id @default(uuid())
+  name        String
+  inviteCode  String   @unique
+  createdAt   DateTime @default(now())
+
+  members     FamilyMember[]
   settings    Setting?
   accounts    Account[]
   creditCards CreditCard[]
@@ -26,9 +38,22 @@ model User {
   accountTypes AccountType[]
 }
 
+model FamilyMember {
+  id        String   @id @default(uuid())
+  userId    String
+  familyId  String
+  role      String   @default("MEMBER") // ADMIN or MEMBER
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  family    Family   @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, familyId])
+}
+
 model Account {
   id          String   @id @default(uuid())
-  userId      String
+  familyId    String
   name        String
   type        String   // checking, savings, investment
   currency    String   @default("USD")
@@ -37,34 +62,35 @@ model Account {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  family       Family        @relation(fields: [familyId], references: [id], onDelete: Cascade)
   transactions Transaction[]
 }
 
 model CreditCard {
   id        String   @id @default(uuid())
-  userId    String
+  familyId  String
   name      String
   limit     Float
   balance   Float    @default(0)
   dueDate   Int      // day of the month (1-31)
   apr       Float
-  currency  String   @default("USD")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  currency     String   @default("USD")
+  statementDay Int      @default(1)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
   
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  family    Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
 }
 
 model Category {
   id        String   @id @default(uuid())
-  userId    String
+  familyId  String
   name      String
   type      String   // income, fixed_expense, variable_expense, savings_goal
   color     String   @default("#3b82f6")
   createdAt DateTime @default(now())
   
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  family       Family        @relation(fields: [familyId], references: [id], onDelete: Cascade)
   transactions Transaction[]
   budgets      Budget[]
 }
@@ -87,7 +113,7 @@ model Transaction {
 
 model Budget {
   id         String   @id @default(uuid())
-  userId     String
+  familyId   String
   categoryId String
   amount     Float
   month      Int      // 1-12
@@ -95,15 +121,15 @@ model Budget {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  family   Family   @relation(fields: [familyId], references: [id], onDelete: Cascade)
   category Category @relation(fields: [categoryId], references: [id])
 
-  @@unique([userId, categoryId, month, year])
+  @@unique([familyId, categoryId, month, year])
 }
 
 model Loan {
   id                   String   @id @default(uuid())
-  userId               String
+  familyId             String
   name                 String
   originalBalance      Float    // original loan amount at start
   balance              Float    // current remaining balance
@@ -120,7 +146,7 @@ model Loan {
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
   
-  user     User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  family   Family       @relation(fields: [familyId], references: [id], onDelete: Cascade)
   payments LoanPayment[]
 }
 
@@ -139,53 +165,65 @@ model LoanPayment {
   loan Loan @relation(fields: [loanId], references: [id], onDelete: Cascade)
 }
 
-
 model Setting {
   id              String   @id @default(uuid())
-  userId          String   @unique
+  familyId        String   @unique
   defaultCurrency String   @default("USD")
   language        String   @default("en-US")
+  fontFamily      String   @default("Outfit")
+  payFrequency    String   @default("monthly")
+  payDay          Int      @default(15)
+  payDay2         Int?     // For twice a month
+  payDayOfWeek    Int?     // For weekly (0-6)
+  budgetStartDay  Int      @default(1)
   theme           String   @default("light")
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
 }
 
 model Currency {
   id        String   @id @default(uuid())
-  userId    String
+  familyId  String
   code      String   // e.g., 'USD', 'EUR'
   symbol    String   // e.g., '$', '€'
   name      String   // e.g., 'US Dollar'
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
   
-  @@unique([userId, code])
+  @@unique([familyId, code])
 }
 
 model Bank {
   id        String   @id @default(uuid())
-  userId    String
+  familyId  String
   name      String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
   
-  @@unique([userId, name])
+  @@unique([familyId, name])
 }
 
 model AccountType {
   id        String   @id @default(uuid())
-  userId    String
+  familyId  String
   name      String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
   
-  @@unique([userId, name])
+  @@unique([familyId, name])
+}
+
+model ExchangeRate {
+  id        String   @id @default(uuid())
+  base      String   @unique // e.g., 'USD'
+  rates     String   // JSON string: { 'EUR': 0.85, 'CRC': 540.0 }
+  updatedAt DateTime @updatedAt
 }

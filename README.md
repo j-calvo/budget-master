@@ -19,7 +19,8 @@ A comprehensive personal finance management application built with React and Nod
   - Payment history and interest tracking
   - Insurance cost tracking
 - **Multi-Currency Support**: Handle multiple currencies with custom symbols and formatting
-- **Settings & Preferences**: Customizable themes, languages, and default currency settings
+- **Localization & Preferences**: Support for English (US) and Spanish (ES), customizable base currencies, and UI settings
+- **Luxury UI Design**: High-end interface featuring midnight blues, champagne gold accents, and elegant glassmorphism effects
 
 ## 🛠️ Tech Stack
 
@@ -93,6 +94,8 @@ budget-master/
 4. **Seed the database (optional)**
    ```bash
    node seed.js
+   # To completely flush the database before seeding:
+   # node seed.js --flush
    ```
 
 5. **Install frontend dependencies**
@@ -162,9 +165,30 @@ The backend provides RESTful API endpoints for:
 - Bill reminders and notifications
 - Financial goal setting and tracking
 - Data export and reporting
-- Mobile app development
 - Bank account integration
 - Advanced analytics and insights
+
+## Development Workflow
+
+### Unified Command (Recommended)
+You can now start both the backend and frontend with a single command from the root directory:
+
+```bash
+npm run dev
+```
+
+This uses `concurrently` to run the Vite dev server and Nodemon simultaneously.
+
+### Using PM2
+Alternatively, you can manage both services using PM2:
+
+```bash
+pm2 start ecosystem.dev.config.cjs
+```
+
+This will launch:
+- `personal-finance-app-api`: Backend (port 5001) with watch mode enabled.
+- `personal-finance-app-ui`: Frontend (port 5173).
 
 ## 🤝 Contributing
 

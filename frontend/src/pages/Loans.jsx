@@ -268,13 +268,13 @@ export default function Loans() {
                   <div className="flex items-center gap-3">
                     <h3 className="font-serif italic text-white text-xl tracking-wide line-clamp-1">{loan.name}</h3>
                     {loan.isVariableRate && (
-                      <span className="text-[10px] bg-amber-500/10 border border-amber-500/20 text-amber-400 px-2.5 py-0.5 rounded-full font-medium uppercase tracking-widest whitespace-nowrap glow-text-amber">Variable</span>
+                      <span className="text-[10px] bg-amber-500/10 border border-amber-500/20 text-amber-400 px-2.5 py-0.5 rounded-full font-medium uppercase tracking-widest whitespace-nowrap glow-text-amber">{t('Variable')}</span>
                     )}
                   </div>
                   <p className="text-xs text-slate-400 mt-2 font-medium uppercase tracking-wider flex items-center gap-2">
                     <span className="text-gold-400">{loan.interestRate}% APR</span>
                     <span className="text-brand-600">•</span>
-                    <span>{loan.termMonths} mo term</span>
+                    <span>{t('{{months}} mo term', { months: loan.termMonths })}</span>
                   </p>
                 </div>
 
@@ -285,7 +285,7 @@ export default function Loans() {
                   </div>
                   <div className="text-right">
                     <p className="text-sm border border-gold-500/20 bg-gold-500/10 text-gold-400 px-3 py-1 rounded-md mb-1 font-medium">{fmt(loan.monthlyPayment + loan.insuranceCost, loan.currency)}/mo</p>
-                    {remaining !== null && <p className="text-xs text-slate-400 uppercase tracking-wider">~{remaining} mo left</p>}
+                    {remaining !== null && <p className="text-xs text-slate-400 uppercase tracking-wider">~{t('{{months}} mo left', { months: remaining })}</p>}
                   </div>
                 </div>
 
@@ -293,8 +293,8 @@ export default function Loans() {
                   <div className="bg-gold-500 shadow-[0_0_8px_rgba(212,175,55,0.6)] h-full rounded-full transition-all duration-1000" style={{ width: `${progress}%` }} />
                 </div>
                 <div className="flex justify-between items-center text-xs text-slate-500 uppercase tracking-widest font-medium">
-                  <span>{progress.toFixed(1)}% paid</span>
-                  {isSelected && <span className="text-gold-400 flex items-center gap-1 animate-pulse">Viewing details <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg></span>}
+                  <span>{t('{{progress}}% paid', { progress: progress.toFixed(1) })}</span>
+                  {isSelected && <span className="text-gold-400 flex items-center gap-1 animate-pulse">{t('Viewing details')} <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg></span>}
                 </div>
               </div>
             );
@@ -323,7 +323,7 @@ export default function Loans() {
               {selectedLoan.isVariableRate && (
                 <button onClick={() => { setNewApr(String(selectedLoan.interestRate)); setShowAprModal(true); }}
                   className="bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 text-xs uppercase tracking-wider px-4 py-2.5 rounded-lg font-medium transition-colors">
-                  Update APR
+                  {t('Update APR')}
                 </button>
               )}
               <button onClick={() => { prefillPayment('installment'); setShowPaymentModal(true); }}
@@ -345,7 +345,7 @@ export default function Loans() {
             {['schedule', 'payments', 'apr_history'].map(tab => (
               <button key={tab} onClick={() => setDetailTab(tab)}
                 className={`px-5 py-3.5 text-xs font-medium uppercase tracking-widest border-b-2 transition-all whitespace-nowrap ${detailTab === tab ? 'border-gold-500 text-gold-400 glow-text-gold' : 'border-transparent text-slate-500 hover:text-slate-300'}`}>
-                {tab === 'schedule' ? 'Amortization Schedule' : tab === 'payments' ? `Payment History (${payments.length})` : 'APR History'}
+                {tab === 'schedule' ? t('Amortization Schedule') : tab === 'payments' ? t('Payment History ({{count}})', { count: payments.length }) : t('APR History')}
               </button>
             ))}
           </div>
@@ -479,8 +479,8 @@ export default function Loans() {
                   <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-brand-900/40 border border-brand-600/30 flex items-center justify-center text-brand-600">
                     <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m0 0v2m0-2h2m-2 0H10M12 9v.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                   </div>
-                  <p className="text-lg text-slate-300 mb-1">Fixed-Rate Loan</p>
-                  <p className="text-sm italic">APR history is only tracked for variable-rate loans.</p>
+                  <p className="text-lg text-slate-300 mb-1">{t('Fixed-Rate Loan')}</p>
+                  <p className="text-sm italic">{t('APR history is only tracked for variable-rate loans.')}</p>
                 </div>
               )}
             </div>
@@ -737,8 +737,8 @@ export default function Loans() {
             <div className="w-16 h-16 bg-rose-500/10 border border-rose-500/20 rounded-full flex items-center justify-center mx-auto mb-5 shadow-inner">
               <svg className="w-8 h-8 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
             </div>
-            <h3 className="text-xl font-serif text-white mb-2 tracking-wide">Delete Loan?</h3>
-            <p className="text-sm text-slate-400 mb-8 leading-relaxed">Delete <span className="text-white font-medium">"{deleteData.name}"</span> and all payment history? This cannot be undone.</p>
+            <h3 className="text-xl font-serif text-white mb-2 tracking-wide">{t('Delete Loan?')}</h3>
+            <p className="text-sm text-slate-400 mb-8 leading-relaxed">{t('Are you sure you want to delete "{{name}}" and all payment history? This cannot be undone.', { name: deleteData.name })}</p>
             <div className="flex gap-3 justify-center">
               <button onClick={() => setDeleteData({ id: null, name: null })} className="btn-glass px-4 py-2.5 flex-1 text-sm tracking-wide">Cancel</button>
               <button onClick={handleDeleteLoan} className="bg-rose-600 hover:bg-rose-500 text-white px-4 py-2.5 rounded-lg transition-colors flex-1 text-sm font-medium shadow-[0_0_15px_rgba(244,63,94,0.3)] tracking-wide">Delete</button>

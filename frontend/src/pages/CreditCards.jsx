@@ -15,7 +15,7 @@ export default function CreditCards() {
   const [showModal, setShowModal] = useState(false);
   const [deleteData, setDeleteData] = useState({ id: null, name: null });
   const [formData, setFormData] = useState({ 
-    id: null, name: '', limit: '', balance: 0, dueDate: 1, apr: 0, currency: 'USD' 
+    id: null, name: '', limit: '', balance: 0, dueDate: 1, statementDay: 1, apr: 0, currency: 'USD' 
   });
 
   useEffect(() => {
@@ -49,7 +49,7 @@ export default function CreditCards() {
         await api.post(API_URL, formData);
       }
       setShowModal(false);
-      setFormData({ id: null, name: '', limit: '', balance: 0, dueDate: 1, apr: 0, currency: currencies[0]?.code || 'USD' });
+      setFormData({ id: null, name: '', limit: '', balance: 0, dueDate: 1, statementDay: 1, apr: 0, currency: currencies[0]?.code || 'USD' });
       fetchData();
     } catch (err) {
       console.error('Failed to save credit card', err);
@@ -108,7 +108,7 @@ export default function CreditCards() {
           <p className="text-slate-400 font-serif italic text-lg mb-6">{t('No credit cards added yet.')}</p>
           <button 
             onClick={() => {
-              setFormData({ id: null, name: '', limit: '', balance: 0, dueDate: 1, apr: 0, currency: currencies.length ? currencies[0].code : 'USD' });
+              setFormData({ id: null, name: '', limit: '', balance: 0, dueDate: 1, statementDay: 1, apr: 0, currency: currencies.length ? currencies[0].code : 'USD' });
               setShowModal(true);
             }} 
             className="btn-glass px-6 py-2"
@@ -138,9 +138,9 @@ export default function CreditCards() {
                 <div className="mb-6 pr-16">
                   <h3 className="font-serif italic text-white text-xl tracking-wide line-clamp-1">{card.name}</h3>
                   <div className="flex gap-3 text-xs font-medium uppercase tracking-widest mt-2">
-                    <span className="text-slate-400">Due: <span className="text-slate-300">{card.dueDate}{['st','nd','rd'][((card.dueDate+90)%100-10)%10-1]||'th'}</span></span>
+                    <span className="text-slate-400">{t('Due:')} <span className="text-slate-300">{card.dueDate}</span></span>
                     <span className="text-brand-600">•</span>
-                    <span className="text-slate-400">APR: <span className="text-slate-300">{card.apr}%</span></span>
+                    <span className="text-slate-400">{t('APR:')} <span className="text-slate-300">{card.apr}%</span></span>
                   </div>
                 </div>
 
@@ -150,7 +150,7 @@ export default function CreditCards() {
                       {formatCurrency(card.balance, card.currency)}
                     </p>
                     <p className="text-xs text-slate-500 uppercase tracking-widest">
-                      of {formatCurrency(card.limit, card.currency)} limit
+                      {t('of {{limit}} limit', { limit: formatCurrency(card.limit, card.currency) })}
                     </p>
                   </div>
                   
@@ -158,8 +158,8 @@ export default function CreditCards() {
                     <div className={`${isHighUtil ? 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.6)]' : 'bg-gold-500 shadow-[0_0_8px_rgba(212,175,55,0.6)]'} h-full rounded-full transition-all duration-1000`} style={{ width: `${utilization}%` }}></div>
                   </div>
                   <div className="flex justify-between text-xs font-medium uppercase tracking-wider">
-                    <span className={isHighUtil ? 'text-rose-400' : 'text-gold-400'}>{utilization}% Utilized</span>
-                    <span className="text-slate-500">{formatCurrency(card.limit - card.balance, card.currency)} avl.</span>
+                    <span className={isHighUtil ? 'text-rose-400' : 'text-gold-400'}>{t('{{utilization}}% Utilized', { utilization })}</span>
+                    <span className="text-slate-500">{t('{{available}} avl.', { available: formatCurrency(card.limit - card.balance, card.currency) })}</span>
                   </div>
                 </div>
               </div>
@@ -213,15 +213,21 @@ export default function CreditCards() {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Currency</label>
-                <select value={formData.currency} onChange={e => setFormData({...formData, currency: e.target.value})} className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all appearance-none cursor-pointer">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Statement Day')}</label>
+                  <input required type="number" min="1" max="31" value={formData.statementDay || ''} onChange={e => setFormData({...formData, statementDay: e.target.value})} className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif" placeholder="1" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Currency</label>
+                  <select value={formData.currency} onChange={e => setFormData({...formData, currency: e.target.value})} className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all appearance-none cursor-pointer">
                   {currencies.map(c => (
                     <option key={c.id} value={c.code} className="bg-brand-800">{c.code} ({c.symbol})</option>
                   ))}
                   {currencies.length === 0 && <option value="USD" className="bg-brand-800">USD ($)</option>}
                 </select>
               </div>
+            </div>
 
               <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-brand-600/30">
                 <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 text-sm text-slate-400 hover:text-white transition-colors">{t('Cancel')}</button>
@@ -244,7 +250,7 @@ export default function CreditCards() {
               </svg>
             </div>
             <h3 className="text-xl font-serif text-white mb-2 tracking-wide">{t('Delete Credit Card?')}</h3>
-            <p className="text-sm text-slate-400 mb-8 leading-relaxed">Are you sure you want to delete <span className="text-white font-medium">"{deleteData.name}"</span>? This action cannot be undone.</p>
+            <p className="text-sm text-slate-400 mb-8 leading-relaxed">{t('Are you sure you want to delete "{{name}}"? This action cannot be undone.', { name: deleteData.name })}</p>
             
             <div className="flex gap-3 justify-center">
               <button 

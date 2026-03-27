@@ -1,5 +1,4 @@
 const prisma = require('../db');
-const USER_ID = 'default-user-id';
 
 exports.getBudgets = async (req, res) => {
   try {
@@ -8,13 +7,28 @@ exports.getBudgets = async (req, res) => {
     const currentYear = year ? parseInt(year) : new Date().getFullYear();
 
     const budgets = await prisma.budget.findMany({
-      where: { userId: USER_ID, month: currentMonth, year: currentYear },
+      where: { familyId: req.user.familyId, month: currentMonth, year: currentYear },
       include: { category: true }
     });
 
     // Calculate spent for each budget
-    const startDate = new Date(currentYear, currentMonth - 1, 1);
-    const endDate = new Date(currentYear, currentMonth, 0, 23, 59, 59, 999);
+    const settings = await prisma.setting.findUnique({
+      where: { familyId: req.user.familyId }
+    });
+    const budgetStartDay = settings?.budgetStartDay || 1;
+
+    let startDate, endDate;
+    if (budgetStartDay === 1) {
+      startDate = new Date(currentYear, currentMonth - 1, 1);
+      endDate = new Date(currentYear, currentMonth, 0, 23, 59, 59, 999);
+    } else {
+      // If startDay is 18, and we want "March 2026" budget: 
+      // It starts on Feb 18 and ends on Mar 17.
+      startDate = new Date(currentYear, currentMonth - 2, budgetStartDay);
+      endDate = new Date(currentYear, currentMonth - 1, budgetStartDay - 1, 23, 59, 59, 999);
+      // Wait, let's verify: March (3) -> currentMonth-2 is 1 (Feb). Feb 18.
+      // currentMonth-1 is 2 (Mar). Mar 17. Correct.
+    }
 
     const budgetsWithSpent = await Promise.all(budgets.map(async (budget) => {
       const transactions = await prisma.transaction.aggregate({
@@ -51,8 +65,8 @@ exports.createBudget = async (req, res) => {
 
     const budget = await prisma.budget.upsert({
       where: {
-        userId_categoryId_month_year: {
-          userId: USER_ID,
+        familyId_categoryId_month_year: {
+          familyId: req.user.familyId,
           categoryId,
           month: currentMonth,
           year: currentYear
@@ -60,7 +74,7 @@ exports.createBudget = async (req, res) => {
       },
       update: { amount: parseFloat(amount) },
       create: {
-        userId: USER_ID,
+        familyId: req.user.familyId,
         categoryId,
         amount: parseFloat(amount),
         month: currentMonth,
@@ -80,7 +94,7 @@ exports.deleteBudget = async (req, res) => {
   try {
     const { id } = req.params;
     await prisma.budget.delete({
-      where: { id, userId: USER_ID }
+      where: { id, familyId: req.user.familyId }
     });
     res.json({ success: true });
   } catch (error) {

@@ -12,20 +12,23 @@ export default function Analytics() {
   const [transactions, setTransactions] = useState([]);
   const [categories, setCategories] = useState([]);
   const [budgets, setBudgets] = useState([]);
+  const [ratesData, setRatesData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [timeRange, setTimeRange] = useState('6M');
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const [txRes, catRes, budgRes] = await Promise.all([
+        const [txRes, catRes, budgRes, rateRes] = await Promise.all([
           api.get('/transactions'),
           api.get('/categories'),
-          api.get('/budgets')
+          api.get('/budgets'),
+          api.get('/currencies/rates')
         ]);
         setTransactions(txRes.data);
         setCategories(catRes.data);
         setBudgets(budgRes.data);
+        setRatesData(rateRes.data);
       } catch (err) {
         console.error('Failed to load analytics data', err);
       } finally {
@@ -60,14 +63,23 @@ export default function Analytics() {
   const expenses = filteredTx.filter(tx => tx.type === 'expense');
   const income = filteredTx.filter(tx => tx.type === 'income');
 
+  // Helper to convert to preferred currency
+  const convert = (amount, fromCode) => {
+    if (!ratesData || !ratesData.rates || fromCode === ratesData.base) return amount;
+    const rate = ratesData.rates[fromCode];
+    if (rate) return amount / rate;
+    return amount;
+  };
+
   // 1. Spending by Category (Pie Chart)
   const spendByCat = {};
   const spendByCatId = {}; // Helpful for budget mapping
   expenses.forEach(tx => {
     const catName = tx.category?.name || 'Uncategorized';
     const catId = tx.category?.id || 'uncategorized';
-    spendByCat[catName] = (spendByCat[catName] || 0) + tx.amount;
-    spendByCatId[catId] = (spendByCatId[catId] || 0) + tx.amount;
+    const convertedAmount = convert(tx.amount, tx.account?.currency || 'USD');
+    spendByCat[catName] = (spendByCat[catName] || 0) + convertedAmount;
+    spendByCatId[catId] = (spendByCatId[catId] || 0) + convertedAmount;
   });
   
   const categoryData = Object.entries(spendByCat)
@@ -89,17 +101,18 @@ export default function Analytics() {
 
   for(let i = monthsToIterate - 1; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const key = d.toLocaleString('default', { month: 'short', year: '2-digit' });
-    monthlyFlows[key] = { name: key, Income: 0, Expenses: 0 };
+    const key = d.toLocaleString(settings?.language || 'en-US', { month: 'short', year: '2-digit' });
+    monthlyFlows[key] = { name: key, [t('Income')]: 0, [t('Expenses')]: 0 };
     monthList.push(key);
   }
 
   filteredTx.forEach(tx => {
     const tDate = new Date(tx.date);
-    const key = tDate.toLocaleString('default', { month: 'short', year: '2-digit' });
+    const key = tDate.toLocaleString(settings?.language || 'en-US', { month: 'short', year: '2-digit' });
     if (monthlyFlows[key]) {
-      if (tx.type === 'income') monthlyFlows[key].Income += tx.amount;
-      else monthlyFlows[key].Expenses += tx.amount;
+      const convertedAmount = convert(tx.amount, tx.account?.currency || 'USD');
+      if (tx.type === 'income') monthlyFlows[key][t('Income')] += convertedAmount;
+      else monthlyFlows[key][t('Expenses')] += convertedAmount;
     }
   });
 
@@ -128,9 +141,9 @@ export default function Analytics() {
 
     return {
       name: catName,
-      Budget: targetAmount,
-      Spent: catSpend,
-      Remaining: targetAmount - catSpend
+      [t('Budget')]: targetAmount,
+      [t('Spent')]: catSpend,
+      [t('Remaining')]: targetAmount - catSpend
     };
   }).sort((a, b) => b.Budget - a.Budget); // sort by largest budget
 
@@ -199,7 +212,7 @@ export default function Analytics() {
               </ResponsiveContainer>
             ) : (
               <div className="flex bg-brand-900/40 border border-brand-600/30 rounded-xl justify-center items-center h-full text-slate-500 font-serif italic shadow-inner">
-                No expense data in this period
+                {t('No expense data in this period')}
               </div>
             )}
           </div>
@@ -226,7 +239,7 @@ export default function Analytics() {
                   labelStyle={{ color: '#94a3b8', marginBottom: '8px', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.1em' }}
                 />
                 <Legend iconType="circle" wrapperStyle={{ paddingTop: "20px", fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#94a3b8' }} />
-                <Bar dataKey="Income" fill="url(#colorIncome)" radius={[4, 4, 0, 0]} barSize={16}>
+                <Bar dataKey={t('Income')} fill="url(#colorIncome)" radius={[4, 4, 0, 0]} barSize={16}>
                   <defs>
                     <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#10b981" stopOpacity={1}/>
@@ -234,7 +247,7 @@ export default function Analytics() {
                     </linearGradient>
                   </defs>
                 </Bar>
-                <Bar dataKey="Expenses" fill="url(#colorExpense)" radius={[4, 4, 0, 0]} barSize={16}>
+                <Bar dataKey={t('Expenses')} fill="url(#colorExpense)" radius={[4, 4, 0, 0]} barSize={16}>
                   <defs>
                     <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#f43f5e" stopOpacity={1}/>
@@ -269,7 +282,7 @@ export default function Analytics() {
                     labelStyle={{ color: '#94a3b8', marginBottom: '8px', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.1em' }}
                   />
                   <Legend iconType="circle" wrapperStyle={{ paddingTop: "20px", fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#94a3b8' }} />
-                  <Bar dataKey="Budget" fill="url(#colorBudget)" radius={[0, 4, 4, 0]} barSize={12}>
+                  <Bar dataKey={t('Budget')} fill="url(#colorBudget)" radius={[0, 4, 4, 0]} barSize={12}>
                     <defs>
                       <linearGradient id="colorBudget" x1="0" y1="0" x2="1" y2="0">
                         <stop offset="5%" stopColor="#d4af37" stopOpacity={1}/>
@@ -277,7 +290,7 @@ export default function Analytics() {
                       </linearGradient>
                     </defs>
                   </Bar>
-                  <Bar dataKey="Spent" fill="url(#colorSpent)" radius={[0, 4, 4, 0]} barSize={12}>
+                  <Bar dataKey={t('Spent')} fill="url(#colorSpent)" radius={[0, 4, 4, 0]} barSize={12}>
                     <defs>
                       <linearGradient id="colorSpent" x1="0" y1="0" x2="1" y2="0">
                         <stop offset="5%" stopColor="#0ea5e9" stopOpacity={1}/>
@@ -289,7 +302,7 @@ export default function Analytics() {
               </ResponsiveContainer>
             ) : (
               <div className="flex bg-brand-900/40 border border-brand-600/30 rounded-xl justify-center items-center h-full text-slate-500 font-serif italic shadow-inner">
-                No active budgets found. Create one to see the comparison.
+                {t('No active budgets found. Create one to see the comparison.')}
               </div>
             )}
           </div>

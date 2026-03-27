@@ -9,6 +9,7 @@ export function SettingsProvider({ children }) {
   const [settings, setSettings] = useState({
     defaultCurrency: 'USD',
     language: 'en-US',
+    fontFamily: 'Outfit',
     theme: 'light'
   });
   const [isLoading, setIsLoading] = useState(true);
@@ -26,7 +27,18 @@ export function SettingsProvider({ children }) {
   };
 
   useEffect(() => {
-    fetchSettings();
+    if (settings.fontFamily) {
+      document.body.style.fontFamily = `'${settings.fontFamily}', sans-serif`;
+    }
+  }, [settings.fontFamily]);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      fetchSettings();
+    } else {
+      setIsLoading(false);
+    }
   }, []);
 
   const updateSettings = async (newSettings) => {

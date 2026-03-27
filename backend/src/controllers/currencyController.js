@@ -1,11 +1,11 @@
 const prisma = require('../db');
+const currencyService = require('../services/currencyService');
 
-const USER_ID = 'default-user-id';
 
 exports.getCurrencies = async (req, res) => {
   try {
     const currencies = await prisma.currency.findMany({
-      where: { userId: USER_ID },
+      where: { familyId: req.user.familyId },
       orderBy: { code: 'asc' }
     });
 
@@ -20,9 +20,9 @@ exports.getCurrencies = async (req, res) => {
       }
 
       const defaultCurrencies = [
-        { userId: USER_ID, code: 'USD', symbol: '$', name: 'US Dollar' },
-        { userId: USER_ID, code: 'CRC', symbol: '₡', name: 'Costa Rican Colón' },
-        { userId: USER_ID, code: 'EUR', symbol: '€', name: 'Euro' },
+        { familyId: req.user.familyId, code: 'USD', symbol: '$', name: 'US Dollar' },
+        { familyId: req.user.familyId, code: 'CRC', symbol: '₡', name: 'Costa Rican Colón' },
+        { familyId: req.user.familyId, code: 'EUR', symbol: '€', name: 'Euro' },
       ];
 
       // SQLite does not support skipDuplicates, use isolated createMany or catch on duplicate keys
@@ -35,7 +35,7 @@ exports.getCurrencies = async (req, res) => {
       }
 
       const newCurrencies = await prisma.currency.findMany({
-        where: { userId: USER_ID },
+        where: { familyId: req.user.familyId },
         orderBy: { code: 'asc' }
       });
       return res.json(newCurrencies);
@@ -52,7 +52,7 @@ exports.createCurrency = async (req, res) => {
   try {
     const { code, symbol, name } = req.body;
     const currency = await prisma.currency.create({
-      data: { userId: USER_ID, code, symbol, name }
+      data: { familyId: req.user.familyId, code, symbol, name }
     });
     res.status(201).json(currency);
   } catch (error) {
@@ -65,7 +65,7 @@ exports.updateCurrency = async (req, res) => {
     const { id } = req.params;
     const { code, symbol, name } = req.body;
     const currency = await prisma.currency.update({
-      where: { id, userId: USER_ID },
+      where: { id, familyId: req.user.familyId },
       data: { code, symbol, name }
     });
     res.json(currency);
@@ -78,10 +78,24 @@ exports.deleteCurrency = async (req, res) => {
   try {
     const { id } = req.params;
     await prisma.currency.delete({
-      where: { id, userId: USER_ID }
+      where: { id, familyId: req.user.familyId }
     });
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete currency' });
+  }
+};
+
+exports.getRates = async (req, res) => {
+  try {
+    const settings = await prisma.setting.findUnique({
+      where: { familyId: req.user.familyId }
+    });
+    const base = settings?.defaultCurrency || 'USD';
+    const rates = await currencyService.getExchangeRates(base);
+    res.json({ base, rates });
+  } catch (error) {
+    console.error('getRates error:', error);
+    res.status(500).json({ error: 'Failed to fetch exchange rates' });
   }
 };

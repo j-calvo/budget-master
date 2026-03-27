@@ -3,13 +3,12 @@ const fs = require('fs');
 const csv = require('csv-parser');
 const { parse: parseCsv } = require('json2csv');
 
-const USER_ID = 'default-user-id';
 
 exports.getTransactions = async (req, res) => {
   try {
     const transactions = await prisma.transaction.findMany({
       where: {
-        account: { userId: USER_ID }
+        account: { familyId: req.user.familyId }
       },
       include: {
         category: true,
@@ -34,7 +33,7 @@ exports.getTransactionById = async (req, res) => {
       }
     });
 
-    if (!transaction || transaction.account.userId !== USER_ID) {
+    if (!transaction || transaction.account.familyId !== req.user.familyId) {
       return res.status(404).json({ error: 'Transaction not found' });
     }
 
@@ -50,7 +49,7 @@ exports.createTransaction = async (req, res) => {
     
     // Verify account belongs to user
     const account = await prisma.account.findUnique({ where: { id: accountId } });
-    if (!account || account.userId !== USER_ID) {
+    if (!account || account.familyId !== req.user.familyId) {
       return res.status(403).json({ error: 'Unauthorized or account not found' });
     }
 
@@ -92,7 +91,7 @@ exports.updateTransaction = async (req, res) => {
       include: { account: true }
     });
 
-    if (!oldTx || oldTx.account.userId !== USER_ID) {
+    if (!oldTx || oldTx.account.familyId !== req.user.familyId) {
       return res.status(404).json({ error: 'Transaction not found' });
     }
 
@@ -138,7 +137,7 @@ exports.deleteTransaction = async (req, res) => {
       include: { account: true }
     });
 
-    if (!transaction || transaction.account.userId !== USER_ID) {
+    if (!transaction || transaction.account.familyId !== req.user.familyId) {
       return res.status(404).json({ error: 'Transaction not found' });
     }
 
@@ -160,7 +159,7 @@ exports.deleteTransaction = async (req, res) => {
 exports.exportTransactions = async (req, res) => {
   try {
     const transactions = await prisma.transaction.findMany({
-      where: { account: { userId: USER_ID } },
+      where: { account: { familyId: req.user.familyId } },
       include: { category: true, account: true },
       orderBy: { date: 'desc' }
     });
@@ -202,8 +201,8 @@ exports.importTransactions = async (req, res) => {
         let importedCount = 0;
         
         // Fetch valid accounts/categories to map IDs
-        const accounts = await prisma.account.findMany({ where: { userId: USER_ID } });
-        const categories = await prisma.category.findMany({ where: { userId: USER_ID } });
+        const accounts = await prisma.account.findMany({ where: { familyId: req.user.familyId } });
+        const categories = await prisma.category.findMany({ where: { familyId: req.user.familyId } });
 
         // Basic default fallbacks
         const defaultAccount = accounts[0];
