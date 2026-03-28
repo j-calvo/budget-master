@@ -146,7 +146,7 @@ export default function Accounts() {
               <div className="flex justify-between items-start mb-6">
                 <div>
                   <h3 className="font-serif italic text-white text-xl tracking-wide line-clamp-1">{acc.name}</h3>
-                  <p className="text-xs font-medium text-slate-500 uppercase tracking-widest mt-1">{acc.institution || 'Bank'} • {acc.type}</p>
+                  <p className="text-xs font-medium text-slate-400 uppercase tracking-widest mt-1">{acc.institution || 'Bank'} • {acc.type}</p>
                 </div>
                 <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button onClick={(e) => { e.stopPropagation(); handleEditClick(acc); }} className="text-slate-400 hover:text-gold-400 transition-colors p-1">
@@ -158,7 +158,7 @@ export default function Accounts() {
                 </div>
               </div>
               <div className="mt-8 flex items-end justify-between">
-                <p className="text-sm font-medium text-slate-500 uppercase tracking-wider">{t('Balance')}</p>
+                <p className="text-sm font-medium text-slate-400 uppercase tracking-wider">{t('Balance')}</p>
                 <p className="text-2xl font-light font-serif text-white tracking-wide">
                   {new Intl.NumberFormat('en-US', { style: 'currency', currency: acc.currency || 'USD' }).format(acc.balance)}
                 </p>

@@ -70,7 +70,7 @@ export default function FamilySettings() {
                 </button>
               )}
             </div>
-            <p className="text-xs text-slate-500 mt-3 font-serif italic">{t('Share this code securely with family to join this workspace.')}</p>
+            <p className="text-xs text-slate-400 mt-3 font-serif italic">{t('Share this code securely with family to join this workspace.')}</p>
           </div>
 
           <div className="glass-panel p-6 rounded-xl border border-brand-600/30 md:col-span-2">
@@ -97,7 +97,7 @@ export default function FamilySettings() {
                     </span>
                     
                     {user.role === 'ADMIN' && member.userId !== user.id && (
-                      <button onClick={() => removeMember(member.userId)} className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors" title={t("Remove Member")}>
+                      <button onClick={() => removeMember(member.userId)} className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors" title={t("Remove Member")}>
                         <Trash2 size={16} />
                       </button>
                     )}

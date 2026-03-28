@@ -158,7 +158,7 @@ export default function Budgets() {
                   <span className={`text-2xl font-light font-serif tracking-wide ${valueColor}`}>
                     {formatCurrency(budget.spent)}
                   </span>
-                  <span className="text-xs font-medium text-slate-500 uppercase tracking-widest mb-1">
+                  <span className="text-xs font-medium text-slate-400 uppercase tracking-widest mb-1">
                     {t('of {{total}}', { total: formatCurrency(budget.amount) })}
                   </span>
                 </div>

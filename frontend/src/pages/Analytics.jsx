@@ -211,7 +211,7 @@ export default function Analytics() {
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex bg-brand-900/40 border border-brand-600/30 rounded-xl justify-center items-center h-full text-slate-500 font-serif italic shadow-inner">
+              <div className="flex bg-brand-900/40 border border-brand-600/30 rounded-xl justify-center items-center h-full text-slate-400 font-serif italic shadow-inner">
                 {t('No expense data in this period')}
               </div>
             )}
@@ -230,7 +230,7 @@ export default function Analytics() {
               <BarChart data={barData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(148, 163, 184, 0.1)" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.05em'}} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 10, fontFamily: 'serif'}} tickFormatter={(val) => `${val >= 1000 ? (val/1000)+'k' : val}`} />
+                <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 10, fontFamily: 'var(--font-serif)'}} tickFormatter={(val) => `${val >= 1000 ? (val/1000)+'k' : val}`} />
                 <Tooltip 
                   cursor={{fill: 'rgba(255, 255, 255, 0.05)'}}
                   formatter={(value) => <span className="font-serif text-slate-100">{formatCurrency(value)}</span>}
@@ -272,7 +272,7 @@ export default function Analytics() {
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={budgetData} layout="vertical" margin={{ top: 20, right: 30, left: 60, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(148, 163, 184, 0.1)" />
-                  <XAxis type="number" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 10, fontFamily: 'serif'}} tickFormatter={(val) => `${val >= 1000 ? (val/1000)+'k' : val}`} />
+                  <XAxis type="number" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 10, fontFamily: 'var(--font-serif)'}} tickFormatter={(val) => `${val >= 1000 ? (val/1000)+'k' : val}`} />
                   <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#cbd5e1', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em'}} width={120} />
                   <Tooltip 
                     cursor={{fill: 'rgba(255, 255, 255, 0.05)'}}
@@ -301,7 +301,7 @@ export default function Analytics() {
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex bg-brand-900/40 border border-brand-600/30 rounded-xl justify-center items-center h-full text-slate-500 font-serif italic shadow-inner">
+              <div className="flex bg-brand-900/40 border border-brand-600/30 rounded-xl justify-center items-center h-full text-slate-400 font-serif italic shadow-inner">
                 {t('No active budgets found. Create one to see the comparison.')}
               </div>
             )}
@@ -342,8 +342,8 @@ export default function Analytics() {
           </div>
         ) : (
           <div className="bg-brand-900/40 border border-brand-600/30 rounded-xl p-8 text-center mt-4">
-            <p className="text-slate-500 font-serif italic mb-2">No expenses found for this time period.</p>
-            <p className="text-xs text-slate-600 uppercase tracking-widest">Try selecting a different time range</p>
+            <p className="text-slate-400 font-serif italic mb-2">{t('No expenses found for this time period.')}</p>
+            <p className="text-xs text-slate-500 uppercase tracking-widest">Try selecting a different time range</p>
           </div>
         )}
       </div>

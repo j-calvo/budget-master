@@ -73,7 +73,7 @@ export default function Currencies() {
   };
 
   if (isLoading) return (
-    <div className="flex justify-center items-center h-64 text-slate-500 font-medium italic">
+    <div className="flex justify-center items-center h-64 text-slate-400 font-medium italic">
       {t('Loading converter...')}
     </div>
   );
@@ -116,7 +116,7 @@ export default function Currencies() {
               {/* Conversion Controls */}
               <div className="grid grid-cols-1 md:grid-cols-7 items-center gap-4">
                 <div className="md:col-span-3">
-                  <label className="block text-[10px] font-bold text-slate-500 mb-2 uppercase tracking-widest ml-1">{t('From')}</label>
+                  <label className="block text-[10px] font-bold text-slate-400 mb-2 uppercase tracking-widest ml-1">{t('From')}</label>
                   <select
                     value={fromCurrency}
                     onChange={(e) => setFromCurrency(e.target.value)}
@@ -138,7 +138,7 @@ export default function Currencies() {
                 </div>
 
                 <div className="md:col-span-3">
-                  <label className="block text-[10px] font-bold text-slate-500 mb-2 uppercase tracking-widest ml-1">{t('To')}</label>
+                  <label className="block text-[10px] font-bold text-slate-400 mb-2 uppercase tracking-widest ml-1">{t('To')}</label>
                   <select
                     value={toCurrency}
                     onChange={(e) => setToCurrency(e.target.value)}
@@ -175,7 +175,7 @@ export default function Currencies() {
               <Clock size={20} />
             </div>
             <div>
-              <p className="text-xs text-slate-500 uppercase tracking-widest mb-1">{t('Market Data Status')}</p>
+              <p className="text-xs text-slate-400 uppercase tracking-widest mb-1">{t('Market Data Status')}</p>
               <p className="text-sm text-slate-300 font-medium">
                 {t('Last updated')}: {ratesData?.updatedAt ? new Date(ratesData.updatedAt).toLocaleString() : t('Real-time')}
               </p>

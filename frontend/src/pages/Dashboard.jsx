@@ -130,7 +130,7 @@ export default function Dashboard() {
   }, []);
 
   if (settingsLoading || loadingDb) return (
-    <div className="flex justify-center items-center h-64 text-slate-500 font-medium">
+    <div className="flex justify-center items-center h-64 text-slate-400 font-medium">
       Loading dashboard...
     </div>
   );
@@ -225,8 +225,8 @@ export default function Dashboard() {
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1C2641" strokeOpacity={0.5} />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12, fontFamily: 'Outfit'}} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12, fontFamily: 'Outfit'}} tickFormatter={(value) => `${value >= 1000 ? (value/1000)+'k' : value}`} />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12, fontFamily: 'inherit'}} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12, fontFamily: 'inherit'}} tickFormatter={(value) => `${value >= 1000 ? (value/1000)+'k' : value}`} />
                 <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#F3E5AB', strokeWidth: 1, strokeDasharray: '4 4', opacity: 0.4 }} />
                 <Area type="monotone" dataKey={t('Income')} stroke="#D4AF37" strokeWidth={3} fillOpacity={1} fill="url(#colorIncome)" activeDot={{ r: 6, fill: '#0A0F1C', stroke: '#D4AF37', strokeWidth: 2 }} />
                 <Area type="monotone" dataKey={t('Expenses')} stroke="#f43f5e" strokeWidth={2} fillOpacity={1} fill="url(#colorExpense)" activeDot={{ r: 5, fill: '#0A0F1C', stroke: '#f43f5e', strokeWidth: 2 }} />
@@ -244,7 +244,7 @@ export default function Dashboard() {
           </h2>
           
           {recentTransactions.length === 0 ? (
-            <div className="flex-1 flex flex-col items-center justify-center text-slate-500 text-sm italic font-serif opacity-70">
+            <div className="flex-1 flex flex-col items-center justify-center text-slate-400 text-sm italic font-serif opacity-70">
               {t('No recent transactions')}
             </div>
           ) : (
@@ -260,7 +260,7 @@ export default function Dashboard() {
                       </div>
                       <div>
                         <p className="font-medium text-slate-200 text-sm line-clamp-1">{tx.description}</p>
-                        <p className="text-xs text-slate-500 mt-0.5 tracking-wide uppercase">{new Date(tx.date).toLocaleDateString(settings?.language || 'en-US', { month: 'short', day: 'numeric' })}</p>
+                        <p className="text-xs text-slate-400 mt-0.5 tracking-wide uppercase">{new Date(tx.date).toLocaleDateString(settings?.language || 'en-US', { month: 'short', day: 'numeric' })}</p>
                       </div>
                     </div>
                     <div className="text-right whitespace-nowrap">

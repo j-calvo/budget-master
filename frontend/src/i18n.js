@@ -237,7 +237,19 @@ const resources = {
       "Wednesday": "Wednesday",
       "Thursday": "Thursday",
       "Friday": "Friday",
-      "Saturday": "Saturday"
+      "Saturday": "Saturday",
+      "Manage your income and expenses": "Manage your income and expenses",
+      "Manage your monthly spending limits": "Manage your monthly spending limits",
+      "Manage your mortgages and structured debt": "Manage your mortgages and structured debt",
+      "Manage your banking and investment accounts": "Manage your banking and investment accounts",
+      "Track your credit utilization and bills": "Track your credit utilization and bills",
+      "No APR history recorded.": "No APR history recorded.",
+      "No expenses found for this time period.": "No expenses found for this time period.",
+      "of": "of",
+      "No schedule available": "No schedule available",
+      "No payments registered yet.": "No payments registered yet.",
+      "This will remove the payment entry and restore the principal to the loan balance.": "This will remove the payment entry and restore the principal to the loan balance.",
+      "Settings saved successfully!": "Settings saved successfully!"
     }
   },
   'es': {
@@ -474,7 +486,19 @@ const resources = {
       "Wednesday": "Miércoles",
       "Thursday": "Jueves",
       "Friday": "Viernes",
-      "Saturday": "Sábado"
+      "Saturday": "Sábado",
+      "Manage your income and expenses": "Gestiona tus ingresos y gastos",
+      "Manage your monthly spending limits": "Gestiona tus límites de gasto mensuales",
+      "Manage your mortgages and structured debt": "Gestiona tus hipotecas y deudas estructuradas",
+      "Manage your banking and investment accounts": "Gestiona tus cuentas bancarias y de inversión",
+      "Track your credit utilization and bills": "Rastrea la utilización de tu crédito y facturas",
+      "No APR history recorded.": "No hay historial de APR registrado.",
+      "No expenses found for this time period.": "No se encontraron gastos para este periodo.",
+      "of": "de",
+      "No schedule available": "No hay cronograma disponible",
+      "No payments registered yet.": "No hay pagos registrados todavía.",
+      "This will remove the payment entry and restore the principal to the loan balance.": "Esto eliminará la entrada de pago y restaurará el capital al saldo del préstamo.",
+      "Settings saved successfully!": "¡Configuraciones guardadas exitosamente!"
     }
   }
 };

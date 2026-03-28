@@ -153,7 +153,7 @@ export default function FinancialTimeline({ cards, loans, settings, metrics }) {
 
                 {/* Day Line & Number */}
                 <div className={`w-1 transition-all rounded-full ${isToday ? 'h-10 bg-gold-500 shadow-[0_0_10px_rgba(212,175,55,0.8)]' : 'h-6 bg-brand-600/30 group-hover/day:bg-brand-600/60'}`}></div>
-                <span className={`text-[10px] mt-2 font-bold tracking-tighter ${isToday ? 'text-gold-400' : 'text-slate-500 group-hover/day:text-slate-300'}`}>
+                <span className={`text-[10px] mt-2 font-bold tracking-tighter ${isToday ? 'text-gold-400' : 'text-slate-400 group-hover/day:text-slate-300'}`}>
                   {day}
                 </span>
                 
@@ -168,7 +168,7 @@ export default function FinancialTimeline({ cards, loans, settings, metrics }) {
         </div>
       </div>
 
-      <div className="mt-4 pt-4 border-t border-brand-600/30 flex flex-wrap gap-4 text-[10px] uppercase tracking-widest font-bold text-slate-500">
+      <div className="mt-4 pt-4 border-t border-brand-600/30 flex flex-wrap gap-4 text-[10px] uppercase tracking-widest font-bold text-slate-400">
         <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-emerald-400"></div> {t('Pay Day')}</div>
         <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-gold-400"></div> {t('Credit Card Due')}</div>
         <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-blue-400"></div> {t('Loan Installment')}</div>

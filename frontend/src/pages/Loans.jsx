@@ -281,7 +281,7 @@ export default function Loans() {
                 <div className="flex justify-between items-end mb-4">
                   <div>
                     <p className="text-3xl font-light font-serif text-white tracking-wide mb-1">{fmt(loan.balance, loan.currency)}</p>
-                    <p className="text-xs text-slate-500 uppercase tracking-widest">of {fmt(loan.originalBalance, loan.currency)}</p>
+                    <p className="text-xs text-slate-400 uppercase tracking-widest">{t('of')} {fmt(loan.originalBalance, loan.currency)}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-sm border border-gold-500/20 bg-gold-500/10 text-gold-400 px-3 py-1 rounded-md mb-1 font-medium">{fmt(loan.monthlyPayment + loan.insuranceCost, loan.currency)}/mo</p>
@@ -292,7 +292,7 @@ export default function Loans() {
                 <div className="w-full bg-brand-900/50 rounded-full h-1.5 mb-2 overflow-hidden border border-brand-600/30">
                   <div className="bg-gold-500 shadow-[0_0_8px_rgba(212,175,55,0.6)] h-full rounded-full transition-all duration-1000" style={{ width: `${progress}%` }} />
                 </div>
-                <div className="flex justify-between items-center text-xs text-slate-500 uppercase tracking-widest font-medium">
+                <div className="flex justify-between items-center text-xs text-slate-400 uppercase tracking-widest font-medium">
                   <span>{t('{{progress}}% paid', { progress: progress.toFixed(1) })}</span>
                   {isSelected && <span className="text-gold-400 flex items-center gap-1 animate-pulse">{t('Viewing details')} <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg></span>}
                 </div>
@@ -334,7 +334,7 @@ export default function Loans() {
                 className="bg-brand-800 hover:bg-brand-700 border border-brand-600 text-white text-xs uppercase tracking-wider px-4 py-2.5 rounded-lg font-medium transition-colors">
                 {t('Early Payment')}
               </button>
-              <button onClick={() => setSelectedLoan(null)} className="text-slate-500 hover:text-white p-2 transition-colors ml-2 bg-brand-900 rounded-full border border-brand-600/50">
+              <button onClick={() => setSelectedLoan(null)} className="text-slate-400 hover:text-white p-2 transition-colors ml-2 bg-brand-900 rounded-full border border-brand-600/50">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
@@ -344,7 +344,7 @@ export default function Loans() {
           <div className="flex border-b border-brand-600/30 px-8 bg-brand-900/20">
             {['schedule', 'payments', 'apr_history'].map(tab => (
               <button key={tab} onClick={() => setDetailTab(tab)}
-                className={`px-5 py-3.5 text-xs font-medium uppercase tracking-widest border-b-2 transition-all whitespace-nowrap ${detailTab === tab ? 'border-gold-500 text-gold-400 glow-text-gold' : 'border-transparent text-slate-500 hover:text-slate-300'}`}>
+                className={`px-5 py-3.5 text-xs font-medium uppercase tracking-widest border-b-2 transition-all whitespace-nowrap ${detailTab === tab ? 'border-gold-500 text-gold-400 glow-text-gold' : 'border-transparent text-slate-400 hover:text-slate-300'}`}>
                 {tab === 'schedule' ? t('Amortization Schedule') : tab === 'payments' ? t('Payment History ({{count}})', { count: payments.length }) : t('APR History')}
               </button>
             ))}
@@ -382,10 +382,10 @@ export default function Loans() {
                           </td>
                           <td className="px-6 py-4 text-right font-bold text-emerald-400">−{fmt(row.principal, selectedLoan.currency)}</td>
                           <td className="px-6 py-4 text-right text-emerald-500">{fmt(row.principal, selectedLoan.currency)}</td>
-                          <td className="px-6 py-4 text-right text-slate-500">—</td>
-                          <td className="px-6 py-4 text-right text-slate-500">—</td>
+                          <td className="px-6 py-4 text-right text-slate-400">—</td>
+                          <td className="px-6 py-4 text-right text-slate-400">—</td>
                           <td className="px-6 py-4 text-right font-semibold text-emerald-300">{fmt(row.balance, selectedLoan.currency)}</td>
-                          <td className="px-6 py-4 text-right text-xs text-slate-500 italic max-w-[120px] truncate">{row.notes}</td>
+                          <td className="px-6 py-4 text-right text-xs text-slate-400 italic max-w-[120px] truncate">{row.notes}</td>
                         </tr>
                       );
                     }
@@ -394,13 +394,13 @@ export default function Loans() {
                     const paid = row.isPaid;
                     return (
                       <tr key={`inst-${row.month}`} className={`transition-colors ${paid ? 'bg-brand-900/30' : 'hover:bg-brand-800/40'}`}>
-                        <td className={`px-6 py-4 font-medium ${paid ? 'text-slate-600' : 'text-slate-400'}`}>{row.month}</td>
-                        <td className={`px-6 py-4 text-right font-mono text-xs ${paid ? 'text-slate-600' : 'text-slate-300'}`}>{row.dueDate}</td>
-                        <td className={`px-6 py-4 text-right font-serif tracking-wide ${paid ? 'text-slate-600 line-through' : 'text-white font-medium'}`}>{fmt(row.payment, selectedLoan.currency)}</td>
-                        <td className={`px-6 py-4 text-right ${paid ? 'text-slate-600' : 'text-emerald-400'}`}>{fmt(row.principal, selectedLoan.currency)}</td>
-                        <td className={`px-6 py-4 text-right ${paid ? 'text-slate-600' : 'text-amber-400'}`}>{fmt(row.interest, selectedLoan.currency)}</td>
-                        <td className={`px-6 py-4 text-right ${paid ? 'text-slate-600' : 'text-slate-400'}`}>{fmt(row.insurance, selectedLoan.currency)}</td>
-                        <td className={`px-6 py-4 text-right font-serif ${paid ? 'text-slate-500' : 'text-slate-100'}`}>{fmt(row.balance, selectedLoan.currency)}</td>
+                        <td className={`px-6 py-4 font-medium ${paid ? 'text-slate-500' : 'text-slate-400'}`}>{row.month}</td>
+                        <td className={`px-6 py-4 text-right font-mono text-xs ${paid ? 'text-slate-500' : 'text-slate-300'}`}>{row.dueDate}</td>
+                        <td className={`px-6 py-4 text-right font-serif tracking-wide ${paid ? 'text-slate-500 line-through' : 'text-white font-medium'}`}>{fmt(row.payment, selectedLoan.currency)}</td>
+                        <td className={`px-6 py-4 text-right ${paid ? 'text-slate-500' : 'text-emerald-400'}`}>{fmt(row.principal, selectedLoan.currency)}</td>
+                        <td className={`px-6 py-4 text-right ${paid ? 'text-slate-500' : 'text-amber-400'}`}>{fmt(row.interest, selectedLoan.currency)}</td>
+                        <td className={`px-6 py-4 text-right ${paid ? 'text-slate-500' : 'text-slate-400'}`}>{fmt(row.insurance, selectedLoan.currency)}</td>
+                        <td className={`px-6 py-4 text-right font-serif ${paid ? 'text-slate-400' : 'text-slate-100'}`}>{fmt(row.balance, selectedLoan.currency)}</td>
                         <td className="px-6 py-4 text-right">
                           {paid ? (
                             <span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-bold text-slate-400 bg-slate-800 px-3 py-1 rounded-full border border-slate-700">
@@ -421,7 +421,7 @@ export default function Loans() {
                   })}
                 </tbody>
               </table>
-              {schedule.length === 0 && <p className="text-center py-12 text-slate-500 font-serif italic">No schedule available</p>}
+              {schedule.length === 0 && <p className="text-center py-12 text-slate-400 font-serif italic">{t('No schedule available')}</p>}
             </div>
           )}
 
@@ -447,9 +447,9 @@ export default function Loans() {
                       <td className="px-6 py-4 text-right text-emerald-400">{fmt(p.principal, selectedLoan.currency)}</td>
                       <td className="px-6 py-4 text-right text-amber-400">{fmt(p.interest, selectedLoan.currency)}</td>
                       <td className="px-6 py-4 text-right text-slate-400">{fmt(p.insuranceCost, selectedLoan.currency)}</td>
-                      <td className="px-6 py-4 text-right text-slate-500 text-xs max-w-[120px] truncate">{p.notes}</td>
+                      <td className="px-6 py-4 text-right text-slate-400 text-xs max-w-[120px] truncate">{p.notes}</td>
                       <td className="px-6 py-4 text-right">
-                        <button onClick={() => setDeletePaymentData({ id: p.id })} className="text-slate-500 hover:text-rose-400 transition-colors p-1">
+                        <button onClick={() => setDeletePaymentData({ id: p.id })} className="text-slate-400 hover:text-rose-400 transition-colors p-1">
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                         </button>
                       </td>
@@ -457,7 +457,7 @@ export default function Loans() {
                   ))}
                 </tbody>
               </table>
-              {payments.length === 0 && <p className="text-center py-12 text-slate-500 font-serif italic">No payments registered yet.</p>}
+              {payments.length === 0 && <p className="text-center py-12 text-slate-400 font-serif italic">{t('No payments registered yet.')}</p>}
             </div>
           )}
 
@@ -466,7 +466,7 @@ export default function Loans() {
             <div className="p-8 bg-brand-900/10 min-h-[200px]">
               {selectedLoan.isVariableRate ? (
                  <div className="space-y-3 max-h-80 overflow-y-auto custom-scrollbar pr-2">
-                  {(selectedLoan.aprHistory || []).length === 0 && <p className="text-slate-400 text-sm italic font-serif text-center mt-8">No APR history recorded.</p>}
+                  {(selectedLoan.aprHistory || []).length === 0 && <p className="text-slate-400 text-sm italic font-serif text-center mt-8">{t('No APR history recorded.')}</p>}
                   {[...(selectedLoan.aprHistory || [])].reverse().map((entry, i) => (
                     <div key={i} className="flex justify-between items-center bg-brand-900/40 border border-brand-600/30 rounded-lg px-5 py-3.5 text-sm hover:border-gold-500/30 transition-colors group">
                       <span className="text-slate-400 font-mono text-xs">{new Date(entry.date).toLocaleDateString(settings?.language || 'en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</span>
@@ -475,7 +475,7 @@ export default function Loans() {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-12 text-slate-500 font-serif">
+                <div className="text-center py-12 text-slate-400 font-serif">
                   <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-brand-900/40 border border-brand-600/30 flex items-center justify-center text-brand-600">
                     <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m0 0v2m0-2h2m-2 0H10M12 9v.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                   </div>
@@ -637,7 +637,7 @@ export default function Loans() {
               {paymentForm.type === 'installment' ? 'Register Installment' : 'Register Early Payment'}
               <span className="absolute -bottom-2 left-0 w-12 h-[2px] bg-gold-500/50"></span>
             </h2>
-            <p className="text-xs text-slate-400 mb-8 uppercase tracking-wider mt-5">Loan: <span className="font-medium text-white">{selectedLoan.name}</span></p>
+            <p className="text-xs text-slate-400 mb-8 uppercase tracking-wider mt-5">{t('Loan:')} <span className="font-medium text-white">{selectedLoan.name}</span></p>
 
             {/* Type toggle */}
             <div className="flex gap-3 mb-6 bg-brand-900/40 p-1.5 rounded-xl border border-brand-600/30">
@@ -676,7 +676,7 @@ export default function Loans() {
                       className="w-full p-3 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-white transition-all font-serif [color-scheme:dark]" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Notes <span className="text-slate-600 font-normal lowercase">(optional)</span></label>
+                    <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Notes <span className="text-slate-500 font-normal lowercase">(optional)</span></label>
                     <input type="text" value={paymentForm.notes}
                       onChange={e => setPaymentForm({ ...paymentForm, notes: e.target.value })}
                       className="w-full p-3 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-white transition-all font-serif italic"
@@ -711,7 +711,7 @@ export default function Loans() {
                     <input required type="date" value={paymentForm.paymentDate} onChange={e => setPaymentForm({ ...paymentForm, paymentDate: e.target.value })} className="w-full p-3 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif [color-scheme:dark]" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Notes <span className="text-slate-600 font-normal lowercase">(optional)</span></label>
+                    <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Notes <span className="text-slate-500 font-normal lowercase">(optional)</span></label>
                     <input type="text" value={paymentForm.notes} onChange={e => setPaymentForm({ ...paymentForm, notes: e.target.value })} className="w-full p-3 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif italic" placeholder="e.g. March payment" />
                   </div>
                 </>
@@ -757,7 +757,7 @@ export default function Loans() {
               <svg className="w-8 h-8 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
             </div>
             <h3 className="text-xl font-serif text-white mb-2 tracking-wide">Remove Payment?</h3>
-            <p className="text-sm text-slate-400 mb-8 leading-relaxed">This will remove the payment entry and restore the principal to the loan balance.</p>
+            <p className="text-sm text-slate-400 mb-8 leading-relaxed">{t('This will remove the payment entry and restore the principal to the loan balance.')}</p>
             <div className="flex gap-3 justify-center">
               <button onClick={() => setDeletePaymentData({ id: null })} className="btn-glass px-4 py-2.5 flex-1 text-sm tracking-wide">Cancel</button>
               <button onClick={handleDeletePayment} className="bg-rose-600 hover:bg-rose-500 text-white px-4 py-2.5 rounded-lg transition-colors flex-1 text-sm font-medium shadow-[0_0_15px_rgba(244,63,94,0.3)] tracking-wide">Remove</button>

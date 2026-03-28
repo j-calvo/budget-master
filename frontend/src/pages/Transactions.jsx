@@ -188,7 +188,7 @@ export default function Transactions() {
         </div>
         
         {transactions.length === 0 ? (
-          <div className="p-16 text-center text-slate-500 italic font-serif">
+          <div className="p-16 text-center text-slate-400 italic font-serif">
             {t('No transactions found.')}
           </div>
         ) : (
@@ -202,7 +202,7 @@ export default function Transactions() {
                   </div>
                   <div>
                     <p className="font-medium text-slate-200">{tx.description}</p>
-                    <p className="text-xs text-slate-500">{tx.account?.name}</p>
+                    <p className="text-xs text-slate-400">{tx.account?.name}</p>
                   </div>
                 </div>
                 <div>

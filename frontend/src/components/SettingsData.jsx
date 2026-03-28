@@ -179,7 +179,7 @@ export default function SettingsData() {
                   <div className="w-8 h-8 rounded-full border-2 border-brand-900 shadow-[0_0_10px_rgba(0,0,0,0.5)]" style={{ backgroundColor: cat.color }}></div>
                   <div>
                     <p className="font-bold text-slate-200 tracking-wide">{cat.name}</p>
-                    <p className="text-[10px] uppercase tracking-widest text-slate-500 mt-1">{cat.type.replace('_', ' ')}</p>
+                    <p className="text-[10px] uppercase tracking-widest text-slate-400 mt-1">{cat.type.replace('_', ' ')}</p>
                   </div>
                 </div>
                 <div className="flex gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -211,7 +211,7 @@ export default function SettingsData() {
                   </div>
                   <div>
                     <p className="font-bold text-slate-200 tracking-wide">{curr.code}</p>
-                    <p className="text-xs text-slate-500 font-serif italic mt-0.5">{curr.name}</p>
+                    <p className="text-xs text-slate-400 font-serif italic mt-0.5">{curr.name}</p>
                   </div>
                 </div>
                 <div className="flex gap-3 opacity-0 group-hover:opacity-100 transition-opacity">

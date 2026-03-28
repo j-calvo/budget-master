@@ -149,7 +149,7 @@ export default function CreditCards() {
                     <p className="text-3xl font-light font-serif text-white mb-1 tracking-wide">
                       {formatCurrency(card.balance, card.currency)}
                     </p>
-                    <p className="text-xs text-slate-500 uppercase tracking-widest">
+                    <p className="text-xs text-slate-400 uppercase tracking-widest">
                       {t('of {{limit}} limit', { limit: formatCurrency(card.limit, card.currency) })}
                     </p>
                   </div>
@@ -159,7 +159,7 @@ export default function CreditCards() {
                   </div>
                   <div className="flex justify-between text-xs font-medium uppercase tracking-wider">
                     <span className={isHighUtil ? 'text-rose-400' : 'text-gold-400'}>{t('{{utilization}}% Utilized', { utilization })}</span>
-                    <span className="text-slate-500">{t('{{available}} avl.', { available: formatCurrency(card.limit - card.balance, card.currency) })}</span>
+                    <span className="text-slate-400">{t('{{available}} avl.', { available: formatCurrency(card.limit - card.balance, card.currency) })}</span>
                   </div>
                 </div>
               </div>

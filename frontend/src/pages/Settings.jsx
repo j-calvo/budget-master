@@ -23,6 +23,7 @@ export default function Settings() {
   });
   const [currencies, setCurrencies] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
 
   // Sync state once context loads
   useEffect(() => {
@@ -33,18 +34,20 @@ export default function Settings() {
     api.get(CURR_URL).then(res => setCurrencies(res.data)).catch(err => console.error(err));
   }, []);
 
-  if (isLoading) return <div className="text-slate-500">Loading settings...</div>;
+  if (isLoading) return <div className="text-slate-400">Loading settings...</div>;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSaving(true);
     await updateSettings(formData);
     setIsSaving(false);
+    setIsSaved(true);
+    setTimeout(() => setIsSaved(false), 3000);
   };
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto pb-24 lg:pb-8">
-      <h1 className="text-4xl font-serif text-white tracking-wide glow-text-white mb-1">{t('Global Settings')}</h1>
+      <h1 className="text-4xl text-white tracking-wide glow-text-white mb-1">{t('Global Settings')}</h1>
 
       <div className="flex gap-3 mb-6 overflow-x-auto pb-2">
         <button
@@ -81,7 +84,7 @@ export default function Settings() {
           <div className="absolute -top-24 -right-24 w-64 h-64 bg-gold-500/5 rounded-full blur-3xl group-hover:bg-gold-500/10 transition-colors pointer-events-none"></div>
           <form onSubmit={handleSubmit} className="space-y-8 relative z-10">
             <div>
-              <h2 className="text-xl font-serif text-white mb-6 flex items-center gap-2">
+              <h2 className="text-xl text-white mb-6 flex items-center gap-2">
                 <div className="w-1 h-5 bg-gold-500 rounded-full"></div>
                 {t('Localization Preferences')}
               </h2>
@@ -99,7 +102,7 @@ export default function Settings() {
                     <option value="en-US" className="bg-brand-800">{t('English (US)')}</option>
                     <option value="es" className="bg-brand-800">{t('Spanish (LatAm)')}</option>
                   </select>
-                  <p className="text-xs text-slate-500 mt-2 font-serif italic">{t('Dictates date formats and UI translations')}</p>
+                  <p className="text-xs text-slate-400 mt-2 italic">{t('Dictates date formats and UI translations')}</p>
                 </div>
 
                 <div>
@@ -115,7 +118,7 @@ export default function Settings() {
                       <option key={c.id} value={c.code} className="bg-brand-800">{c.code} ({c.symbol})</option>
                     ))}
                   </select>
-                  <p className="text-xs text-slate-500 mt-2 font-serif italic">{t('Used for aggregate dashboard numbers')}</p>
+                  <p className="text-xs text-slate-400 mt-2 italic">{t('Used for aggregate dashboard numbers')}</p>
                 </div>
 
                 <div>
@@ -132,7 +135,7 @@ export default function Settings() {
                     <option value="Montserrat" className="bg-brand-800 font-montserrat">Montserrat (Classic)</option>
                     <option value="Playfair Display" className="bg-brand-800 font-serif">Playfair Display (Elegant)</option>
                   </select>
-                  <p className="text-xs text-slate-500 mt-2 font-serif italic">{t('Choose a typeface that best suits your reading preference')}</p>
+                  <p className="text-xs text-slate-400 mt-2 italic">{t('Choose a typeface that best suits your reading preference')}</p>
                 </div>
 
                 <div>
@@ -168,7 +171,7 @@ export default function Settings() {
                       <option value={5} className="bg-brand-800">{t('Friday')}</option>
                       <option value={6} className="bg-brand-800">{t('Saturday')}</option>
                     </select>
-                    <p className="text-xs text-slate-500 mt-2 font-serif italic">{t('Used to align your liquidity forecast')}</p>
+                    <p className="text-xs text-slate-400 mt-2 italic">{t('Used to align your liquidity forecast')}</p>
                   </div>
                 ) : (
                   <div className={`grid ${formData.payFrequency === 'twice_monthly' ? 'grid-cols-2 gap-4' : 'grid-cols-1'}`}>
@@ -182,11 +185,11 @@ export default function Settings() {
                         max="31"
                         value={formData.payDay}
                         onChange={e => setFormData({ ...formData, payDay: parseInt(e.target.value) })}
-                        className="w-full p-3 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif"
+                        className="w-full p-3 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all"
                         placeholder="15"
                       />
                       {formData.payFrequency !== 'twice_monthly' && (
-                        <p className="text-xs text-slate-500 mt-2 font-serif italic">{t('Used to align your liquidity forecast')}</p>
+                        <p className="text-xs text-slate-400 mt-2 italic">{t('Used to align your liquidity forecast')}</p>
                       )}
                     </div>
                     {formData.payFrequency === 'twice_monthly' && (
@@ -200,7 +203,7 @@ export default function Settings() {
                           max="31"
                           value={formData.payDay2 || 28}
                           onChange={e => setFormData({ ...formData, payDay2: parseInt(e.target.value) })}
-                          className="w-full p-3 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif"
+                          className="w-full p-3 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all"
                           placeholder="28"
                         />
                       </div>
@@ -218,16 +221,17 @@ export default function Settings() {
                     max="28"
                     value={formData.budgetStartDay}
                     onChange={e => setFormData({ ...formData, budgetStartDay: parseInt(e.target.value) })}
-                    className="w-full p-3 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif"
+                    className="w-full p-3 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all"
                     placeholder="1"
                   />
-                  <p className="text-xs text-slate-500 mt-2 font-serif italic">{t('Define when your monthly budget period begins')}</p>
+                  <p className="text-xs text-slate-400 mt-2 italic">{t('Define when your monthly budget period begins')}</p>
                 </div>
 
               </div>
             </div>
 
-            <div className="pt-6 border-t border-brand-600/30 flex justify-end">
+            <div className="pt-6 border-t border-brand-600/30 flex justify-end items-center gap-4">
+              {isSaved && <span className="text-emerald-400 text-sm font-medium transition-opacity duration-300">{t('Settings saved successfully!')}</span>}
               <button
                 type="submit"
                 disabled={isSaving}

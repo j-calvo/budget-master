@@ -68,10 +68,10 @@ export default function Register() {
             <label className="block text-slate-400 text-sm mb-1 tracking-wide uppercase">{t('Family Invite (Optional)')}</label>
             <input 
               type="text" placeholder={t('Got an invite?')}
-              className="w-full bg-brand-800/50 border border-brand-600/30 rounded-lg px-4 py-2.5 text-white focus:border-gold-500 focus:outline-none placeholder:text-slate-600 font-light"
+              className="w-full bg-brand-800/50 border border-brand-600/30 rounded-lg px-4 py-2.5 text-white focus:border-gold-500 focus:outline-none placeholder:text-slate-500 font-light"
               value={formData.inviteCode} onChange={e => setFormData({...formData, inviteCode: e.target.value})} 
             />
-            <p className="text-xs text-slate-500 mt-1 italic">{t('Leave empty to create a new Family Workspace.')}</p>
+            <p className="text-xs text-slate-400 mt-1 italic">{t('Leave empty to create a new Family Workspace.')}</p>
           </div>
           <button type="submit" className="w-full mt-6 bg-gradient-to-r from-gold-600 to-gold-500 hover:from-gold-500 hover:to-gold-400 text-brand-900 font-bold py-3 rounded-xl transition-all shadow-[0_4px_15px_rgba(212,175,55,0.3)] hover:shadow-[0_4px_25px_rgba(212,175,55,0.5)]">
             {t('Create Account')}
