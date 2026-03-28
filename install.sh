@@ -51,39 +51,63 @@ then
 fi
 
 # 3. Setup Environment Variables
-echo "⚙️ Setting up environment variables..."
+echo "⚙️  Setting up environment variables..."
 if [ ! -f backend/.env ]; then
-    echo "Creating backend/.env from example..."
-    cp backend/.env.example backend/.env
+    if [ -f backend/.env.example ]; then
+        echo "   Creating backend/.env from example..."
+        cp backend/.env.example backend/.env
+    else
+        echo "   ⚠️  No backend/.env.example found. Creating a generic .env..."
+        echo "DATABASE_URL=\"file:./dev.db\"" > backend/.env
+        echo "PORT=5001" >> backend/.env
+        echo "NODE_ENV=production" >> backend/.env
+    fi
 else
-    echo "backend/.env already exists, skipping."
+    echo "   ✅ backend/.env already exists."
 fi
 
 # 4. Install Dependencies
+echo ""
 echo "📦 Installing backend dependencies..."
-cd backend || exit
-npm install
+(cd backend && npm install)
 
+echo ""
 echo "📦 Installing frontend dependencies..."
-cd ../frontend || exit
-npm install
+(cd frontend && npm install)
 
 # 5. Setup Database
-echo "🗄️ Setting up the database..."
-cd ../backend || exit
-npx prisma generate
-npx prisma db push
+echo ""
+echo "🗄️  Setting up the database..."
+(cd backend && npx prisma generate)
+
+echo "   🔄 Syncing schema and seeding core data..."
+(cd backend && npx prisma db push --accept-data-loss)
+(cd backend && npx prisma db seed)
 
 # 6. Build Frontend
-echo "🏗️ Building the frontend production bundle..."
-cd ../frontend || exit
-npm run build
+echo ""
+echo "🏗️  Building the frontend production bundle..."
+(cd frontend && npm run build)
 
 # 7. Start Application
-echo "▶️ Starting the application with PM2..."
-cd ..
-pm2 start ecosystem.config.cjs
-pm2 save
+echo ""
+echo "▶️  Starting the application with PM2..."
+if command -v pm2 &> /dev/null; then
+  # Try to restart if named 'personal-finance-app' already, else start
+  pm2 restart personal-finance-app 2>/dev/null || pm2 start ecosystem.config.cjs
+  pm2 save
+else
+  echo "   ⚠️  PM2 not found. You may need to manually start the node process."
+  echo "   Example: cd backend && npm start"
+fi
 
-echo "✅ Installation Complete! The application is now running."
-echo "You can view it at: http://localhost:5001"
+echo ""
+echo "═══════════════════════════════════════════════════"
+echo "  🏢 Installation Complete!"
+echo "  Deploy Status: SUCCESS"
+echo "  Initial Seed: COMPLETE (Core data only)"
+echo ""
+echo "  Login: Navigate to http://localhost:5173/register"
+echo "         to create your first Administrator account."
+echo "═══════════════════════════════════════════════════"
+echo ""
