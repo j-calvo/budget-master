@@ -24,18 +24,33 @@ export default function Budgets() {
 
   const fetchData = async () => {
     try {
-      const [budRes, catRes, currRes] = await Promise.all([
+      const [budRes, catRes, currRes] = await Promise.allSettled([
         api.get(API_URL),
         api.get(CATS_URL),
         api.get('/currencies')
       ]);
-      setBudgets(budRes.data);
-      setCurrencies(currRes.data);
-      // Filter out income categories for budgeting
-      const expCats = catRes.data.filter(c => c.type !== 'income');
-      setCategories(expCats);
-      if (expCats.length > 0) {
-        setNewBudget(p => ({ ...p, categoryId: expCats[0].id }));
+
+      if (budRes.status === 'fulfilled') {
+        setBudgets(budRes.value.data);
+      } else {
+        console.error('Failed to fetch budgets:', budRes.reason);
+      }
+
+      if (currRes.status === 'fulfilled') {
+        setCurrencies(currRes.value.data);
+      } else {
+        console.error('Failed to fetch currencies:', currRes.reason);
+      }
+
+      if (catRes.status === 'fulfilled') {
+        // Filter out income categories for budgeting
+        const expCats = catRes.value.data.filter(c => c.type !== 'income');
+        setCategories(expCats);
+        if (expCats.length > 0) {
+          setNewBudget(p => ({ ...p, categoryId: expCats[0].id }));
+        }
+      } else {
+        console.error('Failed to fetch categories:', catRes.reason);
       }
     } catch (err) {
       console.error(err);
