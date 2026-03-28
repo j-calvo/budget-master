@@ -255,11 +255,11 @@ export default function Loans() {
               >
                 <div className="absolute top-0 right-0 w-32 h-32 bg-gold-500/5 rounded-full blur-2xl -z-10 mix-blend-screen transition-all group-hover:bg-gold-500/10"></div>
 
-                <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={e => { e.stopPropagation(); openLoanForm(loan); }} className="text-slate-400 hover:text-gold-400 p-1 transition-colors">
+                <div className="absolute top-4 right-4 flex gap-2 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button onClick={e => { e.stopPropagation(); openLoanForm(loan); }} className="text-slate-400 hover:text-gold-400 p-2 md:p-1 transition-colors active:scale-90">
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                   </button>
-                  <button onClick={e => { e.stopPropagation(); setDeleteData({ id: loan.id, name: loan.name }); }} className="text-slate-400 hover:text-rose-400 p-1 transition-colors">
+                  <button onClick={e => { e.stopPropagation(); setDeleteData({ id: loan.id, name: loan.name }); }} className="text-slate-400 hover:text-rose-400 p-2 md:p-1 transition-colors active:scale-90">
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                   </button>
                 </div>
@@ -304,47 +304,51 @@ export default function Loans() {
 
       {/* Detail Panel */}
       {selectedLoan && (
-        <div className="glass-card overflow-hidden mt-8 animate-in slide-in-from-bottom-4 duration-500">
-          <div className="flex flex-wrap justify-between items-center px-8 py-6 border-b border-brand-600/30 bg-brand-900/40 gap-4">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <h2 className="text-2xl font-serif italic text-white tracking-wide">{selectedLoan.name}</h2>
-                {selectedLoan.isVariableRate && (
-                  <span className="text-[10px] bg-amber-500/10 border border-amber-500/20 text-amber-400 px-2.5 py-0.5 rounded-full font-medium uppercase tracking-widest glow-text-amber">{t('Variable APR')}: {selectedLoan.interestRate}%</span>
-                )}
+        <div className="glass-card overflow-hidden mt-6 md:mt-8 animate-in slide-in-from-bottom-4 duration-500">
+          {/* Detail Header — stacks vertically on mobile */}
+          <div className="px-5 md:px-8 py-5 md:py-6 border-b border-brand-600/30 bg-brand-900/40">
+            <div className="flex justify-between items-start mb-3">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 md:gap-3 mb-2 flex-wrap">
+                  <h2 className="text-xl md:text-2xl font-serif italic text-white tracking-wide">{selectedLoan.name}</h2>
+                  {selectedLoan.isVariableRate && (
+                    <span className="text-[10px] bg-amber-500/10 border border-amber-500/20 text-amber-400 px-2.5 py-0.5 rounded-full font-medium uppercase tracking-widest glow-text-amber">{t('Variable APR')}: {selectedLoan.interestRate}%</span>
+                  )}
+                </div>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-xs font-medium text-slate-400 uppercase tracking-widest">
+                  <span>{t('Balance')}: <span className="text-white ml-1">{fmt(selectedLoan.balance, selectedLoan.currency)}</span></span>
+                  <span className="hidden sm:inline text-brand-600">•</span>
+                  <span>{t('Payment')}: <span className="text-white ml-1">{fmt(selectedLoan.monthlyPayment + selectedLoan.insuranceCost, selectedLoan.currency)}/{t('mo')}</span></span>
+                </div>
               </div>
-              <p className="text-xs font-medium text-slate-400 uppercase tracking-widest flex items-center gap-3">
-                <span>{t('Balance')}: <span className="text-white ml-1">{fmt(selectedLoan.balance, selectedLoan.currency)}</span></span>
-                <span className="text-brand-600">•</span>
-                <span>{t('Payment')}: <span className="text-white ml-1">{fmt(selectedLoan.monthlyPayment + selectedLoan.insuranceCost, selectedLoan.currency)}/{t('mo')}</span></span>
-              </p>
+              <button onClick={() => setSelectedLoan(null)} className="text-slate-400 hover:text-white p-2 transition-colors bg-brand-900 rounded-full border border-brand-600/50 shrink-0 ml-2">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
             </div>
-            <div className="flex gap-3 flex-wrap items-center">
+            {/* Action buttons — full-width grid on mobile, inline on desktop */}
+            <div className="grid grid-cols-2 md:flex gap-2 md:gap-3 mt-4">
               {selectedLoan.isVariableRate && (
                 <button onClick={() => { setNewApr(String(selectedLoan.interestRate)); setShowAprModal(true); }}
-                  className="bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 text-xs uppercase tracking-wider px-4 py-2.5 rounded-lg font-medium transition-colors">
+                  className="bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 text-[10px] md:text-xs uppercase tracking-wider px-3 md:px-4 py-2.5 rounded-lg font-medium transition-colors">
                   {t('Update APR')}
                 </button>
               )}
               <button onClick={() => { prefillPayment('installment'); setShowPaymentModal(true); }}
-                className="btn-gold px-4 py-2.5 text-xs">
+                className="btn-gold px-3 md:px-4 py-2.5 text-[10px] md:text-xs">
                 {t('Register Installment')}
               </button>
               <button onClick={() => { prefillPayment('early_payment'); setShowPaymentModal(true); }}
-                className="bg-brand-800 hover:bg-brand-700 border border-brand-600 text-white text-xs uppercase tracking-wider px-4 py-2.5 rounded-lg font-medium transition-colors">
+                className="bg-brand-800 hover:bg-brand-700 border border-brand-600 text-white text-[10px] md:text-xs uppercase tracking-wider px-3 md:px-4 py-2.5 rounded-lg font-medium transition-colors">
                 {t('Early Payment')}
-              </button>
-              <button onClick={() => setSelectedLoan(null)} className="text-slate-400 hover:text-white p-2 transition-colors ml-2 bg-brand-900 rounded-full border border-brand-600/50">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
           </div>
 
-          {/* Tabs */}
-          <div className="flex border-b border-brand-600/30 px-8 bg-brand-900/20">
+          {/* Tabs — scrollable on mobile */}
+          <div className="flex border-b border-brand-600/30 px-4 md:px-8 bg-brand-900/20 overflow-x-auto custom-scrollbar">
             {['schedule', 'payments', 'apr_history'].map(tab => (
               <button key={tab} onClick={() => setDetailTab(tab)}
-                className={`px-5 py-3.5 text-xs font-medium uppercase tracking-widest border-b-2 transition-all whitespace-nowrap ${detailTab === tab ? 'border-gold-500 text-gold-400 glow-text-gold' : 'border-transparent text-slate-400 hover:text-slate-300'}`}>
+                className={`px-3 md:px-5 py-3 md:py-3.5 text-[10px] md:text-xs font-medium uppercase tracking-widest border-b-2 transition-all whitespace-nowrap ${detailTab === tab ? 'border-gold-500 text-gold-400 glow-text-gold' : 'border-transparent text-slate-400 hover:text-slate-300'}`}>
                 {tab === 'schedule' ? t('Amortization Schedule') : tab === 'payments' ? t('Payment History ({{count}})', { count: payments.length }) : t('APR History')}
               </button>
             ))}
@@ -352,112 +356,221 @@ export default function Loans() {
 
           {/* Schedule */}
           {detailTab === 'schedule' && (
-            <div className="overflow-x-auto max-h-[480px] overflow-y-auto custom-scrollbar bg-brand-900/10">
-              <table className="w-full text-sm text-left border-collapse">
-                <thead className="bg-brand-900/60 text-slate-400 text-[10px] uppercase tracking-widest sticky top-0 z-10 backdrop-blur-md">
-                  <tr>
-                    <th className="px-6 py-4 font-semibold border-b border-brand-600/30">#</th>
-                    <th className="px-6 py-4 text-right font-semibold border-b border-brand-600/30">{t('Date')}</th>
-                    <th className="px-6 py-4 text-right font-semibold border-b border-brand-600/30">{t('Payment')}</th>
-                    <th className="px-6 py-4 text-right font-semibold border-b border-brand-600/30">{t('Principal')}</th>
-                    <th className="px-6 py-4 text-right font-semibold border-b border-brand-600/30">{t('Interest')}</th>
-                    <th className="px-6 py-4 text-right font-semibold border-b border-brand-600/30">{t('Insurance')}</th>
-                    <th className="px-6 py-4 text-right font-semibold border-b border-brand-600/30">{t('Balance')}</th>
-                    <th className="px-6 py-4 border-b border-brand-600/30"></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-brand-800/50">
-                  {schedule.map((row, idx) => {
-                    if (row.rowType === 'early_payment') {
+            <div className="max-h-[480px] overflow-y-auto custom-scrollbar bg-brand-900/10">
+
+              {/* ═══ MOBILE: Card layout for schedule ═══ */}
+              <div className="md:hidden divide-y divide-brand-600/20">
+                {schedule.map((row, idx) => {
+                  if (row.rowType === 'early_payment') {
+                    return (
+                      <div key={`ep-${idx}`} className="p-4 bg-emerald-500/5 border-l-2 border-l-emerald-500">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full">
+                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                            {t('Early Payment')}
+                          </span>
+                          <span className="text-[11px] text-slate-500 font-mono">{row.date}</span>
+                        </div>
+                        <div className="flex justify-between items-baseline">
+                          <span className="text-emerald-400 font-serif font-bold">−{fmt(row.principal, selectedLoan.currency)}</span>
+                          <span className="text-[10px] text-slate-500 uppercase tracking-widest">{t('Balance')}: <span className="text-emerald-300 font-medium">{fmt(row.balance, selectedLoan.currency)}</span></span>
+                        </div>
+                        {row.notes && <p className="text-[11px] text-slate-500 italic mt-1 truncate">{row.notes}</p>}
+                      </div>
+                    );
+                  }
+
+                  const paid = row.isPaid;
+                  return (
+                    <div key={`inst-${row.month}`} className={`p-4 ${paid ? 'opacity-60' : ''}`}>
+                      <div className="flex justify-between items-center mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-[11px] font-bold rounded-md px-2 py-0.5 ${paid ? 'bg-slate-800 text-slate-500' : 'bg-brand-800 text-slate-300'}`}>#{row.month}</span>
+                          <span className={`text-[11px] font-mono ${paid ? 'text-slate-500' : 'text-slate-400'}`}>{row.dueDate}</span>
+                        </div>
+                        {paid ? (
+                          <span className="inline-flex items-center gap-1 text-[9px] uppercase tracking-widest font-bold text-slate-400 bg-slate-800 px-2.5 py-1 rounded-full border border-slate-700">
+                            <svg className="w-2.5 h-2.5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                            {t('Paid')}
+                          </span>
+                        ) : (
+                          <button onClick={() => openPayFromRow(row)}
+                            className="text-[9px] uppercase tracking-widest font-bold text-gold-400 bg-gold-500/10 hover:bg-gold-500/20 border border-gold-500/30 px-3 py-1 rounded-full transition-colors active:scale-95">
+                            {t('Mark Paid')}
+                          </button>
+                        )}
+                      </div>
+                      <div className={`font-serif text-base mb-2 ${paid ? 'text-slate-500 line-through' : 'text-white font-medium'}`}>
+                        {fmt(row.payment, selectedLoan.currency)}
+                      </div>
+                      <div className="grid grid-cols-4 gap-2 text-[10px]">
+                        <div>
+                          <p className="text-slate-500 uppercase tracking-wider mb-0.5">{t('Principal')}</p>
+                          <p className={paid ? 'text-slate-500' : 'text-emerald-400'}>{fmt(row.principal, selectedLoan.currency)}</p>
+                        </div>
+                        <div>
+                          <p className="text-slate-500 uppercase tracking-wider mb-0.5">{t('Interest')}</p>
+                          <p className={paid ? 'text-slate-500' : 'text-amber-400'}>{fmt(row.interest, selectedLoan.currency)}</p>
+                        </div>
+                        <div>
+                          <p className="text-slate-500 uppercase tracking-wider mb-0.5">{t('Insurance')}</p>
+                          <p className={paid ? 'text-slate-500' : 'text-slate-400'}>{fmt(row.insurance, selectedLoan.currency)}</p>
+                        </div>
+                        <div>
+                          <p className="text-slate-500 uppercase tracking-wider mb-0.5">{t('Balance')}</p>
+                          <p className={paid ? 'text-slate-400' : 'text-slate-100 font-medium'}>{fmt(row.balance, selectedLoan.currency)}</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                {schedule.length === 0 && <p className="text-center py-12 text-slate-400 font-serif italic">{t('No schedule available')}</p>}
+              </div>
+
+              {/* ═══ DESKTOP: Table layout for schedule ═══ */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-sm text-left border-collapse">
+                  <thead className="bg-brand-900/60 text-slate-400 text-[10px] uppercase tracking-widest sticky top-0 z-10 backdrop-blur-md">
+                    <tr>
+                      <th className="px-6 py-4 font-semibold border-b border-brand-600/30">#</th>
+                      <th className="px-6 py-4 text-right font-semibold border-b border-brand-600/30">{t('Date')}</th>
+                      <th className="px-6 py-4 text-right font-semibold border-b border-brand-600/30">{t('Payment')}</th>
+                      <th className="px-6 py-4 text-right font-semibold border-b border-brand-600/30">{t('Principal')}</th>
+                      <th className="px-6 py-4 text-right font-semibold border-b border-brand-600/30">{t('Interest')}</th>
+                      <th className="px-6 py-4 text-right font-semibold border-b border-brand-600/30">{t('Insurance')}</th>
+                      <th className="px-6 py-4 text-right font-semibold border-b border-brand-600/30">{t('Balance')}</th>
+                      <th className="px-6 py-4 border-b border-brand-600/30"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-brand-800/50">
+                    {schedule.map((row, idx) => {
+                      if (row.rowType === 'early_payment') {
+                        return (
+                          <tr key={`ep-${idx}`} className="bg-brand-800/20 hover:bg-brand-800/40 transition-colors">
+                            <td colSpan={2} className="px-6 py-4">
+                              <div className="flex items-center gap-3">
+                                <span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full glow-text-emerald">
+                                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                                  {t('Early Payment')}
+                                </span>
+                                <span className="text-xs text-slate-400">{row.date}</span>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 text-right font-bold text-emerald-400">−{fmt(row.principal, selectedLoan.currency)}</td>
+                            <td className="px-6 py-4 text-right text-emerald-500">{fmt(row.principal, selectedLoan.currency)}</td>
+                            <td className="px-6 py-4 text-right text-slate-400">—</td>
+                            <td className="px-6 py-4 text-right text-slate-400">—</td>
+                            <td className="px-6 py-4 text-right font-semibold text-emerald-300">{fmt(row.balance, selectedLoan.currency)}</td>
+                            <td className="px-6 py-4 text-right text-xs text-slate-400 italic max-w-[120px] truncate">{row.notes}</td>
+                          </tr>
+                        );
+                      }
+                      const paid = row.isPaid;
                       return (
-                        <tr key={`ep-${idx}`} className="bg-brand-800/20 hover:bg-brand-800/40 transition-colors">
-                          <td colSpan={2} className="px-6 py-4">
-                            <div className="flex items-center gap-3">
-                              <span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full glow-text-emerald">
-                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
-                                {t('Early Payment')}
+                        <tr key={`inst-${row.month}`} className={`transition-colors ${paid ? 'bg-brand-900/30' : 'hover:bg-brand-800/40'}`}>
+                          <td className={`px-6 py-4 font-medium ${paid ? 'text-slate-500' : 'text-slate-400'}`}>{row.month}</td>
+                          <td className={`px-6 py-4 text-right font-mono text-xs ${paid ? 'text-slate-500' : 'text-slate-300'}`}>{row.dueDate}</td>
+                          <td className={`px-6 py-4 text-right font-serif tracking-wide ${paid ? 'text-slate-500 line-through' : 'text-white font-medium'}`}>{fmt(row.payment, selectedLoan.currency)}</td>
+                          <td className={`px-6 py-4 text-right ${paid ? 'text-slate-500' : 'text-emerald-400'}`}>{fmt(row.principal, selectedLoan.currency)}</td>
+                          <td className={`px-6 py-4 text-right ${paid ? 'text-slate-500' : 'text-amber-400'}`}>{fmt(row.interest, selectedLoan.currency)}</td>
+                          <td className={`px-6 py-4 text-right ${paid ? 'text-slate-500' : 'text-slate-400'}`}>{fmt(row.insurance, selectedLoan.currency)}</td>
+                          <td className={`px-6 py-4 text-right font-serif ${paid ? 'text-slate-400' : 'text-slate-100'}`}>{fmt(row.balance, selectedLoan.currency)}</td>
+                          <td className="px-6 py-4 text-right">
+                            {paid ? (
+                              <span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-bold text-slate-400 bg-slate-800 px-3 py-1 rounded-full border border-slate-700">
+                                <svg className="w-3 h-3 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                                {t('Paid')}
                               </span>
-                              <span className="text-xs text-slate-400">{row.date}</span>
-                            </div>
+                            ) : (
+                              <button onClick={() => openPayFromRow(row)}
+                                className="text-[10px] uppercase tracking-widest font-bold text-gold-400 bg-gold-500/10 hover:bg-gold-500/20 border border-gold-500/30 px-3.5 py-1.5 rounded-full transition-colors whitespace-nowrap glow-text-gold">
+                                {t('Mark Paid')}
+                              </button>
+                            )}
                           </td>
-                          <td className="px-6 py-4 text-right font-bold text-emerald-400">−{fmt(row.principal, selectedLoan.currency)}</td>
-                          <td className="px-6 py-4 text-right text-emerald-500">{fmt(row.principal, selectedLoan.currency)}</td>
-                          <td className="px-6 py-4 text-right text-slate-400">—</td>
-                          <td className="px-6 py-4 text-right text-slate-400">—</td>
-                          <td className="px-6 py-4 text-right font-semibold text-emerald-300">{fmt(row.balance, selectedLoan.currency)}</td>
-                          <td className="px-6 py-4 text-right text-xs text-slate-400 italic max-w-[120px] truncate">{row.notes}</td>
                         </tr>
                       );
-                    }
-
-                    // installment row
-                    const paid = row.isPaid;
-                    return (
-                      <tr key={`inst-${row.month}`} className={`transition-colors ${paid ? 'bg-brand-900/30' : 'hover:bg-brand-800/40'}`}>
-                        <td className={`px-6 py-4 font-medium ${paid ? 'text-slate-500' : 'text-slate-400'}`}>{row.month}</td>
-                        <td className={`px-6 py-4 text-right font-mono text-xs ${paid ? 'text-slate-500' : 'text-slate-300'}`}>{row.dueDate}</td>
-                        <td className={`px-6 py-4 text-right font-serif tracking-wide ${paid ? 'text-slate-500 line-through' : 'text-white font-medium'}`}>{fmt(row.payment, selectedLoan.currency)}</td>
-                        <td className={`px-6 py-4 text-right ${paid ? 'text-slate-500' : 'text-emerald-400'}`}>{fmt(row.principal, selectedLoan.currency)}</td>
-                        <td className={`px-6 py-4 text-right ${paid ? 'text-slate-500' : 'text-amber-400'}`}>{fmt(row.interest, selectedLoan.currency)}</td>
-                        <td className={`px-6 py-4 text-right ${paid ? 'text-slate-500' : 'text-slate-400'}`}>{fmt(row.insurance, selectedLoan.currency)}</td>
-                        <td className={`px-6 py-4 text-right font-serif ${paid ? 'text-slate-400' : 'text-slate-100'}`}>{fmt(row.balance, selectedLoan.currency)}</td>
-                        <td className="px-6 py-4 text-right">
-                          {paid ? (
-                            <span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-bold text-slate-400 bg-slate-800 px-3 py-1 rounded-full border border-slate-700">
-                              <svg className="w-3 h-3 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
-                              {t('Paid')}
-                            </span>
-                          ) : (
-                            <button
-                              onClick={() => openPayFromRow(row)}
-                              className="text-[10px] uppercase tracking-widest font-bold text-gold-400 bg-gold-500/10 hover:bg-gold-500/20 border border-gold-500/30 px-3.5 py-1.5 rounded-full transition-colors whitespace-nowrap glow-text-gold"
-                            >
-                              {t('Mark Paid')}
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-              {schedule.length === 0 && <p className="text-center py-12 text-slate-400 font-serif italic">{t('No schedule available')}</p>}
+                    })}
+                  </tbody>
+                </table>
+                {schedule.length === 0 && <p className="text-center py-12 text-slate-400 font-serif italic">{t('No schedule available')}</p>}
+              </div>
             </div>
           )}
 
           {/* Payment History */}
           {detailTab === 'payments' && (
-            <div className="overflow-x-auto max-h-[480px] overflow-y-auto custom-scrollbar bg-brand-900/10">
-              <table className="w-full text-sm text-left border-collapse">
-                <thead className="bg-brand-900/60 text-slate-400 text-[10px] uppercase tracking-widest sticky top-0 z-10 backdrop-blur-md">
-                  <tr>{['Date', 'Type', 'Total', 'Principal', 'Interest', 'Insurance', 'Notes', ''].map(h => (
-                    <th key={h} className="px-6 py-4 text-right first:text-left font-semibold border-b border-brand-600/30">{h}</th>
-                  ))}</tr>
-                </thead>
-                <tbody className="divide-y divide-brand-800/50">
-                  {payments.map(p => (
-                    <tr key={p.id} className="hover:bg-brand-800/40 transition-colors">
-                      <td className="px-6 py-4 text-slate-300 font-mono text-xs">{new Date(p.paymentDate).toLocaleDateString(settings?.language || 'en-US')}</td>
-                      <td className="px-6 py-4">
-                        <span className={`text-[10px] uppercase tracking-widest px-2.5 py-1 rounded-full font-bold border ${p.type === 'installment' ? 'bg-primary-900/40 text-primary-400 border-primary-500/30' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 glow-text-emerald'}`}>
-                          {p.type === 'installment' ? 'Installment' : 'Early Payment'}
+            <div className="max-h-[480px] overflow-y-auto custom-scrollbar bg-brand-900/10">
+
+              {/* ═══ MOBILE: Card layout for payments ═══ */}
+              <div className="md:hidden divide-y divide-brand-600/20">
+                {payments.map(p => (
+                  <div key={p.id} className="p-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-[9px] uppercase tracking-widest px-2.5 py-1 rounded-full font-bold border ${p.type === 'installment' ? 'bg-brand-900/40 text-slate-300 border-brand-600/30' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'}`}>
+                          {p.type === 'installment' ? t('Installment') : t('Early Payment')}
                         </span>
-                      </td>
-                      <td className="px-6 py-4 text-right font-serif tracking-wide text-white">{fmt(p.amount, selectedLoan.currency)}</td>
-                      <td className="px-6 py-4 text-right text-emerald-400">{fmt(p.principal, selectedLoan.currency)}</td>
-                      <td className="px-6 py-4 text-right text-amber-400">{fmt(p.interest, selectedLoan.currency)}</td>
-                      <td className="px-6 py-4 text-right text-slate-400">{fmt(p.insuranceCost, selectedLoan.currency)}</td>
-                      <td className="px-6 py-4 text-right text-slate-400 text-xs max-w-[120px] truncate">{p.notes}</td>
-                      <td className="px-6 py-4 text-right">
-                        <button onClick={() => setDeletePaymentData({ id: p.id })} className="text-slate-400 hover:text-rose-400 transition-colors p-1">
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {payments.length === 0 && <p className="text-center py-12 text-slate-400 font-serif italic">{t('No payments registered yet.')}</p>}
+                        <span className="text-[11px] text-slate-500 font-mono">{new Date(p.paymentDate).toLocaleDateString(settings?.language || 'en-US')}</span>
+                      </div>
+                      <button onClick={() => setDeletePaymentData({ id: p.id })} className="text-slate-400 hover:text-rose-400 transition-colors p-1.5 active:scale-90">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                      </button>
+                    </div>
+                    <div className="font-serif text-base text-white font-medium mb-2">{fmt(p.amount, selectedLoan.currency)}</div>
+                    <div className="grid grid-cols-3 gap-2 text-[10px]">
+                      <div>
+                        <p className="text-slate-500 uppercase tracking-wider mb-0.5">{t('Principal')}</p>
+                        <p className="text-emerald-400">{fmt(p.principal, selectedLoan.currency)}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-500 uppercase tracking-wider mb-0.5">{t('Interest')}</p>
+                        <p className="text-amber-400">{fmt(p.interest, selectedLoan.currency)}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-500 uppercase tracking-wider mb-0.5">{t('Insurance')}</p>
+                        <p className="text-slate-400">{fmt(p.insuranceCost, selectedLoan.currency)}</p>
+                      </div>
+                    </div>
+                    {p.notes && <p className="text-[11px] text-slate-500 italic mt-2 truncate">{p.notes}</p>}
+                  </div>
+                ))}
+                {payments.length === 0 && <p className="text-center py-12 text-slate-400 font-serif italic">{t('No payments registered yet.')}</p>}
+              </div>
+
+              {/* ═══ DESKTOP: Table layout for payments ═══ */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-sm text-left border-collapse">
+                  <thead className="bg-brand-900/60 text-slate-400 text-[10px] uppercase tracking-widest sticky top-0 z-10 backdrop-blur-md">
+                    <tr>{['Date', 'Type', 'Total', 'Principal', 'Interest', 'Insurance', 'Notes', ''].map(h => (
+                      <th key={h} className="px-6 py-4 text-right first:text-left font-semibold border-b border-brand-600/30">{h}</th>
+                    ))}</tr>
+                  </thead>
+                  <tbody className="divide-y divide-brand-800/50">
+                    {payments.map(p => (
+                      <tr key={p.id} className="hover:bg-brand-800/40 transition-colors">
+                        <td className="px-6 py-4 text-slate-300 font-mono text-xs">{new Date(p.paymentDate).toLocaleDateString(settings?.language || 'en-US')}</td>
+                        <td className="px-6 py-4">
+                          <span className={`text-[10px] uppercase tracking-widest px-2.5 py-1 rounded-full font-bold border ${p.type === 'installment' ? 'bg-primary-900/40 text-primary-400 border-primary-500/30' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 glow-text-emerald'}`}>
+                            {p.type === 'installment' ? 'Installment' : 'Early Payment'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right font-serif tracking-wide text-white">{fmt(p.amount, selectedLoan.currency)}</td>
+                        <td className="px-6 py-4 text-right text-emerald-400">{fmt(p.principal, selectedLoan.currency)}</td>
+                        <td className="px-6 py-4 text-right text-amber-400">{fmt(p.interest, selectedLoan.currency)}</td>
+                        <td className="px-6 py-4 text-right text-slate-400">{fmt(p.insuranceCost, selectedLoan.currency)}</td>
+                        <td className="px-6 py-4 text-right text-slate-400 text-xs max-w-[120px] truncate">{p.notes}</td>
+                        <td className="px-6 py-4 text-right">
+                          <button onClick={() => setDeletePaymentData({ id: p.id })} className="text-slate-400 hover:text-rose-400 transition-colors p-1">
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {payments.length === 0 && <p className="text-center py-12 text-slate-400 font-serif italic">{t('No payments registered yet.')}</p>}
+              </div>
             </div>
           )}
 
@@ -510,7 +623,7 @@ export default function Loans() {
                 <div>
                   <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Loan Amount')}</label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-serif">$</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-serif">{(() => { const p = new Intl.NumberFormat('en-US', { style: 'currency', currency: loanForm.currency || 'USD' }).formatToParts(0); return p.find(x => x.type === 'currency')?.value || '$'; })()}</span>
                     <input required type="number" step="0.01" min="0.01" value={loanForm.originalBalance === 0 ? '' : loanForm.originalBalance} onChange={e => setLoanForm({ ...loanForm, originalBalance: e.target.value })} className="w-full pl-8 pr-3 py-3 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif" placeholder="200,000.00" />
                   </div>
                 </div>
@@ -531,7 +644,7 @@ export default function Loans() {
                 <div>
                   <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Insurance Cost / month')}</label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-serif">$</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-serif">{(() => { const p = new Intl.NumberFormat('en-US', { style: 'currency', currency: loanForm.currency || 'USD' }).formatToParts(0); return p.find(x => x.type === 'currency')?.value || '$'; })()}</span>
                     <input type="number" step="0.01" min="0" value={loanForm.insuranceCost === 0 ? '' : loanForm.insuranceCost} onChange={e => setLoanForm({ ...loanForm, insuranceCost: e.target.value })} className="w-full pl-8 pr-3 py-3 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif" placeholder="0.00" />
                   </div>
                 </div>
@@ -661,7 +774,7 @@ export default function Loans() {
                   <div>
                     <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Extra Principal Amount')}</label>
                     <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-400 font-serif">$</span>
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-400 font-serif">{(() => { const p = new Intl.NumberFormat('en-US', { style: 'currency', currency: selectedLoan?.currency || 'USD' }).formatToParts(0); return p.find(x => x.type === 'currency')?.value || '$'; })()}</span>
                       <input required type="number" step="0.01" min="0.01"
                         value={paymentForm.amount === 0 ? '' : paymentForm.amount}
                         onChange={e => setPaymentForm({ ...paymentForm, amount: e.target.value, principal: e.target.value })}

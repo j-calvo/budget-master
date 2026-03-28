@@ -272,7 +272,51 @@ const resources = {
       "Next Pay Day": "Next Pay Day",
       "Next Month": "Next Month",
       "Credit Card Due": "Credit Card Due",
-      "Loan Installment": "Loan Installment"
+      "Loan Installment": "Loan Installment",
+
+      // Transaction Filters & Sorting
+      "Search transactions...": "Search transactions...",
+      "Filters": "Filters",
+      "All Sources": "All Sources",
+      "All Categories": "All Categories",
+      "All Types": "All Types",
+      "Other Categories": "Other Categories",
+      "Sort By": "Sort By",
+      "Ascending": "Ascending",
+      "Descending": "Descending",
+      "active": "active",
+      "Clear Filters": "Clear Filters",
+      "No matching transactions": "No matching transactions",
+      "Try adjusting your filters or search query": "Try adjusting your filters or search query",
+      "Showing {{count}} of {{total}} transactions": "Showing {{count}} of {{total}} transactions",
+      "New": "New",
+      "Source": "Source",
+      "Add an account or card first": "Add an account or card first",
+
+      // Quick Add Transaction
+      "Quick Add": "Quick Add",
+      "Transaction saved!": "Transaction saved!",
+      "e.g. Weekly Groceries": "e.g. Weekly Groceries",
+      "Budget Master": "Budget Master",
+
+      // Database Backup
+      "Backup": "Backup",
+      "Database Backups": "Database Backups",
+      "Create and manage snapshots of your financial data. Backups include all accounts, transactions, budgets, and settings.": "Create and manage snapshots of your financial data. Backups include all accounts, transactions, budgets, and settings.",
+      "Create Backup": "Create Backup",
+      "Creating...": "Creating...",
+      "No backups yet": "No backups yet",
+      "Create your first backup to protect your data": "Create your first backup to protect your data",
+      "Backup deleted successfully": "Backup deleted successfully",
+      "Restore Database?": "Restore Database?",
+      "This will replace your current database with the selected backup. A safety backup of the current state will be created automatically.": "This will replace your current database with the selected backup. A safety backup of the current state will be created automatically.",
+      "Restore": "Restore",
+      "Delete Backup?": "Delete Backup?",
+      "This backup will be permanently deleted.": "This backup will be permanently deleted.",
+      "Admin access required": "Admin access required",
+      "Only workspace administrators can manage database backups.": "Only workspace administrators can manage database backups.",
+      "Size": "Size",
+      "Download": "Download"
     }
   },
   'es': {
@@ -515,7 +559,6 @@ const resources = {
       "Manage your banking and investment accounts": "Gestiona tus cuentas bancarias y de inversión",
       "Track your credit utilization and bills": "Rastrea la utilización de tu crédito y facturas",
       "No APR history recorded.": "No hay historial de APR registrado.",
-      "No expenses found for this time period.": "No se encontraron gastos para este periodo.",
       "of": "de",
       "No schedule available": "No hay cronograma disponible",
       "No payments registered yet.": "No hay pagos registrados todavía.",
@@ -546,7 +589,51 @@ const resources = {
       "Next Pay Day": "Próximo Día de Pago",
       "Next Month": "Próximo Mes",
       "Credit Card Due": "Pago de Tarjeta",
-      "Loan Installment": "Cuota de Préstamo"
+      "Loan Installment": "Cuota de Préstamo",
+
+      // Transaction Filters & Sorting
+      "Search transactions...": "Buscar transacciones...",
+      "Filters": "Filtros",
+      "All Sources": "Todas las Fuentes",
+      "All Categories": "Todas las Categorías",
+      "All Types": "Todos los Tipos",
+      "Other Categories": "Otras Categorías",
+      "Sort By": "Ordenar por",
+      "Ascending": "Ascendente",
+      "Descending": "Descendente",
+      "active": "activos",
+      "Clear Filters": "Limpiar Filtros",
+      "No matching transactions": "No se encontraron coincidencias",
+      "Try adjusting your filters or search query": "Intenta ajustar tus filtros o búsqueda",
+      "Showing {{count}} of {{total}} transactions": "Mostrando {{count}} de {{total}} transacciones",
+      "New": "Nueva",
+      "Source": "Fuente",
+      "Add an account or card first": "Añade una cuenta o tarjeta primero",
+
+      // Quick Add Transaction
+      "Quick Add": "Agregar Rápido",
+      "Transaction saved!": "¡Transacción guardada!",
+      "e.g. Weekly Groceries": "ej. Compras del Super",
+      "Budget Master": "Budget Master",
+
+      // Database Backup
+      "Backup": "Respaldo",
+      "Database Backups": "Respaldos de Base de Datos",
+      "Create and manage snapshots of your financial data. Backups include all accounts, transactions, budgets, and settings.": "Crea y administra instantáneas de tus datos financieros. Los respaldos incluyen todas las cuentas, transacciones, presupuestos y configuraciones.",
+      "Create Backup": "Crear Respaldo",
+      "Creating...": "Creando...",
+      "No backups yet": "Sin respaldos aún",
+      "Create your first backup to protect your data": "Crea tu primer respaldo para proteger tus datos",
+      "Backup deleted successfully": "Respaldo eliminado exitosamente",
+      "Restore Database?": "¿Restaurar Base de Datos?",
+      "This will replace your current database with the selected backup. A safety backup of the current state will be created automatically.": "Esto reemplazará tu base de datos actual con el respaldo seleccionado. Se creará automáticamente un respaldo de seguridad del estado actual.",
+      "Restore": "Restaurar",
+      "Delete Backup?": "¿Eliminar Respaldo?",
+      "This backup will be permanently deleted.": "Este respaldo será eliminado permanentemente.",
+      "Admin access required": "Acceso de administrador requerido",
+      "Only workspace administrators can manage database backups.": "Solo los administradores del espacio de trabajo pueden gestionar los respaldos.",
+      "Size": "Tamaño",
+      "Download": "Descargar"
     }
   }
 };

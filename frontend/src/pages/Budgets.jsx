@@ -111,18 +111,18 @@ export default function Budgets() {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700">
-      <div className="flex justify-between items-center">
+    <div className="space-y-6 md:space-y-8 animate-in fade-in duration-700 pb-8">
+      <div className="flex justify-between items-start gap-4">
         <div>
-          <h1 className="text-3xl font-serif text-white tracking-wide">{t('Budgets')}</h1>
-          <p className="text-sm font-medium text-slate-400 mt-1">{t('Manage your monthly spending limits')}</p>
+          <h1 className="text-2xl md:text-3xl font-serif text-white tracking-wide">{t('Budgets')}</h1>
+          <p className="text-xs md:text-sm font-medium text-slate-400 mt-1">{t('Manage your monthly spending limits')}</p>
         </div>
         <button onClick={() => {
           setEditingBudget(null);
           setNewBudget(p => ({ ...p, amount: '', currency: 'CRC', payDay: '' }));
           setShowModal(true);
-        }} className="btn-gold px-5 py-2 text-sm shadow-md flex items-center gap-1">
-          <span className="text-lg leading-none">+</span> {t('Create Budget')}
+        }} className="btn-gold px-4 md:px-5 py-2 text-xs md:text-sm shadow-md flex items-center gap-1 shrink-0">
+          <span className="text-lg leading-none">+</span> <span className="hidden sm:inline">{t('Create Budget')}</span><span className="sm:hidden">{t('New')}</span>
         </button>
       </div>
 
@@ -131,7 +131,7 @@ export default function Budgets() {
           <div className="w-8 h-8 rounded-full border-t-2 border-gold-500 animate-spin"></div>
         </div>
       ) : budgets.length === 0 ? (
-        <div className="glass-card p-16 text-center border border-dashed border-brand-600">
+        <div className="glass-card p-12 md:p-16 text-center border border-dashed border-brand-600">
           <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-brand-600/30 flex items-center justify-center text-gold-400/50">
             <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
           </div>
@@ -141,62 +141,256 @@ export default function Budgets() {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {budgets.map(budget => {
-            const pct = Math.min(100, Math.round((budget.spent / budget.amount) * 100)) || 0;
-            const isOver = budget.spent > budget.amount;
-            const barColor = isOver ? 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.6)]' : (pct > 75 ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]' : 'bg-gold-500 shadow-[0_0_8px_rgba(212,175,55,0.6)]');
-            const textColor = isOver ? 'text-rose-400' : 'text-slate-400';
-            const valueColor = isOver ? 'text-rose-300' : 'text-white';
+        <div className="space-y-6 md:space-y-8">
 
-            return (
-              <div key={budget.id} className="glass-card p-6 relative group hover:border-gold-500/30 hover:shadow-[0_0_20px_rgba(212,175,55,0.05)] transition-all overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-gold-500/5 rounded-full blur-2xl -z-10 mix-blend-screen transition-all group-hover:bg-gold-500/10"></div>
-                
-                <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
-                  <button 
-                    onClick={() => handleEditClick(budget)}
-                    className="text-slate-400 hover:text-gold-400 p-1 transition-colors"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                  </button>
-                  <button 
-                    onClick={() => setDeleteData({ id: budget.id, name: budget.category?.name })}
-                    className="text-slate-400 hover:text-rose-400 p-1 transition-colors"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </button>
+          {/* ═══ MOBILE: Card-based layout ═══ */}
+          <div className="md:hidden space-y-3">
+            {budgets.map((budget, idx) => {
+              const pct = Math.min(100, Math.round((budget.spent / budget.amount) * 100)) || 0;
+              const isOver = budget.spent > budget.amount;
+              const remaining = budget.amount - budget.spent;
+              
+              // Color scheme based on usage
+              const barBg = isOver 
+                ? 'bg-rose-500' 
+                : pct > 75 ? 'bg-amber-500' : 'bg-gold-500';
+              const barGlow = isOver 
+                ? 'shadow-[0_0_12px_rgba(244,63,94,0.5)]' 
+                : pct > 75 ? 'shadow-[0_0_12px_rgba(245,158,11,0.5)]' : 'shadow-[0_0_12px_rgba(212,175,55,0.4)]';
+              
+              return (
+                <div 
+                  key={budget.id} 
+                  className="glass-card p-0 overflow-hidden border-brand-600/30 relative group"
+                  style={{ animationDelay: `${idx * 80}ms` }}
+                >
+                  {/* Category color accent */}
+                  <div 
+                    className="absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl"
+                    style={{ backgroundColor: budget.category?.color || '#d4af37' }}
+                  />
+                  
+                  <div className="pl-5 pr-4 py-4">
+                    {/* Row 1: Category + Percentage badge */}
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div 
+                          className="w-8 h-8 rounded-lg flex items-center justify-center text-[11px] font-bold shrink-0"
+                          style={{ 
+                            backgroundColor: `${budget.category?.color || '#d4af37'}15`,
+                            color: budget.category?.color || '#d4af37',
+                            border: `1px solid ${budget.category?.color || '#d4af37'}30`
+                          }}
+                        >
+                          {budget.category?.name?.charAt(0)?.toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-serif text-white text-[15px] tracking-wide truncate">{budget.category?.name}</p>
+                          <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-0.5">
+                            {formatCurrency(budget.amount, budget.currency)}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      {/* Percentage badge */}
+                      <div className={`px-2.5 py-1 rounded-lg text-[11px] font-bold tabular-nums shrink-0 ml-2 ${
+                        isOver 
+                          ? 'bg-rose-500/15 text-rose-400 border border-rose-500/20' 
+                          : pct > 75 
+                            ? 'bg-amber-500/15 text-amber-400 border border-amber-500/20'
+                            : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20'
+                      }`}>
+                        {pct}%
+                      </div>
+                    </div>
+
+                    {/* Row 2: Progress bar */}
+                    <div className="mb-3">
+                      <div className="w-full bg-brand-900/60 rounded-full h-2 overflow-hidden border border-brand-600/30">
+                        <div 
+                          className={`${barBg} ${barGlow} h-full rounded-full transition-all duration-1000 ease-out`}
+                          style={{ width: `${Math.min(pct, 100)}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Row 3: Spent / Remaining + Actions */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex gap-4">
+                        <div>
+                          <p className="text-[9px] text-slate-500 uppercase tracking-[0.15em] font-bold mb-0.5">{t('Spent')}</p>
+                          <p className={`text-sm font-serif tabular-nums ${isOver ? 'text-rose-300' : 'text-white'}`}>
+                            {formatCurrency(budget.spent, budget.currency)}
+                          </p>
+                        </div>
+                        <div className="border-l border-brand-600/40 pl-4">
+                          <p className="text-[9px] text-slate-500 uppercase tracking-[0.15em] font-bold mb-0.5">{t('Remaining')}</p>
+                          <p className={`text-sm font-serif font-medium tabular-nums ${isOver ? 'text-rose-400' : 'text-emerald-400'}`}>
+                            {isOver 
+                              ? `−${formatCurrency(Math.abs(remaining), budget.currency)}` 
+                              : formatCurrency(remaining, budget.currency)}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      {/* Action buttons — always visible on mobile */}
+                      <div className="flex gap-1">
+                        <button 
+                          onClick={() => handleEditClick(budget)}
+                          className="p-2 text-slate-400 hover:text-gold-400 rounded-lg hover:bg-white/5 transition-colors active:scale-90"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                        <button 
+                          onClick={() => setDeleteData({ id: budget.id, name: budget.category?.name })}
+                          className="p-2 text-slate-400 hover:text-rose-400 rounded-lg hover:bg-white/5 transition-colors active:scale-90"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
+              );
+            })}
+          </div>
 
-                <div className="flex justify-between items-start mb-6 pr-12">
-                  <h3 className="font-serif italic text-white text-xl tracking-wide line-clamp-1" title={budget.category?.name}>{budget.category?.name}</h3>
+          {/* ═══ DESKTOP: Table layout (unchanged) ═══ */}
+          <div className="hidden md:block glass-card overflow-hidden border-brand-600/30 shadow-[0_10px_30px_rgba(0,0,0,0.2)]">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-brand-900/80 border-b border-brand-600/30 text-[10px] uppercase tracking-[0.2em] text-slate-400 font-bold">
+                    <th className="p-5 pl-8">{t('Category')}</th>
+                    <th className="p-5">{t('Budgeted')}</th>
+                    <th className="p-5">{t('Spent')}</th>
+                    <th className="p-5">{t('Remaining')}</th>
+                    <th className="p-5 w-[30%]">{t('Utilization')}</th>
+                    <th className="p-5 pr-8 text-right">{t('Actions')}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-brand-600/20">
+                  {budgets.map(budget => {
+                    const pct = Math.min(100, Math.round((budget.spent / budget.amount) * 100)) || 0;
+                    const isOver = budget.spent > budget.amount;
+                    const barColor = isOver ? 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.6)]' : (pct > 75 ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]' : 'bg-gold-500 shadow-[0_0_8px_rgba(212,175,55,0.6)]');
+                    const textColor = isOver ? 'text-rose-400' : 'text-slate-400';
+                    const valueColor = isOver ? 'text-rose-300' : 'text-white';
+                    const remaining = budget.amount - budget.spent;
+
+                    return (
+                      <tr key={budget.id} className="hover:bg-white/[0.02] transition-colors group relative">
+                        <td className="p-5 pl-8">
+                          <div className="flex items-center gap-3">
+                            <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: budget.category?.color || '#d4af37' }} />
+                            <span className="font-serif italic text-white text-[17px] tracking-wide">
+                              {budget.category?.name}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="p-5">
+                          <span className="font-serif text-slate-300">{formatCurrency(budget.amount, budget.currency)}</span>
+                        </td>
+                        <td className="p-5">
+                          <span className={`font-serif ${valueColor}`}>{formatCurrency(budget.spent, budget.currency)}</span>
+                        </td>
+                        <td className="p-5">
+                          <span className={`font-serif font-medium ${isOver ? 'text-rose-400' : 'text-emerald-400'}`}>
+                            {isOver ? formatCurrency(Math.abs(remaining), budget.currency) + ' ' + t('Over') : formatCurrency(remaining, budget.currency)}
+                          </span>
+                        </td>
+                        <td className="p-5">
+                          <div className="flex items-center gap-4">
+                            <div className="flex-1 bg-brand-900/50 rounded-full h-1.5 overflow-hidden border border-brand-600/30">
+                              <div className={`${barColor} h-full rounded-full transition-all duration-1000`} style={{ width: `${pct}%` }}></div>
+                            </div>
+                            <span className={`text-[11px] font-bold w-10 text-right ${textColor}`}>{pct}%</span>
+                          </div>
+                        </td>
+                        <td className="p-5 pr-8 text-right">
+                          <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button 
+                              onClick={() => handleEditClick(budget)}
+                              className="p-2 text-slate-400 hover:text-gold-400 rounded-lg hover:bg-white/5 transition-colors"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                            </button>
+                            <button 
+                              onClick={() => setDeleteData({ id: budget.id, name: budget.category?.name })}
+                              className="p-2 text-slate-400 hover:text-rose-400 rounded-lg hover:bg-white/5 transition-colors"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* ═══ Summary Cards ═══ */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+            {Object.entries(
+              budgets.reduce((acc, b) => {
+                if (!acc[b.currency]) acc[b.currency] = { budgeted: 0, spent: 0 };
+                acc[b.currency].budgeted += parseFloat(b.amount) || 0;
+                acc[b.currency].spent += parseFloat(b.spent) || 0;
+                return acc;
+              }, {})
+            ).map(([curr, data]) => {
+              const isOver = data.spent > data.budgeted;
+              const pct = Math.min(100, Math.round((data.spent / data.budgeted) * 100)) || 0;
+              return (
+                <div key={curr} className="glass-card p-5 md:p-6 border-brand-600/30 group relative overflow-hidden shadow-lg">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-gold-500/5 rounded-full blur-2xl -z-10 mix-blend-screen group-hover:bg-gold-500/10 transition-all"></div>
+                  
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <h4 className="text-[10px] uppercase tracking-[0.2em] font-bold text-slate-400 mb-1">{t('Total in')} {curr}</h4>
+                      <p className="text-xl md:text-2xl font-serif text-white">{formatCurrency(data.budgeted, curr)}</p>
+                    </div>
+                    <div className={`px-2.5 py-1 rounded-lg text-[11px] font-bold ${
+                      isOver 
+                        ? 'bg-rose-500/15 text-rose-400 border border-rose-500/20'
+                        : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20'
+                    }`}>
+                      {pct}%
+                    </div>
+                  </div>
+
+                  {/* Mini progress bar */}
+                  <div className="w-full bg-brand-900/60 rounded-full h-1.5 overflow-hidden border border-brand-600/30 mb-3">
+                    <div 
+                      className={`h-full rounded-full transition-all duration-1000 ${isOver ? 'bg-rose-500 shadow-[0_0_6px_rgba(244,63,94,0.5)]' : 'bg-gold-500 shadow-[0_0_6px_rgba(212,175,55,0.4)]'}`}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+
+                  <div className="flex justify-between items-baseline">
+                    <p className={`text-xs font-medium ${isOver ? 'text-rose-400' : 'text-slate-300'}`}>
+                      {formatCurrency(data.spent, curr)} {t('spent')}
+                    </p>
+                    <p className={`text-[11px] font-bold tracking-wider uppercase ${isOver ? 'text-rose-500' : 'text-emerald-400'}`}>
+                      {isOver 
+                        ? t('Over by {{amt}}', { amt: formatCurrency(data.spent - data.budgeted, curr) }) 
+                        : t('{{amt}} left', { amt: formatCurrency(data.budgeted - data.spent, curr) })}
+                    </p>
+                  </div>
                 </div>
-
-                <div className="mb-2 flex justify-between items-end">
-                  <span className={`text-2xl font-light font-serif tracking-wide ${valueColor}`}>
-                    {formatCurrency(budget.spent, budget.currency)}
-                  </span>
-                  <span className="text-xs font-medium text-slate-400 uppercase tracking-widest mb-1">
-                    {t('of {{total}}', { total: formatCurrency(budget.amount, budget.currency) })}
-                  </span>
-                </div>
-
-                <div className="w-full bg-brand-900/50 rounded-full h-1.5 mb-3 overflow-hidden border border-brand-600/30">
-                  <div className={`${barColor} h-full rounded-full transition-all duration-1000`} style={{ width: `${pct}%` }}></div>
-                </div>
-
-                <p className={`text-xs font-medium uppercase tracking-wider text-right ${textColor}`}>
-                  {isOver 
-                    ? t('Over by {{amount}}', { amount: formatCurrency(budget.spent - budget.amount, budget.currency) })
-                    : t('{{pct}}% Utilized', { pct })}
-                </p>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -226,7 +420,7 @@ export default function Budgets() {
               <div>
                 <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Monthly Amount')}</label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-serif">$</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-serif">{(() => { const p = new Intl.NumberFormat('en-US', { style: 'currency', currency: newBudget.currency || 'CRC' }).formatToParts(0); return p.find(x => x.type === 'currency')?.value || '$'; })()}</span>
                   <input 
                     required 
                     type="number" 

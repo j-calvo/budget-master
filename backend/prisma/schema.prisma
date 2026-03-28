@@ -80,6 +80,7 @@ model CreditCard {
   updatedAt    DateTime @updatedAt
   
   family    Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
 }
 
 model Category {
@@ -97,7 +98,8 @@ model Category {
 
 model Transaction {
   id          String   @id @default(uuid())
-  accountId   String
+  accountId   String?
+  creditCardId String?
   categoryId  String
   amount      Float
   date        DateTime @default(now())
@@ -107,8 +109,9 @@ model Transaction {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   
-  account  Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  category Category @relation(fields: [categoryId], references: [id])
+  account    Account?    @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  creditCard CreditCard? @relation(fields: [creditCardId], references: [id], onDelete: Cascade)
+  category   Category    @relation(fields: [categoryId], references: [id])
 }
 
 model Budget {

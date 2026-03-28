@@ -12,7 +12,8 @@ import SettingsPage from './pages/Settings';
 import CreditCards from './pages/CreditCards';
 import Loans from './pages/Loans';
 import Analytics from './pages/Analytics';
-import Currencies from './pages/Currencies';
+import Tools from './pages/Tools';
+import QuickAddTransaction from './components/QuickAddTransaction';
 import { useTranslation } from 'react-i18next';
 
 // ... navItems and Sidebar ... 
@@ -24,7 +25,7 @@ const navItems = [
   { path: '/transactions', name: 'Activity', subtitle: 'History', icon: <Activity size={22} /> },
   { path: '/budgets', name: 'Budgets', subtitle: 'Planning', icon: <PieChart size={22} /> },
   { path: '/analytics', name: 'Analytics', subtitle: 'Insights', icon: <PieChart size={22} /> },
-  { path: '/currencies', name: 'Currencies', subtitle: 'Exchange', icon: <Coins size={22} /> },
+  { path: '/tools', name: 'Tools', subtitle: 'Calculators', icon: <Coins size={22} /> },
 ];
 
 function Sidebar({ onClose }) {
@@ -192,6 +193,7 @@ function Layout({ children }) {
         </main>
       </div>
       <MobileNav />
+      <QuickAddTransaction />
     </div>
   );
 }
@@ -223,7 +225,7 @@ function App() {
                   <Route path="/transactions" element={<Transactions />} />
                   <Route path="/budgets" element={<Budgets />} />
                   <Route path="/analytics" element={<Analytics />} />
-                  <Route path="/currencies" element={<Currencies />} />
+                  <Route path="/tools" element={<Tools />} />
                   <Route path="/settings" element={<SettingsPage />} />
                 </Routes>
               </Layout>

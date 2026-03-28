@@ -43,6 +43,9 @@ app.use('/api/loans', authenticateToken, loanRoutes);
 app.use('/api/banks', authenticateToken, bankRoutes);
 app.use('/api/account-types', authenticateToken, accountTypeRoutes);
 
+const backupRoutes = require('./src/routes/backupRoutes');
+app.use('/api/backups', authenticateToken, backupRoutes);
+
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date() });
 });

@@ -156,13 +156,13 @@ export default function Analytics() {
           <p className="text-slate-400 font-serif italic text-sm">{t('Deep dive into your financial patterns')}</p>
         </div>
         
-        <div className="glass-card p-1.5 rounded-xl flex gap-1 border-white/5 bg-brand-900/40 relative overflow-hidden backdrop-blur-md">
+        <div className="glass-card p-1 rounded-xl flex gap-1 border-white/5 bg-brand-900/40 relative overflow-hidden backdrop-blur-md overflow-x-auto custom-scrollbar no-scrollbar">
           <div className="absolute inset-0 bg-gradient-to-r from-gold-500/5 to-transparent opacity-50 pointer-events-none"></div>
           {['1M', '3M', '6M', '1Y', 'ALL'].map(range => (
             <button
               key={range}
               onClick={() => setTimeRange(range)}
-              className={`relative z-10 px-4 py-2 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-all duration-300 ${
+              className={`relative z-10 px-3 md:px-4 py-2 text-[9px] md:text-[10px] font-bold uppercase tracking-widest rounded-lg transition-all duration-300 whitespace-nowrap ${
                 timeRange === range 
                   ? 'bg-gold-500 text-brand-900 shadow-[0_0_10px_rgba(212,175,55,0.4)]' 
                   : 'text-slate-400 hover:text-white hover:bg-brand-800/50'
@@ -319,20 +319,20 @@ export default function Analytics() {
         {topExpenses.length > 0 ? (
           <div className="divide-y divide-brand-800/50 relative z-10">
             {topExpenses.map((tx, idx) => (
-              <div key={tx.id} className="py-4 flex justify-between items-center hover:bg-brand-900/40 transition-colors px-4 -mx-4 rounded-xl">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-brand-900/60 border border-brand-600/50 text-gold-400 flex justify-center items-center font-serif font-bold text-xl shadow-inner">
+              <div key={tx.id} className="py-3 md:py-4 flex justify-between items-center hover:bg-brand-900/40 transition-colors px-3 md:px-4 -mx-3 md:-mx-4 rounded-xl group">
+                <div className="flex items-center gap-3 md:gap-4 min-w-0">
+                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-brand-900/60 border border-brand-600/50 text-gold-400 flex justify-center items-center font-serif font-bold text-lg md:text-xl shadow-inner shrink-0 group-hover:bg-gold-500/10 transition-colors">
                     {idx + 1}
                   </div>
-                  <div>
-                    <h3 className="font-bold text-slate-200 text-lg tracking-wide">{tx.description}</h3>
-                    <p className="text-xs text-slate-400 uppercase tracking-widest mt-1">
-                      {tx.category?.name || 'Uncategorized'} <span className="text-brand-600 mx-1">•</span> {new Date(tx.date).toLocaleDateString(settings?.language || 'en-US')}
+                  <div className="min-w-0">
+                    <h3 className="font-bold text-slate-200 text-base md:text-lg tracking-wide truncate group-hover:text-white transition-colors">{tx.description}</h3>
+                    <p className="text-[10px] md:text-xs text-slate-400 uppercase tracking-widest mt-0.5 truncate">
+                      {tx.category?.name || 'Uncategorized'} <span className="text-brand-600 mx-1 opacity-50">•</span> {new Date(tx.date).toLocaleDateString(settings?.language || 'en-US')}
                     </p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-2xl font-serif text-rose-400 glow-text-rose/50">
+                <div className="text-right shrink-0">
+                  <p className="text-xl md:text-2xl font-serif text-rose-400 drop-shadow-[0_0_8px_rgba(244,63,94,0.3)]">
                     {formatCurrency(tx.amount)}
                   </p>
                 </div>
@@ -342,7 +342,7 @@ export default function Analytics() {
         ) : (
           <div className="bg-brand-900/40 border border-brand-600/30 rounded-xl p-8 text-center mt-4">
             <p className="text-slate-400 font-serif italic mb-2">{t('No expenses found for this time period.')}</p>
-            <p className="text-xs text-slate-500 uppercase tracking-widest">{t('Try selecting a different time range')}</p>
+            <p className="text-[10px] text-slate-500 uppercase tracking-widest">{t('Try selecting a different time range')}</p>
           </div>
         )}
       </div>

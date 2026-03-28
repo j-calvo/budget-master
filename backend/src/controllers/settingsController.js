@@ -3,26 +3,30 @@ const prisma = require('../db');
 
 exports.getSettings = async (req, res) => {
   try {
-    let settings = await prisma.setting.findUnique({
-      where: { familyId: req.user.familyId }
-    });
+    const familyId = req.user.familyId;
 
-    if (!settings) {
-      settings = await prisma.setting.create({
-        data: {
-          familyId: req.user.familyId,
-          defaultCurrency: 'USD',
-          language: 'en-US',
-          fontFamily: 'Outfit',
-          payFrequency: 'monthly',
-          payDay: 15,
-          payDay2: null,
-          payDayOfWeek: null,
-          budgetStartDay: 1,
-          theme: 'light'
-        }
-      });
+    // Verify the family actually exists before attempting upsert
+    const family = await prisma.family.findUnique({ where: { id: familyId } });
+    if (!family) {
+      return res.status(404).json({ error: 'Family not found. Please log in again.' });
     }
+
+    const settings = await prisma.setting.upsert({
+      where: { familyId },
+      update: {},  // no-op if already exists
+      create: {
+        familyId,
+        defaultCurrency: 'USD',
+        language: 'en-US',
+        fontFamily: 'Outfit',
+        payFrequency: 'monthly',
+        payDay: 15,
+        payDay2: null,
+        payDayOfWeek: null,
+        budgetStartDay: 1,
+        theme: 'light'
+      }
+    });
 
     res.json(settings);
   } catch (error) {
