@@ -272,7 +272,7 @@ export default function Loans() {
                     )}
                   </div>
                   <p className="text-xs text-slate-400 mt-2 font-medium uppercase tracking-wider flex items-center gap-2">
-                    <span className="text-gold-400">{loan.interestRate}% APR</span>
+                    <span className="text-gold-400">{loan.interestRate}% {t('APR')}</span>
                     <span className="text-brand-600">•</span>
                     <span>{t('{{months}} mo term', { months: loan.termMonths })}</span>
                   </p>
@@ -284,7 +284,7 @@ export default function Loans() {
                     <p className="text-xs text-slate-400 uppercase tracking-widest">{t('of')} {fmt(loan.originalBalance, loan.currency)}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm border border-gold-500/20 bg-gold-500/10 text-gold-400 px-3 py-1 rounded-md mb-1 font-medium">{fmt(loan.monthlyPayment + loan.insuranceCost, loan.currency)}/mo</p>
+                    <p className="text-sm border border-gold-500/20 bg-gold-500/10 text-gold-400 px-3 py-1 rounded-md mb-1 font-medium">{fmt(loan.monthlyPayment + loan.insuranceCost, loan.currency)}/{t('mo')}</p>
                     {remaining !== null && <p className="text-xs text-slate-400 uppercase tracking-wider">~{t('{{months}} mo left', { months: remaining })}</p>}
                   </div>
                 </div>
@@ -310,13 +310,13 @@ export default function Loans() {
               <div className="flex items-center gap-3 mb-2">
                 <h2 className="text-2xl font-serif italic text-white tracking-wide">{selectedLoan.name}</h2>
                 {selectedLoan.isVariableRate && (
-                  <span className="text-[10px] bg-amber-500/10 border border-amber-500/20 text-amber-400 px-2.5 py-0.5 rounded-full font-medium uppercase tracking-widest glow-text-amber">Variable APR: {selectedLoan.interestRate}%</span>
+                  <span className="text-[10px] bg-amber-500/10 border border-amber-500/20 text-amber-400 px-2.5 py-0.5 rounded-full font-medium uppercase tracking-widest glow-text-amber">{t('Variable APR')}: {selectedLoan.interestRate}%</span>
                 )}
               </div>
               <p className="text-xs font-medium text-slate-400 uppercase tracking-widest flex items-center gap-3">
-                <span>Balance: <span className="text-white ml-1">{fmt(selectedLoan.balance, selectedLoan.currency)}</span></span>
+                <span>{t('Balance')}: <span className="text-white ml-1">{fmt(selectedLoan.balance, selectedLoan.currency)}</span></span>
                 <span className="text-brand-600">•</span>
-                <span>Payment: <span className="text-white ml-1">{fmt(selectedLoan.monthlyPayment + selectedLoan.insuranceCost, selectedLoan.currency)}/mo</span></span>
+                <span>{t('Payment')}: <span className="text-white ml-1">{fmt(selectedLoan.monthlyPayment + selectedLoan.insuranceCost, selectedLoan.currency)}/{t('mo')}</span></span>
               </p>
             </div>
             <div className="flex gap-3 flex-wrap items-center">
@@ -357,12 +357,12 @@ export default function Loans() {
                 <thead className="bg-brand-900/60 text-slate-400 text-[10px] uppercase tracking-widest sticky top-0 z-10 backdrop-blur-md">
                   <tr>
                     <th className="px-6 py-4 font-semibold border-b border-brand-600/30">#</th>
-                    <th className="px-6 py-4 text-right font-semibold border-b border-brand-600/30">Date</th>
-                    <th className="px-6 py-4 text-right font-semibold border-b border-brand-600/30">Payment</th>
-                    <th className="px-6 py-4 text-right font-semibold border-b border-brand-600/30">Principal</th>
-                    <th className="px-6 py-4 text-right font-semibold border-b border-brand-600/30">Interest</th>
-                    <th className="px-6 py-4 text-right font-semibold border-b border-brand-600/30">Insurance</th>
-                    <th className="px-6 py-4 text-right font-semibold border-b border-brand-600/30">Balance</th>
+                    <th className="px-6 py-4 text-right font-semibold border-b border-brand-600/30">{t('Date')}</th>
+                    <th className="px-6 py-4 text-right font-semibold border-b border-brand-600/30">{t('Payment')}</th>
+                    <th className="px-6 py-4 text-right font-semibold border-b border-brand-600/30">{t('Principal')}</th>
+                    <th className="px-6 py-4 text-right font-semibold border-b border-brand-600/30">{t('Interest')}</th>
+                    <th className="px-6 py-4 text-right font-semibold border-b border-brand-600/30">{t('Insurance')}</th>
+                    <th className="px-6 py-4 text-right font-semibold border-b border-brand-600/30">{t('Balance')}</th>
                     <th className="px-6 py-4 border-b border-brand-600/30"></th>
                   </tr>
                 </thead>
@@ -375,7 +375,7 @@ export default function Loans() {
                             <div className="flex items-center gap-3">
                               <span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full glow-text-emerald">
                                 <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
-                                Early Payment
+                                {t('Early Payment')}
                               </span>
                               <span className="text-xs text-slate-400">{row.date}</span>
                             </div>
@@ -405,14 +405,14 @@ export default function Loans() {
                           {paid ? (
                             <span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-bold text-slate-400 bg-slate-800 px-3 py-1 rounded-full border border-slate-700">
                               <svg className="w-3 h-3 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
-                              Paid
+                              {t('Paid')}
                             </span>
                           ) : (
                             <button
                               onClick={() => openPayFromRow(row)}
                               className="text-[10px] uppercase tracking-widest font-bold text-gold-400 bg-gold-500/10 hover:bg-gold-500/20 border border-gold-500/30 px-3.5 py-1.5 rounded-full transition-colors whitespace-nowrap glow-text-gold"
                             >
-                              Mark Paid
+                              {t('Mark Paid')}
                             </button>
                           )}
                         </td>
@@ -470,7 +470,7 @@ export default function Loans() {
                   {[...(selectedLoan.aprHistory || [])].reverse().map((entry, i) => (
                     <div key={i} className="flex justify-between items-center bg-brand-900/40 border border-brand-600/30 rounded-lg px-5 py-3.5 text-sm hover:border-gold-500/30 transition-colors group">
                       <span className="text-slate-400 font-mono text-xs">{new Date(entry.date).toLocaleDateString(settings?.language || 'en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</span>
-                      <span className="font-bold text-gold-400 tracking-wider group-hover:glow-text-gold transition-all">{entry.apr}% APR</span>
+                      <span className="font-bold text-gold-400 tracking-wider group-hover:glow-text-gold transition-all">{entry.apr}% {t('APR')}</span>
                     </div>
                   ))}
                 </div>
@@ -546,7 +546,7 @@ export default function Loans() {
                   <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Currency')}</label>
                   <select value={loanForm.currency} onChange={e => setLoanForm({ ...loanForm, currency: e.target.value })} className="w-full p-3 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all appearance-none cursor-pointer">
                     {currencies.map(c => <option key={c.id} value={c.code} className="bg-brand-800">{c.code} ({c.symbol})</option>)}
-                    {currencies.length === 0 && <option value="USD" className="bg-brand-800">USD ($)</option>}
+                    {currencies.length === 0 && <option value="USD" className="bg-brand-800">{t('USD ($)')}</option>}
                   </select>
                 </div>
               </div>
@@ -555,8 +555,8 @@ export default function Loans() {
               <div>
                 <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Early Payment Strategy')}</label>
                 <select value={loanForm.earlyPaymentStrategy} onChange={e => setLoanForm({ ...loanForm, earlyPaymentStrategy: e.target.value })} className="w-full p-3 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all appearance-none cursor-pointer text-sm">
-                  <option value="reduce_term" className="bg-brand-800">Reduce Term — keep same payment, finish sooner</option>
-                  <option value="reduce_payment" className="bg-brand-800">Reduce Payment — same term, lower monthly payments</option>
+                  <option value="reduce_term" className="bg-brand-800">{t('Reduce Term — keep same payment, finish sooner')}</option>
+                  <option value="reduce_payment" className="bg-brand-800">{t('Reduce Payment — same term, lower monthly payments')}</option>
                 </select>
               </div>
 
@@ -564,17 +564,17 @@ export default function Loans() {
               <div className="flex items-center gap-4 bg-amber-500/5 border border-amber-500/20 rounded-xl px-5 py-4 mt-2">
                 <input type="checkbox" id="isVariableRate" checked={loanForm.isVariableRate} onChange={e => setLoanForm({ ...loanForm, isVariableRate: e.target.checked })} className="w-5 h-5 rounded border-amber-500/50 bg-brand-900/50 text-amber-500 focus:ring-amber-500/50 accent-amber-500 cursor-pointer" />
                 <label htmlFor="isVariableRate" className="text-sm font-medium text-amber-500/90 cursor-pointer leading-relaxed">
-                  Variable Rate — APR can be updated over time without affecting past installments
+                  {t('Variable Rate — APR can be updated over time without affecting past installments')}
                 </label>
               </div>
 
               {/* Computed monthly payment preview */}
               {previewPayment !== null && (
                 <div className="bg-gold-500/10 border border-gold-500/20 rounded-xl px-6 py-5 flex justify-between items-center mt-6">
-                  <span className="text-xs uppercase tracking-widest text-gold-400/80 font-medium">Calculated Monthly Payment:</span>
+                  <span className="text-xs uppercase tracking-widest text-gold-400/80 font-medium">{t('Calculated Monthly Payment:')}</span>
                   <span className="text-2xl font-serif text-gold-400 glow-text-gold">
                     {new Intl.NumberFormat(settings?.language || 'en-US', { style: 'currency', currency: loanForm.currency || 'USD' }).format(previewPayment + (parseFloat(loanForm.insuranceCost) || 0))}
-                    <span className="text-sm ml-1 text-gold-400/60 uppercase tracking-widest font-sans">/mo</span>
+                    <span className="text-sm ml-1 text-gold-400/60 uppercase tracking-widest font-sans">/{t('mo')}</span>
                   </span>
                 </div>
               )}
@@ -594,24 +594,24 @@ export default function Loans() {
           <div className="glass-card p-8 w-full max-w-sm shadow-2xl border-white/10 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl -z-10 mix-blend-screen"></div>
             <h2 className="text-2xl font-serif text-white mb-2 tracking-wide relative">
-              Update Variable APR
+              {t('Update Variable APR')}
               <span className="absolute -bottom-2 left-0 w-12 h-[2px] bg-amber-500/50"></span>
             </h2>
             <p className="text-xs text-slate-400 mb-6 uppercase tracking-wider mt-5">
-              Loan: <span className="font-medium text-white">{selectedLoan.name}</span><br />
-              Current APR: <span className="font-bold text-amber-500 text-sm">{selectedLoan.interestRate}%</span>
+              {t('Loan')}: <span className="font-medium text-white">{selectedLoan.name}</span><br />
+              {t('Current APR')}: <span className="font-bold text-amber-500 text-sm">{selectedLoan.interestRate}%</span>
             </p>
             <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 mb-6 text-xs text-amber-400/90 leading-relaxed shadow-inner">
-              ⚠️ This will update the APR going forward and recalculate the monthly payment. Already-registered installments are <strong className="text-amber-300">not affected</strong>.
+              {t('⚠️ This will update the APR going forward and recalculate the monthly payment. Already-registered installments are')} <strong className="text-amber-300">{t('not affected')}</strong>.
             </div>
             <form onSubmit={handleUpdateAPR} className="space-y-5">
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">New APR (%)</label>
+                <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('New APR (%)')}</label>
                 <input required type="number" step="0.01" min="0" value={newApr} onChange={e => setNewApr(e.target.value)} className="w-full p-3 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-amber-500 focus:border-amber-500 outline-none text-white transition-all font-serif text-lg" placeholder="8.50" />
               </div>
               {newApr && (
                 <div className="bg-brand-900/40 border border-brand-600/30 rounded-xl px-4 py-3 flex justify-between items-center text-sm shadow-inner">
-                  <span className="text-xs text-slate-400 uppercase tracking-widest">New payment:</span>
+                  <span className="text-xs text-slate-400 uppercase tracking-widest">{t('New payment:')}</span>
                   <span className="font-serif text-amber-400 text-lg glow-text-amber">
                     {new Intl.NumberFormat(settings?.language || 'en-US', { style: 'currency', currency: selectedLoan.currency || 'USD' })
                       .format((calcMonthlyPayment(selectedLoan.balance, parseFloat(newApr), selectedLoan.termMonths) || 0) + selectedLoan.insuranceCost)}
@@ -619,8 +619,8 @@ export default function Loans() {
                 </div>
               )}
               <div className="flex justify-end gap-3 pt-4 border-t border-brand-600/30 mt-6">
-                <button type="button" onClick={() => setShowAprModal(false)} className="px-5 py-2.5 text-xs text-slate-400 hover:text-white transition-colors uppercase tracking-wider">Cancel</button>
-                <button type="submit" className="bg-amber-600 hover:bg-amber-500 text-white px-6 py-2.5 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors shadow-[0_0_15px_rgba(217,119,6,0.4)]">Update APR</button>
+                <button type="button" onClick={() => setShowAprModal(false)} className="px-5 py-2.5 text-xs text-slate-400 hover:text-white transition-colors uppercase tracking-wider">{t('Cancel')}</button>
+                <button type="submit" className="bg-amber-600 hover:bg-amber-500 text-white px-6 py-2.5 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors shadow-[0_0_15px_rgba(217,119,6,0.4)]">{t('Update APR')}</button>
               </div>
             </form>
           </div>
@@ -659,7 +659,7 @@ export default function Loans() {
                       : "💡 Enter the extra principal amount you're paying. This will reduce your loan balance immediately and shorten your remaining term."}
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Extra Principal Amount</label>
+                    <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Extra Principal Amount')}</label>
                     <div className="relative">
                       <span className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-400 font-serif">$</span>
                       <input required type="number" step="0.01" min="0.01"
@@ -670,13 +670,13 @@ export default function Loans() {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Payment Date</label>
+                    <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Payment Date')}</label>
                     <input required type="date" value={paymentForm.paymentDate}
                       onChange={e => setPaymentForm({ ...paymentForm, paymentDate: e.target.value })}
                       className="w-full p-3 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-white transition-all font-serif [color-scheme:dark]" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Notes <span className="text-slate-500 font-normal lowercase">(optional)</span></label>
+                    <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Notes')} <span className="text-slate-500 font-normal lowercase">({t('optional')})</span></label>
                     <input type="text" value={paymentForm.notes}
                       onChange={e => setPaymentForm({ ...paymentForm, notes: e.target.value })}
                       className="w-full p-3 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-white transition-all font-serif italic"
@@ -688,39 +688,39 @@ export default function Loans() {
                 <>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <div>
-                      <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Total Amount</label>
+                      <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Total Amount')}</label>
                       <input required type="number" step="0.01" value={paymentForm.amount === 0 ? '' : paymentForm.amount} onChange={e => setPaymentForm({ ...paymentForm, amount: e.target.value })} className="w-full p-3 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif" />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Principal</label>
+                      <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Principal')}</label>
                       <input required type="number" step="0.01" value={paymentForm.principal === 0 ? '' : paymentForm.principal} onChange={e => setPaymentForm({ ...paymentForm, principal: e.target.value })} className="w-full p-3 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-emerald-400 transition-all font-serif" />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-5">
                     <div>
-                      <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Interest</label>
+                      <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Interest')}</label>
                       <input type="number" step="0.01" value={paymentForm.interest === 0 ? '' : paymentForm.interest} onChange={e => setPaymentForm({ ...paymentForm, interest: e.target.value })} className="w-full p-3 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-amber-400 transition-all font-serif" />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Insurance</label>
+                      <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Insurance')}</label>
                       <input type="number" step="0.01" value={paymentForm.insuranceCost === 0 ? '' : paymentForm.insuranceCost} onChange={e => setPaymentForm({ ...paymentForm, insuranceCost: e.target.value })} className="w-full p-3 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-slate-300 transition-all font-serif" />
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Payment Date</label>
+                    <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Payment Date')}</label>
                     <input required type="date" value={paymentForm.paymentDate} onChange={e => setPaymentForm({ ...paymentForm, paymentDate: e.target.value })} className="w-full p-3 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif [color-scheme:dark]" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Notes <span className="text-slate-500 font-normal lowercase">(optional)</span></label>
+                    <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Notes')} <span className="text-slate-500 font-normal lowercase">({t('optional')})</span></label>
                     <input type="text" value={paymentForm.notes} onChange={e => setPaymentForm({ ...paymentForm, notes: e.target.value })} className="w-full p-3 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif italic" placeholder="e.g. March payment" />
                   </div>
                 </>
               )}
 
               <div className="flex justify-end gap-4 pt-6 mt-8 border-t border-brand-600/30">
-                <button type="button" onClick={() => setShowPaymentModal(false)} className="px-5 py-2.5 text-xs text-slate-400 hover:text-white transition-colors uppercase tracking-wider">Cancel</button>
+                <button type="button" onClick={() => setShowPaymentModal(false)} className="px-5 py-2.5 text-xs text-slate-400 hover:text-white transition-colors uppercase tracking-wider">{t('Cancel')}</button>
                 <button type="submit" className={paymentForm.type === 'installment' ? 'btn-gold px-8 py-2.5 text-xs uppercase tracking-wider' : 'bg-emerald-600 hover:bg-emerald-500 text-white px-8 py-2.5 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors shadow-[0_0_15px_rgba(5,150,105,0.4)]'}>
-                  {paymentForm.type === 'installment' ? 'Register Installment' : 'Register Early Payment'}
+                  {paymentForm.type === 'installment' ? t('Register Installment') : t('Register Early Payment')}
                 </button>
               </div>
             </form>
@@ -740,8 +740,8 @@ export default function Loans() {
             <h3 className="text-xl font-serif text-white mb-2 tracking-wide">{t('Delete Loan?')}</h3>
             <p className="text-sm text-slate-400 mb-8 leading-relaxed">{t('Are you sure you want to delete "{{name}}" and all payment history? This cannot be undone.', { name: deleteData.name })}</p>
             <div className="flex gap-3 justify-center">
-              <button onClick={() => setDeleteData({ id: null, name: null })} className="btn-glass px-4 py-2.5 flex-1 text-sm tracking-wide">Cancel</button>
-              <button onClick={handleDeleteLoan} className="bg-rose-600 hover:bg-rose-500 text-white px-4 py-2.5 rounded-lg transition-colors flex-1 text-sm font-medium shadow-[0_0_15px_rgba(244,63,94,0.3)] tracking-wide">Delete</button>
+              <button onClick={() => setDeleteData({ id: null, name: null })} className="btn-glass px-4 py-2.5 flex-1 text-sm tracking-wide">{t('Cancel')}</button>
+              <button onClick={handleDeleteLoan} className="bg-rose-600 hover:bg-rose-500 text-white px-4 py-2.5 rounded-lg transition-colors flex-1 text-sm font-medium shadow-[0_0_15px_rgba(244,63,94,0.3)] tracking-wide">{t('Delete')}</button>
             </div>
           </div>
         </div>
@@ -756,11 +756,11 @@ export default function Loans() {
             <div className="w-16 h-16 bg-rose-500/10 border border-rose-500/20 rounded-full flex items-center justify-center mx-auto mb-5 shadow-inner">
               <svg className="w-8 h-8 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
             </div>
-            <h3 className="text-xl font-serif text-white mb-2 tracking-wide">Remove Payment?</h3>
+            <h3 className="text-xl font-serif text-white mb-2 tracking-wide">{t('Remove Payment?')}</h3>
             <p className="text-sm text-slate-400 mb-8 leading-relaxed">{t('This will remove the payment entry and restore the principal to the loan balance.')}</p>
             <div className="flex gap-3 justify-center">
-              <button onClick={() => setDeletePaymentData({ id: null })} className="btn-glass px-4 py-2.5 flex-1 text-sm tracking-wide">Cancel</button>
-              <button onClick={handleDeletePayment} className="bg-rose-600 hover:bg-rose-500 text-white px-4 py-2.5 rounded-lg transition-colors flex-1 text-sm font-medium shadow-[0_0_15px_rgba(244,63,94,0.3)] tracking-wide">Remove</button>
+              <button onClick={() => setDeletePaymentData({ id: null })} className="btn-glass px-4 py-2.5 flex-1 text-sm tracking-wide">{t('Cancel')}</button>
+              <button onClick={handleDeletePayment} className="bg-rose-600 hover:bg-rose-500 text-white px-4 py-2.5 rounded-lg transition-colors flex-1 text-sm font-medium shadow-[0_0_15px_rgba(244,63,94,0.3)] tracking-wide">{t('Remove')}</button>
             </div>
           </div>
         </div>

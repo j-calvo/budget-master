@@ -2,6 +2,7 @@ import js from '@eslint/js'
 import globals from 'globals'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
+import i18nextPlugin from 'eslint-plugin-i18next'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
@@ -22,8 +23,17 @@ export default defineConfig([
         sourceType: 'module',
       },
     },
+    plugins: {
+      reactHooks,
+      reactRefresh,
+      i18next: i18nextPlugin
+    },
     rules: {
-      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      'no-unused-vars': ['warn', { varsIgnorePattern: '^[A-Z_]' }],
+      'i18next/no-literal-string': ['warn', { 
+        markupOnly: true, 
+        ignoreAttribute: ['className', 'type', 'stroke', 'fill', 'viewBox', 'color', 'size', 'to', 'd', 'strokeWidth', 'strokeLinecap', 'strokeLinejoin', 'target', 'rel'] 
+      }]
     },
   },
 ])

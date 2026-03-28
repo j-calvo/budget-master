@@ -20,6 +20,7 @@ export default function CreditCards() {
 
   useEffect(() => {
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchData = async () => {
@@ -181,7 +182,7 @@ export default function CreditCards() {
             
             <form onSubmit={handleSaveCard} className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Card Name</label>
+                <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Card Name')}</label>
                 <input required type="text" value={formData.name || ''} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif" placeholder="e.g. Sapphire Reserve" />
               </div>
 
@@ -219,12 +220,12 @@ export default function CreditCards() {
                   <input required type="number" min="1" max="31" value={formData.statementDay || ''} onChange={e => setFormData({...formData, statementDay: e.target.value})} className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif" placeholder="1" />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Currency</label>
+                  <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Currency')}</label>
                   <select value={formData.currency} onChange={e => setFormData({...formData, currency: e.target.value})} className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all appearance-none cursor-pointer">
                   {currencies.map(c => (
                     <option key={c.id} value={c.code} className="bg-brand-800">{c.code} ({c.symbol})</option>
                   ))}
-                  {currencies.length === 0 && <option value="USD" className="bg-brand-800">USD ($)</option>}
+                  {currencies.length === 0 && <option value="USD" className="bg-brand-800">{t('USD ($)')}</option>}
                 </select>
               </div>
             </div>

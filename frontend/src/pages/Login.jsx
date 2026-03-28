@@ -32,7 +32,7 @@ export default function Login() {
           <div className="w-20 h-20 rounded-2xl bg-brand-900 border border-brand-600/50 flex items-center justify-center shadow-[0_0_30px_rgba(212,175,55,0.1)] p-4 mb-4">
             <img src="/logo.svg" alt="Budget Master" className="w-full h-full object-contain drop-shadow-[0_0_10px_rgba(212,175,55,0.6)]" />
           </div>
-          <h1 className="text-3xl font-serif font-bold tracking-[0.2em] text-white uppercase italic">Budget Master</h1>
+          <h1 className="text-3xl font-serif font-bold tracking-[0.2em] text-white uppercase italic">{t('Budget Master')}</h1>
           <div className="w-16 h-[2px] bg-gradient-to-r from-transparent via-gold-500 to-transparent mt-3 opacity-60"></div>
         </div>
         

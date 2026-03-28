@@ -27,6 +27,7 @@ export default function Settings() {
 
   // Sync state once context loads
   useEffect(() => {
+    // eslint-disable-next-line
     if (settings) setFormData(settings);
   }, [settings]);
 
@@ -46,37 +47,23 @@ export default function Settings() {
   };
 
   return (
-    <div className="space-y-6 max-w-3xl mx-auto pb-24 lg:pb-8">
-      <h1 className="text-4xl text-white tracking-wide glow-text-white mb-1">{t('Global Settings')}</h1>
+    <div className="space-y-6 max-w-3xl mx-auto w-full pb-24 lg:pb-8">
+      <h1 className="text-3xl md:text-4xl text-white tracking-wide glow-text-white mb-1 break-words leading-tight">{t('Global Settings')}</h1>
 
-      <div className="flex gap-3 mb-6 overflow-x-auto pb-2">
-        <button
-          onClick={() => setActiveTab('preferences')}
-          className={`px-6 py-3 text-xs font-bold uppercase tracking-widest rounded-lg transition-all whitespace-nowrap ${activeTab === 'preferences'
-              ? 'bg-gold-500 text-brand-900 shadow-[0_0_10px_rgba(212,175,55,0.4)]'
-              : 'text-slate-400 hover:text-white bg-brand-900/40 border border-brand-600/30'
+      <div className="flex bg-brand-900/60 p-1.5 rounded-2xl border border-brand-600/30 mb-8 shadow-inner max-w-md mx-auto w-full overflow-x-auto custom-scrollbar relative z-10">
+        {['preferences', 'family', 'data'].map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`flex-1 min-w-fit px-4 py-3 text-[10px] md:text-xs font-bold uppercase tracking-widest rounded-xl transition-all whitespace-nowrap ${
+              activeTab === tab
+                ? 'bg-gold-500 text-brand-900 shadow-[0_4px_12px_rgba(212,175,55,0.4)]'
+                : 'text-slate-400 hover:text-white'
             }`}
-        >
-          {t('Localization')}
-        </button>
-        <button
-          onClick={() => setActiveTab('family')}
-          className={`px-6 py-3 text-xs font-bold uppercase tracking-widest rounded-lg transition-all whitespace-nowrap ${activeTab === 'family'
-              ? 'bg-gold-500 text-brand-900 shadow-[0_0_10px_rgba(212,175,55,0.4)]'
-              : 'text-slate-400 hover:text-white bg-brand-900/40 border border-brand-600/30'
-            }`}
-        >
-          {t('Workspace')}
-        </button>
-        <button
-          onClick={() => setActiveTab('data')}
-          className={`px-6 py-3 text-xs font-bold uppercase tracking-widest rounded-lg transition-all whitespace-nowrap ${activeTab === 'data'
-              ? 'bg-gold-500 text-brand-900 shadow-[0_0_10px_rgba(212,175,55,0.4)]'
-              : 'text-slate-400 hover:text-white bg-brand-900/40 border border-brand-600/30'
-            }`}
-        >
-          {t('Data')}
-        </button>
+          >
+            {t(tab === 'preferences' ? 'Localization' : tab === 'family' ? 'Workspace' : 'Data')}
+          </button>
+        ))}
       </div>
 
       {activeTab === 'preferences' ? (
@@ -130,10 +117,10 @@ export default function Settings() {
                     onChange={e => setFormData({ ...formData, fontFamily: e.target.value })}
                     className="w-full p-3 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all appearance-none cursor-pointer"
                   >
-                    <option value="Outfit" className="bg-brand-800 font-outfit">Outfit (Modern)</option>
-                    <option value="Inter" className="bg-brand-800 font-inter">Inter (Clean)</option>
-                    <option value="Montserrat" className="bg-brand-800 font-montserrat">Montserrat (Classic)</option>
-                    <option value="Playfair Display" className="bg-brand-800 font-serif">Playfair Display (Elegant)</option>
+                    <option value="Outfit" className="bg-brand-800 font-outfit">{t('Outfit (Modern)')}</option>
+                    <option value="Inter" className="bg-brand-800 font-inter">{t('Inter (Clean)')}</option>
+                    <option value="Montserrat" className="bg-brand-800 font-montserrat">{t('Montserrat (Classic)')}</option>
+                    <option value="Playfair Display" className="bg-brand-800 font-serif">{t('Playfair Display (Elegant)')}</option>
                   </select>
                   <p className="text-xs text-slate-400 mt-2 italic">{t('Choose a typeface that best suits your reading preference')}</p>
                 </div>

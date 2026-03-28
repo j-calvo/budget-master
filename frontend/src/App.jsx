@@ -17,30 +17,30 @@ import { useTranslation } from 'react-i18next';
 
 // ... navItems and Sidebar ... 
 const navItems = [
-  { path: '/', name: 'Dashboard', icon: <LayoutDashboard size={22} /> },
-  { path: '/accounts', name: 'Accounts', icon: <Wallet size={22} /> },
-  { path: '/credit-cards', name: 'Cards', icon: <CardIcon size={22} /> },
-  { path: '/loans', name: 'Loans', icon: <Landmark size={22} /> },
-  { path: '/transactions', name: 'Activity', icon: <Activity size={22} /> },
-  { path: '/budgets', name: 'Budgets', icon: <PieChart size={22} /> },
-  { path: '/analytics', name: 'Analytics', icon: <PieChart size={22} /> },
-  { path: '/currencies', name: 'Currencies', icon: <Coins size={22} /> },
+  { path: '/', name: 'Dashboard', subtitle: 'Overview', icon: <LayoutDashboard size={22} /> },
+  { path: '/accounts', name: 'Accounts', subtitle: 'Balances', icon: <Wallet size={22} /> },
+  { path: '/credit-cards', name: 'Cards', subtitle: 'Liabilities', icon: <CardIcon size={22} /> },
+  { path: '/loans', name: 'Loans', subtitle: 'Obligations', icon: <Landmark size={22} /> },
+  { path: '/transactions', name: 'Activity', subtitle: 'History', icon: <Activity size={22} /> },
+  { path: '/budgets', name: 'Budgets', subtitle: 'Planning', icon: <PieChart size={22} /> },
+  { path: '/analytics', name: 'Analytics', subtitle: 'Insights', icon: <PieChart size={22} /> },
+  { path: '/currencies', name: 'Currencies', subtitle: 'Exchange', icon: <Coins size={22} /> },
 ];
 
 function Sidebar({ onClose }) {
   const location = useLocation();
   const { t } = useTranslation();
-  const { logout, user } = useAuth();
+  const { logout } = useAuth();
 
   return (
     <div className="flex flex-col w-64 glass-panel h-full text-slate-300 border-r border-brand-600/30">
-      <div className="px-8 mt-8 mb-10 flex items-center gap-4 font-serif font-bold tracking-tight text-2xl shrink-0">
-        <div className="w-11 h-11 rounded-xl bg-brand-900/50 border border-brand-600/50 flex items-center justify-center shadow-[0_0_15px_rgba(212,175,55,0.1)] p-2">
+      <div className="px-6 md:px-8 mt-6 md:mt-8 mb-6 md:mb-10 flex items-center gap-4 font-serif font-bold tracking-tight text-xl md:text-2xl shrink-0">
+        <div className="w-10 h-10 md:w-11 md:h-11 rounded-xl bg-brand-900/50 border border-brand-600/50 flex items-center justify-center shadow-[0_0_15px_rgba(212,175,55,0.1)] p-2">
           <img src="/logo.svg" alt="Budget Master" className="w-full h-full object-contain drop-shadow-[0_0_5px_rgba(212,175,55,0.5)]" />
         </div>
-        <span className="bg-gradient-to-r from-white to-gold-100 bg-clip-text text-transparent italic">Budget Master</span>
+        <span className="bg-gradient-to-r from-white to-gold-100 bg-clip-text text-transparent italic">{t('Budget Master')}</span>
       </div>
-      <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
+      <nav className="flex-1 px-4 space-y-0.5 md:space-y-1 overflow-y-auto custom-scrollbar">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
           return (
@@ -48,7 +48,7 @@ function Sidebar({ onClose }) {
               key={item.path}
               to={item.path}
               onClick={onClose}
-              className={`flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-300 ${isActive
+              className={`flex items-center gap-3 md:gap-4 px-4 py-2.5 md:py-3.5 rounded-xl transition-all duration-300 ${isActive
                 ? 'bg-gradient-to-r from-brand-600/40 to-transparent text-white font-medium border-l-2 border-gold-500 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]'
                 : 'text-slate-400 hover:bg-brand-600/20 hover:text-white hover:translate-x-1'
                 }`}
@@ -56,25 +56,25 @@ function Sidebar({ onClose }) {
               <div className={isActive ? 'text-gold-500 drop-shadow-[0_0_8px_rgba(212,175,55,0.5)]' : ''}>
                 {item.icon}
               </div>
-              <span className="text-[15px]">{t(item.name)}</span>
+              <span className="text-[14px] md:text-[15px]">{t(item.name)}</span>
             </Link>
           );
         })}
       </nav>
-      <div className="p-4 mt-auto border-t border-brand-600/30 flex flex-col gap-2 relative">
-        <Link to="/settings" onClick={onClose} className={`flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-300 ${location.pathname === '/settings'
+      <div className="p-4 mt-auto border-t border-brand-600/30 flex flex-col gap-1 md:gap-2 relative pb-8 md:pb-4">
+        <Link to="/settings" onClick={onClose} className={`flex items-center gap-3 md:gap-4 px-4 py-2.5 md:py-3 rounded-xl transition-all duration-300 ${location.pathname === '/settings'
           ? 'bg-gradient-to-r from-brand-600/40 to-transparent text-white font-medium border-l-2 border-gold-500'
           : 'text-slate-400 hover:bg-brand-600/20 hover:text-white'
           }`}>
           <div className={location.pathname === '/settings' ? 'text-gold-500 drop-shadow-[0_0_8px_rgba(212,175,55,0.5)]' : ''}>
             <Settings size={20} />
           </div>
-          <span className="text-[15px]">{t('Settings')}</span>
+          <span className="text-[14px] md:text-[15px]">{t('Settings')}</span>
         </Link>
 
-        <button onClick={() => { logout(); onClose?.(); }} className="flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-300 text-slate-400 hover:bg-red-500/20 hover:text-red-400 text-left">
+        <button onClick={() => { logout(); onClose?.(); }} className="flex items-center gap-3 md:gap-4 px-4 py-2.5 md:py-3 rounded-xl transition-all duration-300 text-slate-400 hover:bg-red-500/20 hover:text-red-400 text-left">
           <LogOut size={20} />
-          <span className="text-[15px]">{t('Sign Out')}</span>
+          <span className="text-[14px] md:text-[15px]">{t('Sign Out')}</span>
         </button>
       </div>
     </div>
@@ -88,7 +88,7 @@ function MobileNav() {
   const primaryNav = navItems.slice(0, 4);
 
   return (
-    <div className="md:hidden fixed bottom-6 left-4 right-4 z-50">
+    <div className="md:hidden fixed bottom-6 left-4 right-4 z-40">
       <div className="glass-card shadow-lg shadow-brand-900/50 flex justify-between items-center px-4 py-3 rounded-2xl border border-white/5 backdrop-blur-2xl">
         {primaryNav.map((item) => {
           const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
@@ -128,11 +128,17 @@ function GlobalHeader({ onMenuClick }) {
   const location = useLocation();
   const { user } = useAuth();
 
-  // Find current view name
+  // Find current view title and subtitle
   let title = 'Dashboard';
+  let subtitle = 'Overview';
   if (location.pathname !== '/') {
-    const match = [...navItems, { path: '/settings', name: 'Settings' }].find(i => location.pathname.startsWith(i.path));
-    if (match) title = match.name;
+    const match = [...navItems, { path: '/settings', name: 'Settings', subtitle: 'Configuration' }]
+      .filter(i => i.path !== '/')
+      .find(i => location.pathname.startsWith(i.path));
+    if (match) {
+      title = match.name;
+      subtitle = match.subtitle || title;
+    }
   }
 
   return (
@@ -147,7 +153,7 @@ function GlobalHeader({ onMenuClick }) {
           </button>
           <div>
             <h1 className="text-xl md:text-2xl font-serif text-white tracking-wide">{t(title)}</h1>
-            <p className="text-xs text-gold-400 font-medium tracking-widest uppercase mt-0.5 opacity-80">{t('Overview')}</p>
+            <p className="text-xs text-gold-400 font-medium tracking-widest uppercase mt-0.5 opacity-80">{t(subtitle)}</p>
           </div>
         </div>
         <div className="flex items-center gap-4">
@@ -179,9 +185,9 @@ function Layout({ children }) {
         <Sidebar onClose={() => setIsSidebarOpen(false)} />
       </div>
 
-      <div className="flex-1 flex flex-col pb-24 md:pb-0">
+      <div className="flex-1 flex flex-col pb-24 md:pb-0 min-w-0 w-full overflow-hidden">
         <GlobalHeader onMenuClick={() => setIsSidebarOpen(true)} />
-        <main className="flex-1 px-4 md:px-10 max-w-7xl mx-auto w-full">
+        <main className="flex-1 px-4 md:px-10 max-w-7xl mx-auto w-full overflow-y-auto overflow-x-hidden">
           {children}
         </main>
       </div>

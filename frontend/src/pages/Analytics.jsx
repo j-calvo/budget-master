@@ -10,7 +10,7 @@ export default function Analytics() {
   const { t } = useTranslation();
   const { settings } = useSettings();
   const [transactions, setTransactions] = useState([]);
-  const [categories, setCategories] = useState([]);
+  const [, setCategories] = useState([]);
   const [budgets, setBudgets] = useState([]);
   const [ratesData, setRatesData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -61,7 +61,6 @@ export default function Analytics() {
   const filteredTx = transactions.filter(tx => new Date(tx.date) >= startDate);
 
   const expenses = filteredTx.filter(tx => tx.type === 'expense');
-  const income = filteredTx.filter(tx => tx.type === 'income');
 
   // Helper to convert to preferred currency
   const convert = (amount, fromCode) => {
@@ -343,7 +342,7 @@ export default function Analytics() {
         ) : (
           <div className="bg-brand-900/40 border border-brand-600/30 rounded-xl p-8 text-center mt-4">
             <p className="text-slate-400 font-serif italic mb-2">{t('No expenses found for this time period.')}</p>
-            <p className="text-xs text-slate-500 uppercase tracking-widest">Try selecting a different time range</p>
+            <p className="text-xs text-slate-500 uppercase tracking-widest">{t('Try selecting a different time range')}</p>
           </div>
         )}
       </div>

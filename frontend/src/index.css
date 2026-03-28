@@ -29,6 +29,7 @@ body {
                     radial-gradient(circle at bottom left, rgba(212, 175, 55, 0.03), transparent 400px);
   background-attachment: fixed;
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 /* Glassmorphism & Luxury Utilities */
