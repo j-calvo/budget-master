@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api';
+import { useTranslation } from 'react-i18next';
 
 const CATS_URL = '/categories';
 const CURR_URL = '/currencies';
@@ -7,6 +8,7 @@ const BANKS_URL = '/banks';
 const TYPES_URL = '/account-types';
 
 export default function SettingsData() {
+  const { t } = useTranslation();
   const [categories, setCategories] = useState([]);
   const [currencies, setCurrencies] = useState([]);
   const [banks, setBanks] = useState([]);
@@ -164,7 +166,7 @@ export default function SettingsData() {
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-serif text-white flex items-center gap-2">
               <div className="w-1 h-5 bg-rose-500 rounded-full"></div>
-              Budget Categories
+              {t('Budget Categories')}
             </h2>
             <button onClick={() => { setCatForm({ id: null, name: '', type: 'expense', color: '#ef4444' }); setShowCatModal(true); }} className="text-[10px] font-bold uppercase tracking-widest text-brand-900 bg-rose-500 hover:bg-rose-400 px-3.5 py-2 rounded-lg transition-colors shadow-[0_0_10px_rgba(244,63,94,0.3)]">
               + Category
@@ -177,7 +179,7 @@ export default function SettingsData() {
                   <div className="w-8 h-8 rounded-full border-2 border-brand-900 shadow-[0_0_10px_rgba(0,0,0,0.5)]" style={{ backgroundColor: cat.color }}></div>
                   <div>
                     <p className="font-bold text-slate-200 tracking-wide">{cat.name}</p>
-                    <p className="text-[10px] uppercase tracking-widest text-slate-500 mt-1">{cat.type.replace('_', ' ')}</p>
+                    <p className="text-[10px] uppercase tracking-widest text-slate-400 mt-1">{cat.type.replace('_', ' ')}</p>
                   </div>
                 </div>
                 <div className="flex gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -194,7 +196,7 @@ export default function SettingsData() {
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-serif text-white flex items-center gap-2">
               <div className="w-1 h-5 bg-gold-500 rounded-full"></div>
-              Currencies
+              {t('Currencies')}
             </h2>
             <button onClick={() => { setCurrForm({ id: null, code: '', symbol: '', name: '' }); setShowCurrModal(true); }} className="text-[10px] font-bold uppercase tracking-widest text-brand-900 bg-gold-500 hover:bg-gold-400 px-3.5 py-2 rounded-lg transition-colors shadow-[0_0_10px_rgba(212,175,55,0.3)]">
               + Currency
@@ -209,7 +211,7 @@ export default function SettingsData() {
                   </div>
                   <div>
                     <p className="font-bold text-slate-200 tracking-wide">{curr.code}</p>
-                    <p className="text-xs text-slate-500 font-serif italic mt-0.5">{curr.name}</p>
+                    <p className="text-xs text-slate-400 font-serif italic mt-0.5">{curr.name}</p>
                   </div>
                 </div>
                 <div className="flex gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -226,7 +228,7 @@ export default function SettingsData() {
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-serif text-white flex items-center gap-2">
               <div className="w-1 h-5 bg-emerald-500 rounded-full"></div>
-              Banks & Institutions
+              {t('Banks & Institutions')}
             </h2>
             <button onClick={() => { setBankForm({ id: null, name: '' }); setShowBankModal(true); }} className="text-[10px] font-bold uppercase tracking-widest text-brand-900 bg-emerald-500 hover:bg-emerald-400 px-3.5 py-2 rounded-lg transition-colors shadow-[0_0_10px_rgba(16,185,129,0.3)]">
               + Bank
@@ -255,7 +257,7 @@ export default function SettingsData() {
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-serif text-white flex items-center gap-2">
               <div className="w-1 h-5 bg-sky-500 rounded-full"></div>
-              Account Types
+              {t('Account Types')}
             </h2>
             <button onClick={() => { setTypeForm({ id: null, name: '' }); setShowTypeModal(true); }} className="text-[10px] font-bold uppercase tracking-widest text-brand-900 bg-sky-500 hover:bg-sky-400 px-3.5 py-2 rounded-lg transition-colors shadow-[0_0_10px_rgba(14,165,233,0.3)]">
               + Type
@@ -409,8 +411,8 @@ export default function SettingsData() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
             </div>
-            <h3 className="text-2xl font-serif text-white mb-2">Delete {deleteData.type === 'category' ? 'Category' : deleteData.type === 'currency' ? 'Currency' : deleteData.type === 'bank' ? 'Bank' : 'Account Type'}?</h3>
-            <p className="text-slate-400 mb-8 font-serif italic">Are you sure you want to delete <span className="text-gold-400 not-italic">"{deleteData.name}"</span>? This action cannot be undone.</p>
+            <h3 className="text-2xl font-serif text-white mb-2">{t('Delete {{type}}?', { type: deleteData.type === 'category' ? t('Category') : deleteData.type === 'currency' ? t('Currency') : deleteData.type === 'bank' ? t('Bank') : t('Account Type') })}</h3>
+            <p className="text-slate-400 mb-8 font-serif italic">{t('Are you sure you want to delete "{{name}}"? This action cannot be undone.', { name: deleteData.name })}</p>
 
             <div className="flex gap-4 justify-center">
               <button onClick={() => setDeleteData({ type: null, id: null, name: null })} className="px-6 py-3 text-xs font-bold text-slate-400 hover:text-white uppercase tracking-widest transition-colors flex-1 bg-brand-900/50 border border-brand-600/30 rounded-lg">Cancel</button>

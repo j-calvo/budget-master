@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
+import FinancialTimeline from '../components/FinancialTimeline';
 
 export default function Dashboard() {
   const { settings, isLoading: settingsLoading } = useSettings();
@@ -19,40 +20,68 @@ export default function Dashboard() {
   });
   const [chartData, setChartData] = useState([]);
   const [recentTransactions, setRecentTransactions] = useState([]);
+  const [cards, setCards] = useState([]);
+  const [loans, setLoans] = useState([]);
 
   useEffect(() => {
     async function loadData() {
       try {
-        const [accRes, txRes, ccRes, loanRes] = await Promise.all([
+        const [accRes, txRes, ccRes, loanRes, rateRes] = await Promise.all([
           api.get('/accounts'),
           api.get('/transactions'),
           api.get('/credit-cards'),
           api.get('/loans'),
+          api.get('/currencies/rates'),
         ]);
 
         const accounts = accRes.data;
         const transactions = txRes.data;
         const cards = ccRes.data;
         const loans = loanRes.data;
+        const { rates, base: prefBase } = rateRes.data;
+
+        // Helper to convert to preferred currency
+        const convert = (amount, fromCode) => {
+          if (!rates || fromCode === prefBase) return amount;
+          // If rates are for 'USD' but prefBase is 'CRC', we might need cross-conversion 
+          // but our backend already returns rates relative to prefBase.
+          const rate = rates[fromCode]; 
+          if (rate) return amount / rate; // If rates[fromCode] is 515 (CRC per 1 USD) and amount is 515, result is 1 USD.
+          return amount;
+        };
 
         // 1. Net Worth = Accounts (Assets) - Cards (Liabilities) - Loans (Liabilities)
-        const assets = accounts.reduce((sum, a) => sum + (a.balance || 0), 0);
-        const cardDebt = cards.reduce((sum, c) => sum + (c.balance || 0), 0);
-        const loanDebt = loans.reduce((sum, l) => sum + (l.balance || 0), 0);
+        const assets = accounts.reduce((sum, a) => sum + convert(a.balance || 0, a.currency || 'USD'), 0);
+        const cardDebt = cards.reduce((sum, c) => sum + convert(c.balance || 0, c.currency || 'USD'), 0);
+        const loanDebt = loans.reduce((sum, l) => sum + convert(l.balance || 0, l.currency || 'USD'), 0);
         const netWorth = assets - cardDebt - loanDebt;
 
         // 2. This Month's Income & Expenses
         const now = new Date();
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const budgetStartDay = settings?.budgetStartDay || 1;
+        let startOfPeriod;
+        
+        if (budgetStartDay === 1) {
+          startOfPeriod = new Date(now.getFullYear(), now.getMonth(), 1);
+        } else {
+          // If today is Mar 10 and startDay is 18, we are in the "Feb 18 - Mar 17" period.
+          // If today is Mar 20 and startDay is 18, we are in the "Mar 18 - Apr 17" period.
+          if (now.getDate() < budgetStartDay) {
+            startOfPeriod = new Date(now.getFullYear(), now.getMonth() - 1, budgetStartDay);
+          } else {
+            startOfPeriod = new Date(now.getFullYear(), now.getMonth(), budgetStartDay);
+          }
+        }
         
         let mIncome = 0;
         let mExpenses = 0;
 
         transactions.forEach(tx => {
           const tDate = new Date(tx.date);
-          if (tDate >= startOfMonth) {
-            if (tx.type === 'income') mIncome += tx.amount;
-            else if (tx.type === 'expense') mExpenses += tx.amount;
+          if (tDate >= startOfPeriod) {
+            const convertedAmount = convert(tx.amount, tx.account?.currency || 'USD');
+            if (tx.type === 'income') mIncome += convertedAmount;
+            else if (tx.type === 'expense') mExpenses += convertedAmount;
           }
         });
 
@@ -63,18 +92,19 @@ export default function Dashboard() {
         const monthlyFlows = {};
         for(let i = 5; i >= 0; i--) {
           const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-          const key = d.toLocaleString('default', { month: 'short' });
-          monthlyFlows[key] = { name: key, Income: 0, Expenses: 0 };
+          const key = d.toLocaleString(settings?.language || 'en-US', { month: 'short' });
+          monthlyFlows[key] = { name: key, [t('Income')]: 0, [t('Expenses')]: 0 };
         }
 
         transactions.forEach(tx => {
           const tDate = new Date(tx.date);
           const diffMonths = (now.getFullYear() - tDate.getFullYear()) * 12 + (now.getMonth() - tDate.getMonth());
           if (diffMonths >= 0 && diffMonths <= 5) {
-            const key = tDate.toLocaleString('default', { month: 'short' });
+            const key = tDate.toLocaleString(settings?.language || 'en-US', { month: 'short' });
             if (monthlyFlows[key]) {
-              if (tx.type === 'income') monthlyFlows[key].Income += tx.amount;
-              else monthlyFlows[key].Expenses += tx.amount;
+              const convertedAmount = convert(tx.amount, tx.account?.currency || 'USD');
+              if (tx.type === 'income') monthlyFlows[key][t('Income')] += convertedAmount;
+              else monthlyFlows[key][t('Expenses')] += convertedAmount;
             }
           }
         });
@@ -86,6 +116,10 @@ export default function Dashboard() {
         const sortedTx = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
         setRecentTransactions(sortedTx.slice(0, 5));
 
+        // 6. Store cards/loans for timeline
+        setCards(cards);
+        setLoans(loans);
+
       } catch (err) {
         console.error('Failed to load dashboard data', err);
       } finally {
@@ -96,7 +130,7 @@ export default function Dashboard() {
   }, []);
 
   if (settingsLoading || loadingDb) return (
-    <div className="flex justify-center items-center h-64 text-slate-500 font-medium">
+    <div className="flex justify-center items-center h-64 text-slate-400 font-medium">
       Loading dashboard...
     </div>
   );
@@ -115,7 +149,7 @@ export default function Dashboard() {
           <p className="text-gold-400 font-serif italic mb-2">{label}</p>
           {payload.map((entry, index) => (
             <p key={index} className="text-sm font-medium flex justify-between gap-6" style={{ color: entry.color }}>
-              <span>{entry.name}:</span>
+              <span>{t(entry.name)}:</span>
               <span>{formatCurrency(entry.value)}</span>
             </p>
           ))}
@@ -127,6 +161,14 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-700">
+      {/* Financial Timeline */}
+      <FinancialTimeline 
+        cards={cards} 
+        loans={loans} 
+        settings={settings} 
+        metrics={metrics}
+      />
+
       {/* KPI Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         {/* Net Worth */}
@@ -183,11 +225,11 @@ export default function Dashboard() {
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1C2641" strokeOpacity={0.5} />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12, fontFamily: 'Outfit'}} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12, fontFamily: 'Outfit'}} tickFormatter={(value) => `${value >= 1000 ? (value/1000)+'k' : value}`} />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12, fontFamily: 'inherit'}} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12, fontFamily: 'inherit'}} tickFormatter={(value) => `${value >= 1000 ? (value/1000)+'k' : value}`} />
                 <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#F3E5AB', strokeWidth: 1, strokeDasharray: '4 4', opacity: 0.4 }} />
-                <Area type="monotone" dataKey="Income" stroke="#D4AF37" strokeWidth={3} fillOpacity={1} fill="url(#colorIncome)" activeDot={{ r: 6, fill: '#0A0F1C', stroke: '#D4AF37', strokeWidth: 2 }} />
-                <Area type="monotone" dataKey="Expenses" stroke="#f43f5e" strokeWidth={2} fillOpacity={1} fill="url(#colorExpense)" activeDot={{ r: 5, fill: '#0A0F1C', stroke: '#f43f5e', strokeWidth: 2 }} />
+                <Area type="monotone" dataKey={t('Income')} stroke="#D4AF37" strokeWidth={3} fillOpacity={1} fill="url(#colorIncome)" activeDot={{ r: 6, fill: '#0A0F1C', stroke: '#D4AF37', strokeWidth: 2 }} />
+                <Area type="monotone" dataKey={t('Expenses')} stroke="#f43f5e" strokeWidth={2} fillOpacity={1} fill="url(#colorExpense)" activeDot={{ r: 5, fill: '#0A0F1C', stroke: '#f43f5e', strokeWidth: 2 }} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -202,7 +244,7 @@ export default function Dashboard() {
           </h2>
           
           {recentTransactions.length === 0 ? (
-            <div className="flex-1 flex flex-col items-center justify-center text-slate-500 text-sm italic font-serif opacity-70">
+            <div className="flex-1 flex flex-col items-center justify-center text-slate-400 text-sm italic font-serif opacity-70">
               {t('No recent transactions')}
             </div>
           ) : (
@@ -218,7 +260,7 @@ export default function Dashboard() {
                       </div>
                       <div>
                         <p className="font-medium text-slate-200 text-sm line-clamp-1">{tx.description}</p>
-                        <p className="text-xs text-slate-500 mt-0.5 tracking-wide uppercase">{new Date(tx.date).toLocaleDateString(settings?.language || 'en-US', { month: 'short', day: 'numeric' })}</p>
+                        <p className="text-xs text-slate-400 mt-0.5 tracking-wide uppercase">{new Date(tx.date).toLocaleDateString(settings?.language || 'en-US', { month: 'short', day: 'numeric' })}</p>
                       </div>
                     </div>
                     <div className="text-right whitespace-nowrap">

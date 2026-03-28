@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 
+const authRoutes = require('./src/routes/authRoutes');
 const accountRoutes = require('./src/routes/accountRoutes');
 const categoryRoutes = require('./src/routes/categoryRoutes');
 const transactionRoutes = require('./src/routes/transactionRoutes');
@@ -13,6 +14,7 @@ const creditCardRoutes = require('./src/routes/creditCardRoutes');
 const loanRoutes = require('./src/routes/loanRoutes');
 const bankRoutes = require('./src/routes/bankRoutes');
 const accountTypeRoutes = require('./src/routes/accountTypeRoutes');
+const { authenticateToken } = require('./src/middleware/auth');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -23,17 +25,23 @@ const corsOptions = process.env.NODE_ENV === 'production'
 app.use(cors(corsOptions));
 app.use(express.json());
 
-// Main MVP Routes
-app.use('/api/accounts', accountRoutes);
-app.use('/api/categories', categoryRoutes);
-app.use('/api/transactions', transactionRoutes);
-app.use('/api/settings', settingsRoutes);
-app.use('/api/budgets', budgetRoutes);
-app.use('/api/currencies', currencyRoutes);
-app.use('/api/credit-cards', creditCardRoutes);
-app.use('/api/loans', loanRoutes);
-app.use('/api/banks', bankRoutes);
-app.use('/api/account-types', accountTypeRoutes);
+// Public API Routes
+app.use('/api/auth', authRoutes);
+
+// Protected MVP Routes
+const familyRoutes = require('./src/routes/familyRoutes');
+app.use('/api/family', authenticateToken, familyRoutes);
+
+app.use('/api/accounts', authenticateToken, accountRoutes);
+app.use('/api/categories', authenticateToken, categoryRoutes);
+app.use('/api/transactions', authenticateToken, transactionRoutes);
+app.use('/api/settings', authenticateToken, settingsRoutes);
+app.use('/api/budgets', authenticateToken, budgetRoutes);
+app.use('/api/currencies', authenticateToken, currencyRoutes);
+app.use('/api/credit-cards', authenticateToken, creditCardRoutes);
+app.use('/api/loans', authenticateToken, loanRoutes);
+app.use('/api/banks', authenticateToken, bankRoutes);
+app.use('/api/account-types', authenticateToken, accountTypeRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date() });

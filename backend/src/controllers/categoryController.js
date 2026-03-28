@@ -1,11 +1,10 @@
 const prisma = require('../db');
 
-const USER_ID = 'default-user-id';
 
 exports.getCategories = async (req, res) => {
   try {
     const categories = await prisma.category.findMany({
-      where: { userId: USER_ID },
+      where: { familyId: req.user.familyId },
       orderBy: { name: 'asc' }
     });
     res.json(categories);
@@ -18,7 +17,7 @@ exports.getCategoryById = async (req, res) => {
   try {
     const { id } = req.params;
     const category = await prisma.category.findUnique({
-      where: { id, userId: USER_ID }
+      where: { id, familyId: req.user.familyId }
     });
     if (!category) return res.status(404).json({ error: 'Category not found' });
     res.json(category);
@@ -41,7 +40,7 @@ exports.createCategory = async (req, res) => {
 
     const category = await prisma.category.create({
       data: {
-        userId: USER_ID,
+        familyId: req.user.familyId,
         name,
         type,
         color: color || '#3b82f6'
@@ -58,7 +57,7 @@ exports.updateCategory = async (req, res) => {
     const { id } = req.params;
     const { name, type, color } = req.body;
     const category = await prisma.category.update({
-      where: { id, userId: USER_ID },
+      where: { id, familyId: req.user.familyId },
       data: { name, type, color }
     });
     res.json(category);
@@ -71,7 +70,7 @@ exports.deleteCategory = async (req, res) => {
   try {
     const { id } = req.params;
     await prisma.category.delete({
-      where: { id, userId: USER_ID }
+      where: { id, familyId: req.user.familyId }
     });
     res.json({ success: true });
   } catch (error) {

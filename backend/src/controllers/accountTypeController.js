@@ -1,11 +1,10 @@
 const prisma = require('../db');
 
-const USER_ID = 'default-user-id';
 
 exports.getAccountTypes = async (req, res) => {
     try {
         const accountTypes = await prisma.accountType.findMany({
-            where: { userId: USER_ID },
+            where: { familyId: req.user.familyId },
             orderBy: { name: 'asc' }
         });
 
@@ -19,8 +18,8 @@ exports.getAccountTypes = async (req, res) => {
             }
 
             const defaultTypes = [
-                { userId: USER_ID, name: 'Ahorros' },
-                { userId: USER_ID, name: 'Planilla' },
+                { familyId: req.user.familyId, name: 'Ahorros' },
+                { familyId: req.user.familyId, name: 'Planilla' },
             ];
 
             try {
@@ -32,7 +31,7 @@ exports.getAccountTypes = async (req, res) => {
             }
 
             const newTypes = await prisma.accountType.findMany({
-                where: { userId: USER_ID },
+                where: { familyId: req.user.familyId },
                 orderBy: { name: 'asc' }
             });
             return res.json(newTypes);
@@ -49,7 +48,7 @@ exports.createAccountType = async (req, res) => {
     try {
         const { name } = req.body;
         const accountType = await prisma.accountType.create({
-            data: { userId: USER_ID, name }
+            data: { familyId: req.user.familyId, name }
         });
         res.status(201).json(accountType);
     } catch (error) {
@@ -63,7 +62,7 @@ exports.updateAccountType = async (req, res) => {
         const { id } = req.params;
         const { name } = req.body;
         const accountType = await prisma.accountType.update({
-            where: { id, userId: USER_ID },
+            where: { id, familyId: req.user.familyId },
             data: { name }
         });
         res.json(accountType);
@@ -77,7 +76,7 @@ exports.deleteAccountType = async (req, res) => {
     try {
         const { id } = req.params;
         await prisma.accountType.delete({
-            where: { id, userId: USER_ID }
+            where: { id, familyId: req.user.familyId }
         });
         res.json({ success: true });
     } catch (error) {

@@ -1,11 +1,11 @@
 const prisma = require('../db');
-const USER_ID = 'default-user-id'; // simplified auth
+ // simplified auth
 
 // Get all credit cards
 exports.getCreditCards = async (req, res) => {
   try {
     const cards = await prisma.creditCard.findMany({
-      where: { userId: USER_ID },
+      where: { familyId: req.user.familyId },
       orderBy: { createdAt: 'desc' },
     });
     res.json(cards);
@@ -26,11 +26,12 @@ exports.createCreditCard = async (req, res) => {
 
     const card = await prisma.creditCard.create({
       data: {
-        userId: USER_ID,
+        familyId: req.user.familyId,
         name,
         limit: parseFloat(limit),
         balance: parseFloat(balance) || 0,
         dueDate: parseInt(dueDate) || 1,
+        statementDay: parseInt(statementDay) || 1,
         apr: parseFloat(apr) || 0,
         currency: currency || 'USD',
       },
@@ -50,12 +51,13 @@ exports.updateCreditCard = async (req, res) => {
     const { name, limit, balance, dueDate, apr, currency } = req.body;
     
     const card = await prisma.creditCard.update({
-      where: { id, userId: USER_ID },
+      where: { id, familyId: req.user.familyId },
       data: {
         name,
         limit: parseFloat(limit),
         balance: parseFloat(balance),
         dueDate: parseInt(dueDate),
+        statementDay: parseInt(statementDay),
         apr: parseFloat(apr),
         currency,
       },
@@ -74,7 +76,7 @@ exports.deleteCreditCard = async (req, res) => {
     const { id } = req.params;
     
     await prisma.creditCard.delete({
-      where: { id, userId: USER_ID },
+      where: { id, familyId: req.user.familyId },
     });
     
     res.json({ success: true });

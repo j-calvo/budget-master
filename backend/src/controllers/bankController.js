@@ -1,11 +1,10 @@
 const prisma = require('../db');
 
-const USER_ID = 'default-user-id';
 
 exports.getBanks = async (req, res) => {
     try {
         const banks = await prisma.bank.findMany({
-            where: { userId: USER_ID },
+            where: { familyId: req.user.familyId },
             orderBy: { name: 'asc' }
         });
 
@@ -19,9 +18,9 @@ exports.getBanks = async (req, res) => {
             }
 
             const defaultBanks = [
-                { userId: USER_ID, name: 'BAC San Jose' },
-                { userId: USER_ID, name: 'Davivienda' },
-                { userId: USER_ID, name: 'BCR' },
+                { familyId: req.user.familyId, name: 'BAC San Jose' },
+                { familyId: req.user.familyId, name: 'Davivienda' },
+                { familyId: req.user.familyId, name: 'BCR' },
             ];
             try {
                 await prisma.bank.createMany({
@@ -32,7 +31,7 @@ exports.getBanks = async (req, res) => {
             }
 
             const newBanks = await prisma.bank.findMany({
-                where: { userId: USER_ID },
+                where: { familyId: req.user.familyId },
                 orderBy: { name: 'asc' }
             });
             return res.json(newBanks);
@@ -49,7 +48,7 @@ exports.createBank = async (req, res) => {
     try {
         const { name } = req.body;
         const bank = await prisma.bank.create({
-            data: { userId: USER_ID, name }
+            data: { familyId: req.user.familyId, name }
         });
         res.status(201).json(bank);
     } catch (error) {
@@ -63,7 +62,7 @@ exports.updateBank = async (req, res) => {
         const { id } = req.params;
         const { name } = req.body;
         const bank = await prisma.bank.update({
-            where: { id, userId: USER_ID },
+            where: { id, familyId: req.user.familyId },
             data: { name }
         });
         res.json(bank);
@@ -77,7 +76,7 @@ exports.deleteBank = async (req, res) => {
     try {
         const { id } = req.params;
         await prisma.bank.delete({
-            where: { id, userId: USER_ID }
+            where: { id, familyId: req.user.familyId }
         });
         res.json({ success: true });
     } catch (error) {

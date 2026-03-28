@@ -1,5 +1,4 @@
 const prisma = require('../db');
-const USER_ID = 'default-user-id';
 
 /**
  * Standard amortization formula.
@@ -17,7 +16,7 @@ function calcMonthlyPayment(principal, annualRatePercent, termMonths) {
 exports.getLoans = async (req, res) => {
   try {
     const loans = await prisma.loan.findMany({
-      where: { userId: USER_ID },
+      where: { familyId: req.user.familyId },
       orderBy: { nextDueDate: 'asc' },
     });
     // Parse aprHistory JSON string -> array
@@ -52,7 +51,7 @@ exports.createLoan = async (req, res) => {
 
     const loan = await prisma.loan.create({
       data: {
-        userId: USER_ID,
+        familyId: req.user.familyId,
         name,
         originalBalance: parsedBalance,
         balance: parsedBalance,
@@ -82,7 +81,7 @@ exports.updateLoan = async (req, res) => {
     const { id } = req.params;
     const { name, interestRate, termMonths, insuranceCost, startDate, isVariableRate, earlyPaymentStrategy, currency } = req.body;
 
-    const existing = await prisma.loan.findUnique({ where: { id, userId: USER_ID } });
+    const existing = await prisma.loan.findUnique({ where: { id, familyId: req.user.familyId } });
     if (!existing) return res.status(404).json({ error: 'Loan not found' });
 
     const parsedRate = parseFloat(interestRate) ?? existing.interestRate;
@@ -96,7 +95,7 @@ exports.updateLoan = async (req, res) => {
       : existing.nextDueDate;
 
     const loan = await prisma.loan.update({
-      where: { id, userId: USER_ID },
+      where: { id, familyId: req.user.familyId },
       data: {
         name,
         interestRate: parsedRate,
@@ -128,7 +127,7 @@ exports.updateAPR = async (req, res) => {
       return res.status(400).json({ error: 'apr is required' });
     }
 
-    const existing = await prisma.loan.findUnique({ where: { id, userId: USER_ID } });
+    const existing = await prisma.loan.findUnique({ where: { id, familyId: req.user.familyId } });
     if (!existing) return res.status(404).json({ error: 'Loan not found' });
     if (!existing.isVariableRate) return res.status(400).json({ error: 'This loan has a fixed rate' });
 
@@ -148,7 +147,7 @@ exports.updateAPR = async (req, res) => {
     const newPayment = calcMonthlyPayment(existing.balance, parsedAPR, remainingMonths);
 
     const loan = await prisma.loan.update({
-      where: { id, userId: USER_ID },
+      where: { id, familyId: req.user.familyId },
       data: {
         interestRate: parsedAPR,
         monthlyPayment: parseFloat(newPayment.toFixed(2)),
@@ -167,7 +166,7 @@ exports.updateAPR = async (req, res) => {
 exports.deleteLoan = async (req, res) => {
   try {
     const { id } = req.params;
-    await prisma.loan.delete({ where: { id, userId: USER_ID } });
+    await prisma.loan.delete({ where: { id, familyId: req.user.familyId } });
     res.json({ success: true });
   } catch (error) {
     console.error('deleteLoan error:', error);

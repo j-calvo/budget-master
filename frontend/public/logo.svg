@@ -1,0 +1,11 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="256" cy="256" r="240" stroke="url(#gold_gradient)" stroke-width="20" fill="transparent"/>
+  <path d="M256 120V392M256 120C300 120 340 140 340 190C340 240 300 260 256 260M256 120H200M256 260C310 260 360 280 360 335C360 390 310 410 256 410M256 260H180M256 410H180" stroke="url(#gold_gradient)" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
+  <defs>
+    <linearGradient id="gold_gradient" x1="120" y1="120" x2="392" y2="392" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F3E5AB"/>
+      <stop offset="0.5" stop-color="#D4AF37"/>
+      <stop offset="1" stop-color="#B49326"/>
+    </linearGradient>
+  </defs>
+</svg>
