@@ -1,11 +1,24 @@
 #!/bin/bash
 echo "🚀 Starting Personal Finance App Installation..."
 
-# 1. Check for Node.js
-if ! command -v node &> /dev/null
-then
+# 1. Check for Node.js and its version
+NODE_NEEDS_INSTALL=false
+
+if ! command -v node &> /dev/null; then
     echo "❌ Node.js could not be found."
-    read -p "Do you want to install Node v18 using NVM now? [y/N]: " install_node
+    NODE_NEEDS_INSTALL=true
+else
+    NODE_VERSION=$(node -v | cut -d 'v' -f 2 | cut -d '.' -f 1)
+    if [ "$NODE_VERSION" -lt 20 ]; then
+        echo "❌ Node.js version is v$NODE_VERSION, but at least v20 is required."
+        NODE_NEEDS_INSTALL=true
+    else
+        echo "✅ Node.js version $(node -v) found."
+    fi
+fi
+
+if [ "$NODE_NEEDS_INSTALL" = true ]; then
+    read -p "Do you want to install Node v22 using NVM now? [y/N]: " install_node
     if [[ "$install_node" =~ ^[Yy]$ ]]; then
         echo "Installing NVM..."
         curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
@@ -14,11 +27,11 @@ then
         export NVM_DIR="$HOME/.nvm"
         [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 
-        echo "Installing Node v18..."
-        nvm install 18
-        nvm use 18
+        echo "Installing Node v22..."
+        nvm install 22
+        nvm use 22
     else
-        echo "Please install Node manually and run the script again."
+        echo "Please install Node 20+ manually and run the script again."
         exit 1
     fi
 fi
