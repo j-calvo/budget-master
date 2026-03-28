@@ -178,9 +178,9 @@ export default function Transactions() {
         </div>
       </div>
 
-      <div className="glass-card overflow-x-auto custom-scrollbar">
-        <div className="min-w-[800px]">
-          <div className="p-4 border-b border-brand-600/50 bg-brand-900/40 text-xs font-semibold uppercase tracking-wider text-slate-400 grid grid-cols-6 gap-4">
+      <div className="glass-card overflow-hidden">
+        <div>
+          <div className="hidden md:grid p-4 border-b border-brand-600/50 bg-brand-900/40 text-xs font-semibold uppercase tracking-wider text-slate-400 grid-cols-6 gap-4">
             <div className="col-span-2">{t('Description')}</div>
             <div>{t('Category')}</div>
             <div>{t('Date')}</div>
@@ -195,30 +195,58 @@ export default function Transactions() {
           ) : (
             <div className="divide-y divide-brand-600/30">
               {transactions.map(tx => (
-                <div key={tx.id} className="p-4 grid grid-cols-6 gap-4 items-center hover:bg-brand-600/20 transition-colors group">
-                  <div className="col-span-2 flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-serif italic text-lg shadow-inner shrink-0
-                      ${tx.type === 'expense' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' : 'bg-gold-500/10 text-gold-400 border border-gold-500/20'}`}>
-                      {tx.description.charAt(0).toUpperCase()}
+                <div key={tx.id} className="p-4 md:py-3 flex flex-col md:grid md:grid-cols-6 md:gap-4 items-start md:items-center hover:bg-brand-600/20 transition-colors group">
+                  <div className="w-full md:col-span-2 flex items-center justify-between md:justify-start gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center font-serif italic text-lg shadow-inner shrink-0
+                        ${tx.type === 'expense' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' : 'bg-gold-500/10 text-gold-400 border border-gold-500/20'}`}>
+                        {tx.description.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-medium text-slate-200 line-clamp-1 truncate">{tx.description}</p>
+                        <p className="text-xs text-slate-400">{tx.account?.name}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium text-slate-200 line-clamp-1 truncate">{tx.description}</p>
-                      <p className="text-xs text-slate-400">{tx.account?.name}</p>
+                    {/* Mobile Amount */}
+                    <div className="md:hidden text-right shrink-0">
+                      <div className={`font-serif tracking-wide text-lg ${tx.type === 'expense' ? 'text-slate-300' : 'text-gold-400 drop-shadow-[0_0_5px_rgba(212,175,55,0.4)]'}`}>
+                        {tx.type === 'expense' ? '-' : '+'}
+                        {new Intl.NumberFormat(settings?.language || 'en-US', { style: 'currency', currency: tx.account?.currency || settings?.defaultCurrency || 'USD' }).format(tx.amount)}
+                      </div>
                     </div>
                   </div>
-                  <div>
-                    <span className="inline-block px-2.5 py-1 bg-brand-900/50 border border-brand-600/40 text-slate-300 rounded-md text-xs font-medium tracking-wide">
-                      {tx.category?.name || 'Uncategorized'}
-                    </span>
+
+                  {/* Mobile Actions & details row */}
+                  <div className="w-full flex md:contents justify-between items-center mt-3 md:mt-0 pl-[52px] md:pl-0">
+                    <div className="flex items-center gap-3">
+                      <span className="inline-block px-2 py-1 bg-brand-900/50 border border-brand-600/40 text-slate-300 rounded text-[10px] md:text-xs font-medium tracking-wide">
+                        {tx.category?.name || 'Uncategorized'}
+                      </span>
+                      <span className="md:hidden text-[10px] text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                        {new Date(tx.date).toLocaleDateString(settings?.language || 'en-US', { month: 'short', day: 'numeric', year: '2-digit' })}
+                      </span>
+                    </div>
+                    
+                    {/* Mobile Only Actions */}
+                    <div className="flex md:hidden gap-4">
+                      <button onClick={() => handleEditClick(tx)} className="text-slate-400 hover:text-gold-400 transition-colors">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                      </button>
+                      <button onClick={() => handleDelete(tx.id)} className="text-slate-400 hover:text-rose-400 transition-colors">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                      </button>
+                    </div>
                   </div>
-                  <div className="text-sm text-slate-400 uppercase tracking-wide">
+
+                  {/* Desktop Only Columns */}
+                  <div className="hidden md:block text-sm text-slate-400 uppercase tracking-wide">
                     {new Date(tx.date).toLocaleDateString(settings?.language || 'en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                   </div>
-                  <div className={`text-right font-serif tracking-wide text-lg ${tx.type === 'expense' ? 'text-slate-300' : 'text-gold-400 drop-shadow-[0_0_5px_rgba(212,175,55,0.4)]'}`}>
+                  <div className={`hidden md:block text-right font-serif tracking-wide text-lg ${tx.type === 'expense' ? 'text-slate-300' : 'text-gold-400 drop-shadow-[0_0_5px_rgba(212,175,55,0.4)]'}`}>
                     {tx.type === 'expense' ? '-' : '+'}
                     {new Intl.NumberFormat(settings?.language || 'en-US', { style: 'currency', currency: tx.account?.currency || settings?.defaultCurrency || 'USD' }).format(tx.amount)}
                   </div>
-                  <div className="flex justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="hidden md:flex justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button onClick={() => handleEditClick(tx)} className="text-slate-400 hover:text-gold-400 transition-colors">
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                     </button>
