@@ -178,57 +178,59 @@ export default function Transactions() {
         </div>
       </div>
 
-      <div className="glass-card overflow-hidden">
-        <div className="p-4 border-b border-brand-600/50 bg-brand-900/40 text-xs font-semibold uppercase tracking-wider text-slate-400 grid grid-cols-6 gap-4">
-          <div className="col-span-2">{t('Description')}</div>
-          <div>{t('Category')}</div>
-          <div>{t('Date')}</div>
-          <div className="text-right">{t('Amount')}</div>
-          <div className="text-right">{t('Actions')}</div>
-        </div>
-        
-        {transactions.length === 0 ? (
-          <div className="p-16 text-center text-slate-400 italic font-serif">
-            {t('No transactions found.')}
+      <div className="glass-card overflow-x-auto custom-scrollbar">
+        <div className="min-w-[800px]">
+          <div className="p-4 border-b border-brand-600/50 bg-brand-900/40 text-xs font-semibold uppercase tracking-wider text-slate-400 grid grid-cols-6 gap-4">
+            <div className="col-span-2">{t('Description')}</div>
+            <div>{t('Category')}</div>
+            <div>{t('Date')}</div>
+            <div className="text-right">{t('Amount')}</div>
+            <div className="text-right">{t('Actions')}</div>
           </div>
-        ) : (
-          <div className="divide-y divide-brand-600/30">
-            {transactions.map(tx => (
-              <div key={tx.id} className="p-4 grid grid-cols-6 gap-4 items-center hover:bg-brand-600/20 transition-colors group">
-                <div className="col-span-2 flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-serif italic text-lg shadow-inner shrink-0
-                    ${tx.type === 'expense' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' : 'bg-gold-500/10 text-gold-400 border border-gold-500/20'}`}>
-                    {tx.description.charAt(0).toUpperCase()}
+          
+          {transactions.length === 0 ? (
+            <div className="p-16 text-center text-slate-400 italic font-serif">
+              {t('No transactions found.')}
+            </div>
+          ) : (
+            <div className="divide-y divide-brand-600/30">
+              {transactions.map(tx => (
+                <div key={tx.id} className="p-4 grid grid-cols-6 gap-4 items-center hover:bg-brand-600/20 transition-colors group">
+                  <div className="col-span-2 flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-serif italic text-lg shadow-inner shrink-0
+                      ${tx.type === 'expense' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' : 'bg-gold-500/10 text-gold-400 border border-gold-500/20'}`}>
+                      {tx.description.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="font-medium text-slate-200 line-clamp-1 truncate">{tx.description}</p>
+                      <p className="text-xs text-slate-400">{tx.account?.name}</p>
+                    </div>
                   </div>
                   <div>
-                    <p className="font-medium text-slate-200">{tx.description}</p>
-                    <p className="text-xs text-slate-400">{tx.account?.name}</p>
+                    <span className="inline-block px-2.5 py-1 bg-brand-900/50 border border-brand-600/40 text-slate-300 rounded-md text-xs font-medium tracking-wide">
+                      {tx.category?.name || 'Uncategorized'}
+                    </span>
+                  </div>
+                  <div className="text-sm text-slate-400 uppercase tracking-wide">
+                    {new Date(tx.date).toLocaleDateString(settings?.language || 'en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </div>
+                  <div className={`text-right font-serif tracking-wide text-lg ${tx.type === 'expense' ? 'text-slate-300' : 'text-gold-400 drop-shadow-[0_0_5px_rgba(212,175,55,0.4)]'}`}>
+                    {tx.type === 'expense' ? '-' : '+'}
+                    {new Intl.NumberFormat(settings?.language || 'en-US', { style: 'currency', currency: tx.account?.currency || settings?.defaultCurrency || 'USD' }).format(tx.amount)}
+                  </div>
+                  <div className="flex justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => handleEditClick(tx)} className="text-slate-400 hover:text-gold-400 transition-colors">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                    </button>
+                    <button onClick={() => handleDelete(tx.id)} className="text-slate-400 hover:text-rose-400 transition-colors">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    </button>
                   </div>
                 </div>
-                <div>
-                  <span className="inline-block px-2.5 py-1 bg-brand-900/50 border border-brand-600/40 text-slate-300 rounded-md text-xs font-medium tracking-wide">
-                    {tx.category?.name || 'Uncategorized'}
-                  </span>
-                </div>
-                <div className="text-sm text-slate-400 uppercase tracking-wide">
-                  {new Date(tx.date).toLocaleDateString(settings?.language || 'en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                </div>
-                <div className={`text-right font-serif tracking-wide text-lg ${tx.type === 'expense' ? 'text-slate-300' : 'text-gold-400 drop-shadow-[0_0_5px_rgba(212,175,55,0.4)]'}`}>
-                  {tx.type === 'expense' ? '-' : '+'}
-                  {new Intl.NumberFormat(settings?.language || 'en-US', { style: 'currency', currency: tx.account?.currency || settings?.defaultCurrency || 'USD' }).format(tx.amount)}
-                </div>
-                <div className="flex justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => handleEditClick(tx)} className="text-slate-400 hover:text-gold-400 transition-colors">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                  </button>
-                  <button onClick={() => handleDelete(tx.id)} className="text-slate-400 hover:text-rose-400 transition-colors">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {showModal && (
@@ -260,7 +262,7 @@ export default function Transactions() {
                 <input required type="text" value={newTx.description} onChange={e => setNewTx({...newTx, description: e.target.value})} className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all" placeholder="e.g. Weekly Groceries" />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Account')}</label>
                   <select value={newTx.accountId} onChange={e => setNewTx({...newTx, accountId: e.target.value})} className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all appearance-none cursor-pointer">
