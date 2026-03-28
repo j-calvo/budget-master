@@ -31,14 +31,6 @@ exports.createAccount = async (req, res) => {
   try {
     const { name, type, balance, institution, currency } = req.body;
     
-    // Ensure default user exists
-    let user = await prisma.user.findUnique({ where: { id: USER_ID } });
-    if (!user) {
-      user = await prisma.user.create({
-        data: { id: USER_ID, name: 'Default User' }
-      });
-    }
-
     const account = await prisma.account.create({
       data: {
         familyId: req.user.familyId,

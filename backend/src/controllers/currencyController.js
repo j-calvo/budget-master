@@ -11,13 +11,6 @@ exports.getCurrencies = async (req, res) => {
 
     // Seed default currencies if none exist
     if (currencies.length === 0) {
-      // Ensure default user exists
-      let user = await prisma.user.findUnique({ where: { id: USER_ID } });
-      if (!user) {
-        user = await prisma.user.create({
-          data: { id: USER_ID, name: 'Default User' }
-        });
-      }
 
       const defaultCurrencies = [
         { familyId: req.user.familyId, code: 'USD', symbol: '$', name: 'US Dollar' },

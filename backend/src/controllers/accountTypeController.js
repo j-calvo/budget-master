@@ -10,12 +10,6 @@ exports.getAccountTypes = async (req, res) => {
 
         // Seed default account types if none exist
         if (accountTypes.length === 0) {
-            let user = await prisma.user.findUnique({ where: { id: USER_ID } });
-            if (!user) {
-                user = await prisma.user.create({
-                    data: { id: USER_ID, name: 'Default User' }
-                });
-            }
 
             const defaultTypes = [
                 { familyId: req.user.familyId, name: 'Ahorros' },
