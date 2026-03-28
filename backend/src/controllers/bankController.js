@@ -10,12 +10,6 @@ exports.getBanks = async (req, res) => {
 
         // Seed default banks if none exist
         if (banks.length === 0) {
-            let user = await prisma.user.findUnique({ where: { id: USER_ID } });
-            if (!user) {
-                user = await prisma.user.create({
-                    data: { id: USER_ID, name: 'Default User' }
-                });
-            }
 
             const defaultBanks = [
                 { familyId: req.user.familyId, name: 'BAC San Jose' },

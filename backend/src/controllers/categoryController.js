@@ -30,13 +30,6 @@ exports.createCategory = async (req, res) => {
   try {
     const { name, type, color } = req.body;
     
-    // Ensure default user exists
-    let user = await prisma.user.findUnique({ where: { id: USER_ID } });
-    if (!user) {
-      user = await prisma.user.create({
-        data: { id: USER_ID, name: 'Default User' }
-      });
-    }
 
     const category = await prisma.category.create({
       data: {
