@@ -133,19 +133,19 @@ export default function FinancialTimeline({ cards, loans, settings, metrics }) {
         </div>
       </div>
 
-      {/* Timeline Scrollable Area */}
-      <div className="relative overflow-x-auto pb-6 scrollbar-thin scrollbar-thumb-brand-600 scrollbar-track-transparent">
-        <div className="flex min-w-max gap-2 px-2 h-32 items-end">
+      {/* Timeline Area (Responsive grid/wrap instead of horizontal scroll) */}
+      <div className="w-full pb-6 mt-8">
+        <div className="flex flex-wrap gap-y-14 gap-x-1 sm:gap-x-2 md:gap-x-4 justify-center px-2 items-end">
           {daysInMonth.map(day => {
             const isToday = day === currentDay;
             const dayEvents = events[day] || [];
             
             return (
-              <div key={day} className="flex flex-col items-center group/day relative w-12">
+              <div key={day} className="flex flex-col items-center group/day relative w-10 sm:w-12">
                 {/* Event Markers */}
-                <div className="absolute bottom-14 flex flex-col items-center gap-1">
+                <div className="absolute bottom-12 flex flex-col items-center gap-1 z-10 hover:z-20">
                   {dayEvents.map((ev, idx) => (
-                    <div key={idx} className="w-8 h-8 rounded-full bg-brand-900/80 border border-brand-600/50 flex items-center justify-center shadow-lg transform group-hover/day:scale-110 transition-transform cursor-pointer" title={ev.label}>
+                    <div key={idx} className="w-8 h-8 rounded-full bg-brand-900 border border-brand-600/50 flex items-center justify-center shadow-lg transform hover:scale-125 transition-transform cursor-pointer relative" title={ev.label}>
                       {ev.icon}
                     </div>
                   ))}
@@ -158,7 +158,7 @@ export default function FinancialTimeline({ cards, loans, settings, metrics }) {
                 </span>
                 
                 {isToday && (
-                  <span className="absolute -bottom-4 text-[8px] uppercase tracking-widest text-gold-500 font-black animate-pulse">
+                  <span className="absolute -bottom-5 text-[8px] uppercase tracking-widest text-gold-500 font-black animate-pulse whitespace-nowrap">
                     {t('Today')}
                   </span>
                 )}

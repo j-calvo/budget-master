@@ -170,7 +170,7 @@ export default function Dashboard() {
       />
 
       {/* KPI Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         {/* Net Worth */}
         <div className="glass-card p-5 md:p-6 transition-all hover:border-gold-500/30 hover:shadow-gold-500/10 group cursor-default">
           <p className="text-xs md:text-sm font-medium text-slate-400 uppercase tracking-widest group-hover:text-gold-400 transition-colors">{t('Net Worth')}</p>

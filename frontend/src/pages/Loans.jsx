@@ -686,7 +686,7 @@ export default function Loans() {
               ) : (
                 /* ---- Full installment form ---- */
                 <>
-                  <div className="grid grid-cols-2 gap-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <div>
                       <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Total Amount</label>
                       <input required type="number" step="0.01" value={paymentForm.amount === 0 ? '' : paymentForm.amount} onChange={e => setPaymentForm({ ...paymentForm, amount: e.target.value })} className="w-full p-3 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif" />

@@ -33,7 +33,7 @@ function Sidebar({ onClose }) {
   const { logout, user } = useAuth();
 
   return (
-    <div className="hidden md:flex flex-col w-64 glass-panel h-screen fixed top-0 left-0 z-50 text-slate-300 border-r border-brand-600/30">
+    <div className="flex flex-col w-64 glass-panel h-full text-slate-300 border-r border-brand-600/30">
       <div className="px-8 mt-8 mb-10 flex items-center gap-4 font-serif font-bold tracking-tight text-2xl shrink-0">
         <div className="w-11 h-11 rounded-xl bg-brand-900/50 border border-brand-600/50 flex items-center justify-center shadow-[0_0_15px_rgba(212,175,55,0.1)] p-2">
           <img src="/logo.svg" alt="Budget Master" className="w-full h-full object-contain drop-shadow-[0_0_5px_rgba(212,175,55,0.5)]" />

@@ -183,7 +183,7 @@ export default function Accounts() {
                 <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Account Name')}</label>
                 <input required type="text" value={newAccount.name} onChange={e => setNewAccount({ ...newAccount, name: e.target.value })} className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif" placeholder="e.g. Premium Checking" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Institution')}</label>
                   {banks.length > 0 ? (
@@ -210,7 +210,7 @@ export default function Accounts() {
                   )}
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Currency')}</label>
                   <select value={newAccount.currency} onChange={e => setNewAccount({ ...newAccount, currency: e.target.value })} className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all appearance-none cursor-pointer">
