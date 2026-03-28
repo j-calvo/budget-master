@@ -1,6 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import api from '../api';
-import { useTranslation } from 'react-i18next';
 import i18n from '../i18n';
 
 const SettingsContext = createContext();
@@ -60,6 +59,7 @@ export function SettingsProvider({ children }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useSettings() {
   return useContext(SettingsContext);
 }

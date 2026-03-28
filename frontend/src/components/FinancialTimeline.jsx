@@ -13,6 +13,8 @@ import {
 export default function FinancialTimeline({ cards, loans, settings, metrics }) {
   const { t } = useTranslation();
   const today = new Date();
+  const currentYear = today.getFullYear();
+  const currentMonth = today.getMonth();
   const currentDay = today.getDate();
   const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
   const payFrequency = settings?.payFrequency || 'monthly';
@@ -29,7 +31,7 @@ export default function FinancialTimeline({ cards, loans, settings, metrics }) {
       days.push(Math.min(payDay2, lastDayOfMonth));
     } else if (payFrequency === 'weekly') {
       for (let d = 1; d <= lastDayOfMonth; d++) {
-        const dateObj = new Date(today.getFullYear(), today.getMonth(), d);
+        const dateObj = new Date(currentYear, currentMonth, d);
         if (dateObj.getDay() === payDayOfWeek) {
           days.push(d);
         }
@@ -37,7 +39,7 @@ export default function FinancialTimeline({ cards, loans, settings, metrics }) {
     }
     // Remove duplicates (e.g., if payDay1 == payDay2 somehow) and sort
     return [...new Set(days)].sort((a, b) => a - b);
-  }, [payFrequency, payDay1, payDay2, payDayOfWeek, lastDayOfMonth, today.getFullYear(), today.getMonth()]);
+  }, [payFrequency, payDay1, payDay2, payDayOfWeek, lastDayOfMonth, currentYear, currentMonth]);
   const daysInMonth = Array.from({ length: lastDayOfMonth }, (_, i) => i + 1);
 
   // Identify important days
@@ -79,7 +81,8 @@ export default function FinancialTimeline({ cards, loans, settings, metrics }) {
     });
 
     return ev;
-  }, [cards, loans, payDays, t, today.getMonth(), today.getFullYear()]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cards, loans, payDays, t, currentMonth, currentYear]);
 
   // Calculate liquidity forecast
   // "Bills due before next payday"

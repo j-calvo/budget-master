@@ -49,45 +49,45 @@ export default function FamilySettings() {
   if (!family) return null;
 
   return (
-    <div className="space-y-6">
-      <div className="glass-card p-8 relative overflow-hidden group">
+    <div className="space-y-6 max-w-2xl mx-auto">
+      <div className="glass-panel p-5 md:glass-card md:p-8 rounded-2xl relative overflow-hidden group border border-brand-600/30">
         <div className="absolute -top-24 -right-24 w-64 h-64 bg-gold-500/5 rounded-full blur-3xl group-hover:bg-gold-500/10 transition-colors pointer-events-none"></div>
-        <h2 className="text-xl font-serif text-white mb-6 flex items-center gap-2 relative z-10">
-          <div className="w-1 h-5 bg-gold-500 rounded-full"></div>
+        <h2 className="text-xl md:text-2xl font-serif text-white mb-6 md:mb-8 flex items-center gap-2 relative z-10">
+          <div className="w-1 h-5 bg-gold-500 rounded-full shrink-0"></div>
           {family.name}
         </h2>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
-          <div className="glass-panel p-6 rounded-xl border border-brand-600/30">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 relative z-10">
+          <div className="bg-brand-900/40 p-5 rounded-2xl border border-brand-600/30">
             <h3 className="text-sm font-bold text-gold-500 uppercase tracking-widest mb-4 flex items-center gap-2">
               <Key size={16} /> {t('Access Code')}
             </h3>
             <div className="flex items-center justify-between bg-brand-900/50 p-4 rounded-lg border border-brand-600/50">
-              <span className="font-mono text-xl text-white tracking-widest">{family.inviteCode}</span>
+              <span className="font-mono text-lg md:text-xl text-white tracking-widest break-all mr-2">{family.inviteCode}</span>
               {user.role === 'ADMIN' && (
                 <button onClick={rotateInviteCode} className="text-xs text-gold-400 hover:text-white transition-colors uppercase tracking-wider font-bold bg-gold-500/10 hover:bg-gold-500/20 px-3 py-1.5 rounded">
                   {t('Rotate')}
                 </button>
               )}
             </div>
-            <p className="text-xs text-slate-400 mt-3 font-serif italic">{t('Share this code securely with family to join this workspace.')}</p>
+            <p className="text-xs text-slate-400 mt-4 font-serif italic">{t('Share this code securely with family to join this workspace.')}</p>
           </div>
 
-          <div className="glass-panel p-6 rounded-xl border border-brand-600/30 md:col-span-2">
+          <div className="bg-brand-900/40 p-5 rounded-2xl border border-brand-600/30 md:col-span-2">
             <h3 className="text-sm font-bold text-gold-500 uppercase tracking-widest mb-4 flex items-center gap-2">
               <Users size={16} /> {t('Workspace Members')}
             </h3>
             
-            <div className="space-y-2">
+            <div className="space-y-2 -mx-2 md:mx-0">
               {family.members.map((member) => (
-                <div key={member.id} className="flex items-center justify-between p-4 bg-brand-900/30 rounded-lg border border-white/5 hover:bg-brand-800/40 transition-colors">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-full bg-brand-700/50 border border-gold-500/20 flex items-center justify-center text-gold-500 shadow-[0_0_10px_rgba(212,175,55,0.1)]">
+                <div key={member.id} className="flex items-center justify-between p-3 md:p-4 bg-transparent md:bg-brand-900/30 md:rounded-lg border-b border-brand-600/20 md:border-white/5 hover:bg-brand-800/40 transition-colors last:border-0 md:last:border-white/5">
+                  <div className="flex items-center gap-4 min-w-0">
+                    <div className="w-10 h-10 rounded-full bg-brand-700/50 border border-gold-500/20 flex items-center justify-center text-gold-500 shadow-[0_0_10px_rgba(212,175,55,0.1)] shrink-0">
                       {member.role === 'ADMIN' ? <Shield size={18} /> : <User size={18} />}
                     </div>
-                    <div>
-                      <p className="text-white font-medium">{member.user.name}</p>
-                      <p className="text-xs text-slate-400">{member.user.email}</p>
+                    <div className="min-w-0 pr-2">
+                      <p className="text-white font-medium truncate">{member.user.name}</p>
+                      <p className="text-xs text-slate-400 truncate">{member.user.email}</p>
                     </div>
                   </div>
                   

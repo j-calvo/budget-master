@@ -13,7 +13,8 @@ export default function SettingsData() {
   const [currencies, setCurrencies] = useState([]);
   const [banks, setBanks] = useState([]);
   const [accountTypes, setAccountTypes] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [, setIsLoading] = useState(true);
+  const [activeDataTab, setActiveDataTab] = useState('categories');
 
   // Modals
   const [showCatModal, setShowCatModal] = useState(false);
@@ -158,128 +159,154 @@ export default function SettingsData() {
   };
 
   return (
-    <div className="space-y-8 mt-12">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+    <div className="space-y-6 mt-6 max-w-2xl mx-auto w-full pb-8">
+      
+      {/* Sub-navigation for Data Types */}
+      <div className="flex bg-brand-900/60 p-1.5 rounded-2xl border border-brand-600/30 mb-8 shadow-inner overflow-x-auto custom-scrollbar w-full">
+        {['categories', 'currencies', 'banks', 'types'].map(tab => (
+          <button
+            key={tab}
+            onClick={() => setActiveDataTab(tab)}
+            className={`flex-1 min-w-[100px] py-3 px-2 md:px-4 text-[10px] md:text-xs font-bold uppercase tracking-widest rounded-xl transition-all whitespace-nowrap ${
+              activeDataTab === tab
+                ? 'bg-brand-600 text-white shadow-[0_4px_12px_rgba(0,0,0,0.3)]'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            {t(tab === 'categories' ? 'Categories' : tab === 'currencies' ? 'Currencies' : tab === 'banks' ? 'Banks' : 'Account Types')}
+          </button>
+        ))}
+      </div>
 
+      <div className="glass-panel p-5 md:glass-card md:p-8 rounded-2xl relative overflow-hidden border border-brand-600/30">
+        
         {/* Categories Section */}
-        <div className="glass-card p-6 flex flex-col h-[400px]">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-serif text-white flex items-center gap-2">
-              <div className="w-1 h-5 bg-rose-500 rounded-full"></div>
-              {t('Budget Categories')}
-            </h2>
-            <button onClick={() => { setCatForm({ id: null, name: '', type: 'expense', color: '#ef4444' }); setShowCatModal(true); }} className="text-[10px] font-bold uppercase tracking-widest text-brand-900 bg-rose-500 hover:bg-rose-400 px-3.5 py-2 rounded-lg transition-colors shadow-[0_0_10px_rgba(244,63,94,0.3)]">
-              + Category
-            </button>
-          </div>
-          <div className="space-y-3 flex-1 overflow-y-auto custom-scrollbar pr-2">
-            {categories.map(cat => (
-              <div key={cat.id} className="flex justify-between items-center p-4 bg-brand-900/40 border border-brand-600/30 rounded-xl hover:border-brand-500/50 transition-colors group">
-                <div className="flex items-center gap-4">
-                  <div className="w-8 h-8 rounded-full border-2 border-brand-900 shadow-[0_0_10px_rgba(0,0,0,0.5)]" style={{ backgroundColor: cat.color }}></div>
-                  <div>
-                    <p className="font-bold text-slate-200 tracking-wide">{cat.name}</p>
-                    <p className="text-[10px] uppercase tracking-widest text-slate-400 mt-1">{cat.type.replace('_', ' ')}</p>
+        {activeDataTab === 'categories' && (
+          <div className="flex flex-col animate-in fade-in duration-300">
+            <div className="flex flex-wrap justify-between items-center gap-4 mb-6 md:mb-8">
+              <h2 className="text-xl md:text-2xl font-serif text-white flex items-center gap-2">
+                <div className="w-1 h-5 bg-rose-500 rounded-full shrink-0"></div>
+                {t('Budget Categories')}
+              </h2>
+              <button onClick={() => { setCatForm({ id: null, name: '', type: 'expense', color: '#ef4444' }); setShowCatModal(true); }} className="text-[10px] font-bold uppercase tracking-widest text-brand-900 bg-rose-500 hover:bg-rose-400 px-4 py-2.5 rounded-lg transition-colors shadow-[0_0_10px_rgba(244,63,94,0.3)]">
+                + {t('Category')}
+              </button>
+            </div>
+            <div className="space-y-1 -mx-2 md:mx-0">
+              {categories.map(cat => (
+                <div key={cat.id} className="flex flex-col md:flex-row justify-between md:items-center gap-3 md:gap-0 p-4 bg-transparent md:bg-brand-900/30 md:rounded-lg border-b border-brand-600/20 md:border-white/5 hover:bg-brand-800/40 transition-colors last:border-0 md:last:border-white/5 group">
+                  <div className="flex items-center gap-4 min-w-0 w-full md:w-auto">
+                    <div className="w-10 h-10 rounded-full border-2 border-brand-900 shadow-[0_0_10px_rgba(0,0,0,0.5)] shrink-0" style={{ backgroundColor: cat.color }}></div>
+                    <div className="min-w-0 pr-2">
+                      <p className="font-bold text-slate-200 tracking-wide truncate">{cat.name}</p>
+                      <p className="text-[10px] uppercase tracking-widest text-slate-400 mt-1">{cat.type.replace('_', ' ')}</p>
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-6 md:gap-4 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity shrink-0 mt-2 md:mt-0 pb-1 md:pb-0 border-b border-white/5 md:border-0 pl-14 md:pl-0">
+                    <button onClick={() => { setCatForm(cat); setShowCatModal(true); }} className="text-slate-400 hover:text-gold-400 text-[13px] md:text-sm font-medium transition-colors uppercase tracking-wider">{t('Edit')}</button>
+                    <button onClick={() => setDeleteData({ type: 'category', id: cat.id, name: cat.name })} className="text-slate-400 hover:text-rose-500 text-[13px] md:text-sm font-medium transition-colors uppercase tracking-wider">{t('Delete')}</button>
                   </div>
                 </div>
-                <div className="flex gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => { setCatForm(cat); setShowCatModal(true); }} className="text-slate-400 hover:text-gold-400 text-sm transition-colors">Edit</button>
-                  <button onClick={() => setDeleteData({ type: 'category', id: cat.id, name: cat.name })} className="text-slate-400 hover:text-rose-500 text-sm transition-colors">Delete</button>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Currencies Section */}
-        <div className="glass-card p-6 flex flex-col h-[400px]">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-serif text-white flex items-center gap-2">
-              <div className="w-1 h-5 bg-gold-500 rounded-full"></div>
-              {t('Currencies')}
-            </h2>
-            <button onClick={() => { setCurrForm({ id: null, code: '', symbol: '', name: '' }); setShowCurrModal(true); }} className="text-[10px] font-bold uppercase tracking-widest text-brand-900 bg-gold-500 hover:bg-gold-400 px-3.5 py-2 rounded-lg transition-colors shadow-[0_0_10px_rgba(212,175,55,0.3)]">
-              + Currency
-            </button>
-          </div>
-          <div className="space-y-3 flex-1 overflow-y-auto custom-scrollbar pr-2">
-            {currencies.map(curr => (
-              <div key={curr.id} className="flex justify-between items-center p-4 bg-brand-900/40 border border-brand-600/30 rounded-xl hover:border-brand-500/50 transition-colors group">
-                <div className="flex items-center gap-5">
-                  <div className="text-gold-400 font-serif font-bold text-2xl w-10 text-center glow-text-gold">
-                    {curr.symbol}
+        {activeDataTab === 'currencies' && (
+          <div className="flex flex-col animate-in fade-in duration-300">
+            <div className="flex flex-wrap justify-between items-center gap-4 mb-6 md:mb-8">
+              <h2 className="text-xl md:text-2xl font-serif text-white flex items-center gap-2">
+                <div className="w-1 h-5 bg-gold-500 rounded-full shrink-0"></div>
+                {t('Currencies')}
+              </h2>
+              <button onClick={() => { setCurrForm({ id: null, code: '', symbol: '', name: '' }); setShowCurrModal(true); }} className="text-[10px] font-bold uppercase tracking-widest text-brand-900 bg-gold-500 hover:bg-gold-400 px-4 py-2.5 rounded-lg transition-colors shadow-[0_0_10px_rgba(212,175,55,0.3)]">
+                + {t('Currency')}
+              </button>
+            </div>
+            <div className="space-y-1 -mx-2 md:mx-0">
+              {currencies.map(curr => (
+                <div key={curr.id} className="flex flex-col md:flex-row justify-between md:items-center gap-3 md:gap-0 p-4 bg-transparent md:bg-brand-900/30 md:rounded-lg border-b border-brand-600/20 md:border-white/5 hover:bg-brand-800/40 transition-colors last:border-0 md:last:border-white/5 group">
+                  <div className="flex items-center gap-5 min-w-0 w-full md:w-auto">
+                    <div className="text-gold-400 font-serif font-bold text-3xl w-10 text-center glow-text-gold shrink-0">
+                      {curr.symbol}
+                    </div>
+                    <div className="min-w-0 pr-2">
+                      <p className="font-bold text-slate-200 tracking-wide truncate">{curr.code}</p>
+                      <p className="text-xs text-slate-400 font-serif italic mt-0.5 truncate">{curr.name}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-bold text-slate-200 tracking-wide">{curr.code}</p>
-                    <p className="text-xs text-slate-400 font-serif italic mt-0.5">{curr.name}</p>
+                  <div className="flex justify-end gap-6 md:gap-4 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity shrink-0 mt-2 md:mt-0 pb-1 md:pb-0 border-b border-white/5 md:border-0 pl-15 md:pl-0">
+                    <button onClick={() => { setCurrForm(curr); setShowCurrModal(true); }} className="text-slate-400 hover:text-gold-400 text-[13px] md:text-sm font-medium transition-colors uppercase tracking-wider">{t('Edit')}</button>
+                    <button onClick={() => setDeleteData({ type: 'currency', id: curr.id, name: curr.name })} className="text-slate-400 hover:text-rose-500 text-[13px] md:text-sm font-medium transition-colors uppercase tracking-wider">{t('Delete')}</button>
                   </div>
                 </div>
-                <div className="flex gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => { setCurrForm(curr); setShowCurrModal(true); }} className="text-slate-400 hover:text-gold-400 text-sm transition-colors">Edit</button>
-                  <button onClick={() => setDeleteData({ type: 'currency', id: curr.id, name: curr.name })} className="text-slate-400 hover:text-rose-500 text-sm transition-colors">Delete</button>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Banks Section */}
-        <div className="glass-card p-6 flex flex-col h-[400px]">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-serif text-white flex items-center gap-2">
-              <div className="w-1 h-5 bg-emerald-500 rounded-full"></div>
-              {t('Banks & Institutions')}
-            </h2>
-            <button onClick={() => { setBankForm({ id: null, name: '' }); setShowBankModal(true); }} className="text-[10px] font-bold uppercase tracking-widest text-brand-900 bg-emerald-500 hover:bg-emerald-400 px-3.5 py-2 rounded-lg transition-colors shadow-[0_0_10px_rgba(16,185,129,0.3)]">
-              + Bank
-            </button>
-          </div>
-          <div className="space-y-3 flex-1 overflow-y-auto custom-scrollbar pr-2">
-            {banks.map(bank => (
-              <div key={bank.id} className="flex justify-between items-center p-4 bg-brand-900/40 border border-brand-600/30 rounded-xl hover:border-brand-500/50 transition-colors group">
-                <div className="flex items-center gap-4">
-                  <div className="text-emerald-400 w-10 text-center">
-                    <svg className="w-6 h-6 mx-auto drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+        {activeDataTab === 'banks' && (
+          <div className="flex flex-col animate-in fade-in duration-300">
+            <div className="flex flex-wrap justify-between items-center gap-4 mb-6 md:mb-8">
+              <h2 className="text-xl md:text-2xl font-serif text-white flex items-center gap-2">
+                <div className="w-1 h-5 bg-emerald-500 rounded-full shrink-0"></div>
+                {t('Banks & Institutions')}
+              </h2>
+              <button onClick={() => { setBankForm({ id: null, name: '' }); setShowBankModal(true); }} className="text-[10px] font-bold uppercase tracking-widest text-brand-900 bg-emerald-500 hover:bg-emerald-400 px-4 py-2.5 rounded-lg transition-colors shadow-[0_0_10px_rgba(16,185,129,0.3)]">
+                + {t('Bank')}
+              </button>
+            </div>
+            <div className="space-y-1 -mx-2 md:mx-0">
+              {banks.map(bank => (
+                <div key={bank.id} className="flex flex-col md:flex-row justify-between md:items-center gap-3 md:gap-0 p-4 bg-transparent md:bg-brand-900/30 md:rounded-lg border-b border-brand-600/20 md:border-white/5 hover:bg-brand-800/40 transition-colors last:border-0 md:last:border-white/5 group">
+                  <div className="flex items-center gap-4 min-w-0 w-full md:w-auto">
+                    <div className="text-emerald-400 w-10 text-center shrink-0">
+                      <svg className="w-6 h-6 mx-auto drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+                    </div>
+                    <p className="font-bold text-slate-200 tracking-wide truncate min-w-0 pr-2">{bank.name}</p>
                   </div>
-                  <p className="font-bold text-slate-200 tracking-wide">{bank.name}</p>
+                  <div className="flex justify-end gap-6 md:gap-4 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity shrink-0 mt-2 md:mt-0 pb-1 md:pb-0 border-b border-white/5 md:border-0 pl-14 md:pl-0">
+                    <button onClick={() => { setBankForm(bank); setShowBankModal(true); }} className="text-slate-400 hover:text-gold-400 text-[13px] md:text-sm font-medium transition-colors uppercase tracking-wider">{t('Edit')}</button>
+                    <button onClick={() => setDeleteData({ type: 'bank', id: bank.id, name: bank.name })} className="text-slate-400 hover:text-rose-500 text-[13px] md:text-sm font-medium transition-colors uppercase tracking-wider">{t('Delete')}</button>
+                  </div>
                 </div>
-                <div className="flex gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => { setBankForm(bank); setShowBankModal(true); }} className="text-slate-400 hover:text-gold-400 text-sm transition-colors">Edit</button>
-                  <button onClick={() => setDeleteData({ type: 'bank', id: bank.id, name: bank.name })} className="text-slate-400 hover:text-rose-500 text-sm transition-colors">Delete</button>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Account Types Section */}
-        <div className="glass-card p-6 flex flex-col h-[400px]">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-serif text-white flex items-center gap-2">
-              <div className="w-1 h-5 bg-sky-500 rounded-full"></div>
-              {t('Account Types')}
-            </h2>
-            <button onClick={() => { setTypeForm({ id: null, name: '' }); setShowTypeModal(true); }} className="text-[10px] font-bold uppercase tracking-widest text-brand-900 bg-sky-500 hover:bg-sky-400 px-3.5 py-2 rounded-lg transition-colors shadow-[0_0_10px_rgba(14,165,233,0.3)]">
-              + Type
-            </button>
-          </div>
-          <div className="space-y-3 flex-1 overflow-y-auto custom-scrollbar pr-2">
-            {accountTypes.map(type => (
-              <div key={type.id} className="flex justify-between items-center p-4 bg-brand-900/40 border border-brand-600/30 rounded-xl hover:border-brand-500/50 transition-colors group">
-                <div className="flex items-center gap-4">
-                  <div className="text-sky-400 w-10 text-center">
-                    <svg className="w-6 h-6 mx-auto drop-shadow-[0_0_8px_rgba(14,165,233,0.5)]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" /></svg>
+        {activeDataTab === 'types' && (
+          <div className="flex flex-col animate-in fade-in duration-300">
+            <div className="flex flex-wrap justify-between items-center gap-4 mb-6 md:mb-8">
+              <h2 className="text-xl md:text-2xl font-serif text-white flex items-center gap-2">
+                <div className="w-1 h-5 bg-sky-500 rounded-full shrink-0"></div>
+                {t('Account Types')}
+              </h2>
+              <button onClick={() => { setTypeForm({ id: null, name: '' }); setShowTypeModal(true); }} className="text-[10px] font-bold uppercase tracking-widest text-brand-900 bg-sky-500 hover:bg-sky-400 px-4 py-2.5 rounded-lg transition-colors shadow-[0_0_10px_rgba(14,165,233,0.3)]">
+                + {t('Type')}
+              </button>
+            </div>
+            <div className="space-y-1 -mx-2 md:mx-0">
+              {accountTypes.map(type => (
+                <div key={type.id} className="flex flex-col md:flex-row justify-between md:items-center gap-3 md:gap-0 p-4 bg-transparent md:bg-brand-900/30 md:rounded-lg border-b border-brand-600/20 md:border-white/5 hover:bg-brand-800/40 transition-colors last:border-0 md:last:border-white/5 group">
+                  <div className="flex items-center gap-4 min-w-0 w-full md:w-auto">
+                    <div className="text-sky-400 w-10 text-center shrink-0">
+                      <svg className="w-6 h-6 mx-auto drop-shadow-[0_0_8px_rgba(14,165,233,0.5)]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" /></svg>
+                    </div>
+                    <p className="font-bold text-slate-200 tracking-wide truncate min-w-0 pr-2">{type.name}</p>
                   </div>
-                  <p className="font-bold text-slate-200 tracking-wide">{type.name}</p>
+                  <div className="flex justify-end gap-6 md:gap-4 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity shrink-0 mt-2 md:mt-0 pb-1 md:pb-0 border-b border-white/5 md:border-0 pl-14 md:pl-0">
+                    <button onClick={() => { setTypeForm(type); setShowTypeModal(true); }} className="text-slate-400 hover:text-gold-400 text-[13px] md:text-sm font-medium transition-colors uppercase tracking-wider">{t('Edit')}</button>
+                    <button onClick={() => setDeleteData({ type: 'accountType', id: type.id, name: type.name })} className="text-slate-400 hover:text-rose-500 text-[13px] md:text-sm font-medium transition-colors uppercase tracking-wider">{t('Delete')}</button>
+                  </div>
                 </div>
-                <div className="flex gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => { setTypeForm(type); setShowTypeModal(true); }} className="text-slate-400 hover:text-gold-400 text-sm transition-colors">Edit</button>
-                  <button onClick={() => setDeleteData({ type: 'accountType', id: type.id, name: type.name })} className="text-slate-400 hover:text-rose-500 text-sm transition-colors">Delete</button>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
       </div>
 
@@ -290,23 +317,23 @@ export default function SettingsData() {
           <div className="glass-panel relative w-full max-w-md p-8 animate-in fade-in zoom-in-95 duration-300">
             <h2 className="text-2xl font-serif text-white mb-6 flex items-center gap-2">
               <div className="w-1.5 h-6 bg-rose-500 rounded-full"></div>
-              {catForm.id ? 'Edit' : 'Add'} Category
+              {catForm.id ? t('Edit') : t('Add')} {t('Category')}
             </h2>
             <form onSubmit={handleSaveCategory} className="space-y-6">
               <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Name</label>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">{t('Name')}</label>
                 <input required value={catForm.name} onChange={e => setCatForm({ ...catForm, name: e.target.value })} className="w-full bg-brand-900/50 border border-brand-600/30 text-white rounded-lg p-3 focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 transition-all font-serif placeholder-slate-600" placeholder="e.g. Dining Out" />
               </div>
-              <div className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Type</label>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">{t('Type')}</label>
                   <select value={catForm.type} onChange={e => setCatForm({ ...catForm, type: e.target.value })} className="w-full bg-brand-900/50 border border-brand-600/30 text-white rounded-lg p-3 focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 transition-all appearance-none cursor-pointer">
-                    <option value="expense" className="bg-brand-800">Expense</option>
-                    <option value="income" className="bg-brand-800">Income</option>
+                    <option value="expense" className="bg-brand-800">{t('Expense')}</option>
+                    <option value="income" className="bg-brand-800">{t('Income')}</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Color</label>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">{t('Color')}</label>
                   <div className="flex gap-2 items-center">
                     <input type="color" value={catForm.color} onChange={e => setCatForm({ ...catForm, color: e.target.value })} className="w-12 h-12 p-1 bg-brand-900/50 border border-brand-600/30 rounded-lg cursor-pointer" />
                     <span className="text-slate-400 text-sm font-mono uppercase bg-brand-900/50 border border-brand-600/30 px-3 py-2 rounded-lg flex-1 text-center">{catForm.color}</span>
@@ -314,8 +341,8 @@ export default function SettingsData() {
                 </div>
               </div>
               <div className="flex justify-end gap-3 pt-6 border-t border-brand-800">
-                <button type="button" onClick={() => setShowCatModal(false)} className="px-5 py-2.5 text-xs font-bold text-slate-400 hover:text-white uppercase tracking-widest transition-colors">Cancel</button>
-                <button type="submit" className="px-6 py-2.5 bg-rose-500 hover:bg-rose-400 text-brand-900 text-xs font-bold uppercase tracking-widest rounded-lg transition-colors shadow-[0_0_15px_rgba(244,63,94,0.4)]">Save</button>
+                <button type="button" onClick={() => setShowCatModal(false)} className="px-5 py-2.5 text-xs font-bold text-slate-400 hover:text-white uppercase tracking-widest transition-colors">{t('Cancel')}</button>
+                <button type="submit" className="px-6 py-2.5 bg-rose-500 hover:bg-rose-400 text-brand-900 text-xs font-bold uppercase tracking-widest rounded-lg transition-colors shadow-[0_0_15px_rgba(244,63,94,0.4)]">{t('Save')}</button>
               </div>
             </form>
           </div>
@@ -329,26 +356,26 @@ export default function SettingsData() {
           <div className="glass-panel relative w-full max-w-md p-8 animate-in fade-in zoom-in-95 duration-300">
             <h2 className="text-2xl font-serif text-white mb-6 flex items-center gap-2">
               <div className="w-1.5 h-6 bg-gold-500 rounded-full"></div>
-              {currForm.id ? 'Edit' : 'Add'} Currency
+              {currForm.id ? t('Edit') : t('Add')} {t('Currency')}
             </h2>
             <form onSubmit={handleSaveCurrency} className="space-y-6">
-              <div className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Code (USD)</label>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">{t('Code (USD)')}</label>
                   <input required maxLength={3} value={currForm.code} onChange={e => setCurrForm({ ...currForm, code: e.target.value.toUpperCase() })} className="w-full bg-brand-900/50 border border-brand-600/30 text-white rounded-lg p-3 focus:outline-none focus:border-gold-500 focus:ring-1 focus:ring-gold-500 transition-all font-serif placeholder-slate-600 uppercase" placeholder="EUR" />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Symbol (€)</label>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">{t('Symbol (€)')}</label>
                   <input required maxLength={5} value={currForm.symbol} onChange={e => setCurrForm({ ...currForm, symbol: e.target.value })} className="w-full bg-brand-900/50 border border-brand-600/30 text-white rounded-lg p-3 focus:outline-none focus:border-gold-500 focus:ring-1 focus:ring-gold-500 transition-all font-serif placeholder-slate-600" placeholder="€" />
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Full Name</label>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">{t('Full Name')}</label>
                 <input required value={currForm.name} onChange={e => setCurrForm({ ...currForm, name: e.target.value })} className="w-full bg-brand-900/50 border border-brand-600/30 text-white rounded-lg p-3 focus:outline-none focus:border-gold-500 focus:ring-1 focus:ring-gold-500 transition-all font-serif placeholder-slate-600" placeholder="e.g. Euro" />
               </div>
               <div className="flex justify-end gap-3 pt-6 border-t border-brand-800">
-                <button type="button" onClick={() => setShowCurrModal(false)} className="px-5 py-2.5 text-xs font-bold text-slate-400 hover:text-white uppercase tracking-widest transition-colors">Cancel</button>
-                <button type="submit" className="btn-gold px-6 py-2.5 text-xs font-bold uppercase tracking-widest">Save</button>
+                <button type="button" onClick={() => setShowCurrModal(false)} className="px-5 py-2.5 text-xs font-bold text-slate-400 hover:text-white uppercase tracking-widest transition-colors">{t('Cancel')}</button>
+                <button type="submit" className="btn-gold px-6 py-2.5 text-xs font-bold uppercase tracking-widest">{t('Save')}</button>
               </div>
             </form>
           </div>
@@ -362,16 +389,16 @@ export default function SettingsData() {
           <div className="glass-panel relative w-full max-w-md p-8 animate-in fade-in zoom-in-95 duration-300">
             <h2 className="text-2xl font-serif text-white mb-6 flex items-center gap-2">
               <div className="w-1.5 h-6 bg-emerald-500 rounded-full"></div>
-              {bankForm.id ? 'Edit' : 'Add'} Bank
+              {bankForm.id ? t('Edit') : t('Add')} {t('Bank')}
             </h2>
             <form onSubmit={handleSaveBank} className="space-y-6">
               <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Institution Name</label>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">{t('Institution Name')}</label>
                 <input required value={bankForm.name} onChange={e => setBankForm({ ...bankForm, name: e.target.value })} className="w-full bg-brand-900/50 border border-brand-600/30 text-white rounded-lg p-3 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all font-serif placeholder-slate-600" placeholder="e.g. Chase Bank" />
               </div>
               <div className="flex justify-end gap-3 pt-6 border-t border-brand-800">
-                <button type="button" onClick={() => setShowBankModal(false)} className="px-5 py-2.5 text-xs font-bold text-slate-400 hover:text-white uppercase tracking-widest transition-colors">Cancel</button>
-                <button type="submit" className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-brand-900 text-xs font-bold uppercase tracking-widest rounded-lg transition-colors shadow-[0_0_15px_rgba(16,185,129,0.4)]">Save</button>
+                <button type="button" onClick={() => setShowBankModal(false)} className="px-5 py-2.5 text-xs font-bold text-slate-400 hover:text-white uppercase tracking-widest transition-colors">{t('Cancel')}</button>
+                <button type="submit" className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-brand-900 text-xs font-bold uppercase tracking-widest rounded-lg transition-colors shadow-[0_0_15px_rgba(16,185,129,0.4)]">{t('Save')}</button>
               </div>
             </form>
           </div>
@@ -385,16 +412,16 @@ export default function SettingsData() {
           <div className="glass-panel relative w-full max-w-md p-8 animate-in fade-in zoom-in-95 duration-300">
             <h2 className="text-2xl font-serif text-white mb-6 flex items-center gap-2">
               <div className="w-1.5 h-6 bg-sky-500 rounded-full"></div>
-              {typeForm.id ? 'Edit' : 'Add'} Account Type
+              {typeForm.id ? t('Edit') : t('Add')} {t('Account Type')}
             </h2>
             <form onSubmit={handleSaveAccountType} className="space-y-6">
               <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Type Name</label>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">{t('Type Name')}</label>
                 <input required value={typeForm.name} onChange={e => setTypeForm({ ...typeForm, name: e.target.value })} className="w-full bg-brand-900/50 border border-brand-600/30 text-white rounded-lg p-3 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all font-serif placeholder-slate-600" placeholder="e.g. Checking" />
               </div>
               <div className="flex justify-end gap-3 pt-6 border-t border-brand-800">
-                <button type="button" onClick={() => setShowTypeModal(false)} className="px-5 py-2.5 text-xs font-bold text-slate-400 hover:text-white uppercase tracking-widest transition-colors">Cancel</button>
-                <button type="submit" className="px-6 py-2.5 bg-sky-500 hover:bg-sky-400 text-brand-900 text-xs font-bold uppercase tracking-widest rounded-lg transition-colors shadow-[0_0_15px_rgba(14,165,233,0.4)]">Save</button>
+                <button type="button" onClick={() => setShowTypeModal(false)} className="px-5 py-2.5 text-xs font-bold text-slate-400 hover:text-white uppercase tracking-widest transition-colors">{t('Cancel')}</button>
+                <button type="submit" className="px-6 py-2.5 bg-sky-500 hover:bg-sky-400 text-brand-900 text-xs font-bold uppercase tracking-widest rounded-lg transition-colors shadow-[0_0_15px_rgba(14,165,233,0.4)]">{t('Save')}</button>
               </div>
             </form>
           </div>
@@ -415,8 +442,8 @@ export default function SettingsData() {
             <p className="text-slate-400 mb-8 font-serif italic">{t('Are you sure you want to delete "{{name}}"? This action cannot be undone.', { name: deleteData.name })}</p>
 
             <div className="flex gap-4 justify-center">
-              <button onClick={() => setDeleteData({ type: null, id: null, name: null })} className="px-6 py-3 text-xs font-bold text-slate-400 hover:text-white uppercase tracking-widest transition-colors flex-1 bg-brand-900/50 border border-brand-600/30 rounded-lg">Cancel</button>
-              <button onClick={deleteData.type === 'category' ? handleDeleteCategory : deleteData.type === 'currency' ? handleDeleteCurrency : deleteData.type === 'bank' ? handleDeleteBank : handleDeleteAccountType} className="px-6 py-3 bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold uppercase tracking-widest rounded-lg transition-colors flex-1 shadow-[0_0_15px_rgba(244,63,94,0.4)]">Delete</button>
+              <button onClick={() => setDeleteData({ type: null, id: null, name: null })} className="px-6 py-3 text-xs font-bold text-slate-400 hover:text-white uppercase tracking-widest transition-colors flex-1 bg-brand-900/50 border border-brand-600/30 rounded-lg">{t('Cancel')}</button>
+              <button onClick={deleteData.type === 'category' ? handleDeleteCategory : deleteData.type === 'currency' ? handleDeleteCurrency : deleteData.type === 'bank' ? handleDeleteBank : handleDeleteAccountType} className="px-6 py-3 bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold uppercase tracking-widest rounded-lg transition-colors flex-1 shadow-[0_0_15px_rgba(244,63,94,0.4)]">{t('Delete')}</button>
             </div>
           </div>
         </div>

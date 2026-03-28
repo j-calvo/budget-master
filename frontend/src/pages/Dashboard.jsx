@@ -127,6 +127,7 @@ export default function Dashboard() {
       }
     }
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (settingsLoading || loadingDb) return (

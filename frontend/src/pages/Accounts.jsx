@@ -20,6 +20,7 @@ export default function Accounts() {
 
   useEffect(() => {
     fetchAccounts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchAccounts = async () => {
@@ -202,10 +203,10 @@ export default function Accounts() {
                     </select>
                   ) : (
                     <select value={newAccount.type} onChange={e => setNewAccount({ ...newAccount, type: e.target.value })} className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all appearance-none cursor-pointer">
-                      <option className="bg-brand-800">Checking</option>
-                      <option className="bg-brand-800">Savings</option>
-                      <option className="bg-brand-800">Credit Card</option>
-                      <option className="bg-brand-800">Investment</option>
+                      <option className="bg-brand-800">{t('Checking')}</option>
+                      <option className="bg-brand-800">{t('Savings')}</option>
+                      <option className="bg-brand-800">{t('Credit Card')}</option>
+                      <option className="bg-brand-800">{t('Investment')}</option>
                     </select>
                   )}
                 </div>
