@@ -11,9 +11,10 @@ export default function Budgets() {
   const { settings } = useSettings();
   const [budgets, setBudgets] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [currencies, setCurrencies] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [editingBudget, setEditingBudget] = useState(null);
-  const [newBudget, setNewBudget] = useState({ categoryId: '', amount: '' });
+  const [newBudget, setNewBudget] = useState({ categoryId: '', amount: '', currency: 'CRC', payDay: '' });
   const [deleteData, setDeleteData] = useState({ id: null, name: null });
   const [isLoading, setIsLoading] = useState(true);
 
@@ -23,11 +24,13 @@ export default function Budgets() {
 
   const fetchData = async () => {
     try {
-      const [budRes, catRes] = await Promise.all([
+      const [budRes, catRes, currRes] = await Promise.all([
         api.get(API_URL),
-        api.get(CATS_URL)
+        api.get(CATS_URL),
+        api.get('/currencies')
       ]);
       setBudgets(budRes.data);
+      setCurrencies(currRes.data);
       // Filter out income categories for budgeting
       const expCats = catRes.data.filter(c => c.type !== 'income');
       setCategories(expCats);
@@ -46,7 +49,9 @@ export default function Budgets() {
     try {
       const payload = {
         categoryId: newBudget.categoryId,
-        amount: parseFloat(newBudget.amount) || 0
+        amount: parseFloat(newBudget.amount) || 0,
+        currency: newBudget.currency || 'CRC',
+        payDay: newBudget.payDay ? parseInt(newBudget.payDay) : null
       };
       if (editingBudget) {
         await api.put(`${API_URL}/${editingBudget.id}`, payload);
@@ -55,7 +60,7 @@ export default function Budgets() {
       }
       setShowModal(false);
       setEditingBudget(null);
-      setNewBudget(p => ({ ...p, amount: '' }));
+      setNewBudget(p => ({ ...p, amount: '', currency: 'CRC', payDay: '' }));
       fetchData();
     } catch (err) {
       console.error('Failed to save budget', err);
@@ -66,7 +71,9 @@ export default function Budgets() {
     setEditingBudget(budget);
     setNewBudget({
       categoryId: budget.categoryId,
-      amount: budget.amount
+      amount: budget.amount,
+      currency: budget.currency || 'CRC',
+      payDay: budget.payDay || ''
     });
     setShowModal(true);
   };
@@ -81,10 +88,10 @@ export default function Budgets() {
     }
   };
 
-  const formatCurrency = (amount) => {
+  const formatCurrency = (amount, currencyCode) => {
     return new Intl.NumberFormat(settings?.language || 'en-US', {
       style: 'currency',
-      currency: settings?.defaultCurrency || 'USD'
+      currency: currencyCode || settings?.defaultCurrency || 'USD'
     }).format(amount);
   };
 
@@ -97,7 +104,7 @@ export default function Budgets() {
         </div>
         <button onClick={() => {
           setEditingBudget(null);
-          setNewBudget(p => ({ ...p, amount: '' }));
+          setNewBudget(p => ({ ...p, amount: '', currency: 'CRC', payDay: '' }));
           setShowModal(true);
         }} className="btn-gold px-5 py-2 text-sm shadow-md flex items-center gap-1">
           <span className="text-lg leading-none">+</span> {t('Create Budget')}
@@ -156,10 +163,10 @@ export default function Budgets() {
 
                 <div className="mb-2 flex justify-between items-end">
                   <span className={`text-2xl font-light font-serif tracking-wide ${valueColor}`}>
-                    {formatCurrency(budget.spent)}
+                    {formatCurrency(budget.spent, budget.currency)}
                   </span>
                   <span className="text-xs font-medium text-slate-400 uppercase tracking-widest mb-1">
-                    {t('of {{total}}', { total: formatCurrency(budget.amount) })}
+                    {t('of {{total}}', { total: formatCurrency(budget.amount, budget.currency) })}
                   </span>
                 </div>
 
@@ -169,7 +176,7 @@ export default function Budgets() {
 
                 <p className={`text-xs font-medium uppercase tracking-wider text-right ${textColor}`}>
                   {isOver 
-                    ? t('Over by {{amount}}', { amount: formatCurrency(budget.spent - budget.amount) })
+                    ? t('Over by {{amount}}', { amount: formatCurrency(budget.spent - budget.amount, budget.currency) })
                     : t('{{pct}}% Utilized', { pct })}
                 </p>
               </div>
@@ -213,6 +220,30 @@ export default function Budgets() {
                     onChange={e => setNewBudget({...newBudget, amount: e.target.value})} 
                     className="w-full pl-8 pr-3 py-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif" 
                     placeholder="0.00" 
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Currency')}</label>
+                  <select 
+                    value={newBudget.currency || 'CRC'} 
+                    onChange={e => setNewBudget({...newBudget, currency: e.target.value})} 
+                    className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all appearance-none cursor-pointer"
+                  >
+                    {currencies.map(c => <option key={c.id} value={c.code} className="bg-brand-800">{c.code} - {c.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Pay Day (Optional)')}</label>
+                  <input 
+                    type="number" 
+                    min="1" max="31"
+                    value={newBudget.payDay || ''} 
+                    onChange={e => setNewBudget({...newBudget, payDay: e.target.value})} 
+                    className="w-full px-3 py-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all" 
+                    placeholder="1-31" 
                   />
                 </div>
               </div>

@@ -10,7 +10,7 @@ import {
   Clock
 } from 'lucide-react';
 
-export default function FinancialTimeline({ cards, loans, settings, metrics }) {
+export default function FinancialTimeline({ cards, loans, settings, metrics, budgets = [] }) {
   const { t } = useTranslation();
   const today = new Date();
   const currentYear = today.getFullYear();
@@ -80,9 +80,23 @@ export default function FinancialTimeline({ cards, loans, settings, metrics }) {
       }
     });
 
+    // Budget Paydays
+    budgets.forEach(budget => {
+      if (budget.payDay) {
+        ev[budget.payDay] = ev[budget.payDay] || [];
+        ev[budget.payDay].push({ 
+          type: 'budget', 
+          label: `${budget.category?.name || 'Budget'} Payday`, 
+          amount: budget.amount, 
+          currency: budget.currency,
+          icon: <Banknote className="w-4 h-4 text-gold-400" /> 
+        });
+      }
+    });
+
     return ev;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cards, loans, payDays, t, currentMonth, currentYear]);
+  }, [cards, loans, budgets, payDays, t, currentMonth, currentYear]);
 
   // Calculate liquidity forecast
   // "Bills due before next payday"
@@ -109,6 +123,13 @@ export default function FinancialTimeline({ cards, loans, settings, metrics }) {
   }, [events, currentDay, nextPayDay]);
 
   const isLiquidityLow = metrics?.netWorth < billsBeforePayday;
+
+  const formatCurrency = (amount, currencyCode) => {
+    return new Intl.NumberFormat(settings?.language || 'en-US', {
+      style: 'currency',
+      currency: currencyCode || settings?.defaultCurrency || 'USD'
+    }).format(amount);
+  };
 
   return (
     <div className="glass-card p-6 relative overflow-hidden group">
@@ -146,10 +167,15 @@ export default function FinancialTimeline({ cards, loans, settings, metrics }) {
             return (
               <div key={day} className="flex flex-col items-center group/day relative w-10 sm:w-12">
                 {/* Event Markers */}
-                <div className="absolute bottom-12 flex flex-col items-center gap-1 z-10 hover:z-20">
+                <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex flex-row items-center justify-center z-10 w-max hover:z-30 group/events">
                   {dayEvents.map((ev, idx) => (
-                    <div key={idx} className="w-8 h-8 rounded-full bg-brand-900 border border-brand-600/50 flex items-center justify-center shadow-lg transform hover:scale-125 transition-transform cursor-pointer relative" title={ev.label}>
-                      {ev.icon}
+                    <div 
+                      key={idx} 
+                      className={`w-8 h-8 rounded-full bg-brand-900 border border-brand-500/80 flex items-center justify-center shadow-lg transform transition-all duration-300 relative cursor-pointer ${idx > 0 ? '-ml-4 group-hover/events:ml-1 shadow-[-4px_0_10px_rgba(0,0,0,0.5)]' : 'shadow-xl'} hover:!scale-125 hover:!z-50`} 
+                      style={{ zIndex: 20 - idx }}
+                      title={`${ev.label} ${ev.amount ? ` - ${formatCurrency(ev.amount, ev.currency)}` : ''}`}
+                    >
+                      <div className="scale-90">{ev.icon}</div>
                     </div>
                   ))}
                 </div>

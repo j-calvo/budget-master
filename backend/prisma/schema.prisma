@@ -116,6 +116,8 @@ model Budget {
   familyId   String
   categoryId String
   amount     Float
+  currency   String   @default("CRC")
+  payDay     Int?     // 1-31 optional payday marker
   month      Int      // 1-12
   year       Int
   createdAt  DateTime @default(now())
