@@ -59,7 +59,7 @@ exports.getBudgets = async (req, res) => {
 
 exports.createBudget = async (req, res) => {
   try {
-    const { categoryId, amount, month, year } = req.body;
+    const { categoryId, amount, month, year, currency, payDay } = req.body;
     const currentMonth = month ? parseInt(month) : new Date().getMonth() + 1;
     const currentYear = year ? parseInt(year) : new Date().getFullYear();
 
@@ -72,13 +72,19 @@ exports.createBudget = async (req, res) => {
           year: currentYear
         }
       },
-      update: { amount: parseFloat(amount) },
+      update: { 
+        amount: parseFloat(amount),
+        currency: currency || 'CRC',
+        payDay: payDay ? parseInt(payDay) : null
+      },
       create: {
         familyId: req.user.familyId,
         categoryId,
         amount: parseFloat(amount),
         month: currentMonth,
-        year: currentYear
+        year: currentYear,
+        currency: currency || 'CRC',
+        payDay: payDay ? parseInt(payDay) : null
       },
       include: { category: true }
     });

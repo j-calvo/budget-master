@@ -22,16 +22,18 @@ export default function Dashboard() {
   const [recentTransactions, setRecentTransactions] = useState([]);
   const [cards, setCards] = useState([]);
   const [loans, setLoans] = useState([]);
+  const [budgets, setBudgets] = useState([]);
 
   useEffect(() => {
     async function loadData() {
       try {
-        const [accRes, txRes, ccRes, loanRes, rateRes] = await Promise.all([
+        const [accRes, txRes, ccRes, loanRes, rateRes, budgRes] = await Promise.all([
           api.get('/accounts'),
           api.get('/transactions'),
           api.get('/credit-cards'),
           api.get('/loans'),
           api.get('/currencies/rates'),
+          api.get('/budgets'),
         ]);
 
         const accounts = accRes.data;
@@ -39,6 +41,7 @@ export default function Dashboard() {
         const cards = ccRes.data;
         const loans = loanRes.data;
         const { rates, base: prefBase } = rateRes.data;
+        const budgetsData = budgRes.data;
 
         // Helper to convert to preferred currency
         const convert = (amount, fromCode) => {
@@ -119,6 +122,7 @@ export default function Dashboard() {
         // 6. Store cards/loans for timeline
         setCards(cards);
         setLoans(loans);
+        setBudgets(budgetsData);
 
       } catch (err) {
         console.error('Failed to load dashboard data', err);
@@ -168,6 +172,7 @@ export default function Dashboard() {
         loans={loans} 
         settings={settings} 
         metrics={metrics}
+        budgets={budgets}
       />
 
       {/* KPI Grid */}
