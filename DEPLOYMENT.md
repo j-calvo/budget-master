@@ -6,7 +6,7 @@ Step-by-step guide to deploy the application locally on MacOS using PM2 for pers
 
 ## Prerequisites
 
-- **Node.js** v18+ — [Download](https://nodejs.org/)
+- **Node.js** v22+ — [Download](https://nodejs.org/)
 - **PM2** — Install globally:
   ```bash
   npm install -g pm2
