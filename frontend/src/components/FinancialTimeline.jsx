@@ -1,5 +1,7 @@
 import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { formatCurrency } from '../lib/currencyUtils';
+import { useSettings } from '../context/SettingsContext';
 import { 
   Calendar, 
   CreditCard, 
@@ -10,8 +12,9 @@ import {
   Clock
 } from 'lucide-react';
 
-export default function FinancialTimeline({ cards, loans, settings, metrics, budgets = [] }) {
+export default function FinancialTimeline({ cards, loans, metrics, budgets = [] }) {
   const { t } = useTranslation();
+  const { settings, currencies } = useSettings();
   const today = new Date();
   const currentYear = today.getFullYear();
   const currentMonth = today.getMonth();
@@ -124,11 +127,8 @@ export default function FinancialTimeline({ cards, loans, settings, metrics, bud
 
   const isLiquidityLow = metrics?.netWorth < billsBeforePayday;
 
-  const formatCurrency = (amount, currencyCode) => {
-    return new Intl.NumberFormat(settings?.language || 'en-US', {
-      style: 'currency',
-      currency: currencyCode || settings?.defaultCurrency || 'USD'
-    }).format(amount);
+  const formatC = (amount, currencyCode) => {
+    return formatCurrency(amount, currencyCode || settings?.defaultCurrency || 'USD', currencies, settings?.language);
   };
 
   return (
@@ -173,7 +173,7 @@ export default function FinancialTimeline({ cards, loans, settings, metrics, bud
                       key={idx} 
                       className={`w-8 h-8 rounded-full bg-brand-900 border border-brand-500/80 flex items-center justify-center shadow-lg transform transition-all duration-300 relative cursor-pointer ${idx > 0 ? '-ml-4 group-hover/events:ml-1 shadow-[-4px_0_10px_rgba(0,0,0,0.5)]' : 'shadow-xl'} hover:!scale-125 hover:!z-50`} 
                       style={{ zIndex: 20 - idx }}
-                      title={`${ev.label} ${ev.amount ? ` - ${formatCurrency(ev.amount, ev.currency)}` : ''}`}
+                      title={`${ev.label} ${ev.amount ? ` - ${formatC(ev.amount, ev.currency)}` : ''}`}
                     >
                       <div className="scale-90">{ev.icon}</div>
                     </div>

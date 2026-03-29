@@ -2,9 +2,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import api from '../api';
 import { useSettings } from '../context/SettingsContext';
 import { useTranslation } from 'react-i18next';
+import AmountInput from '../components/AmountInput';
+import { formatCurrency as formatC } from '../lib/currencyUtils';
 
 const API_URL = '/loans';
-const CURR_URL = '/currencies';
 
 function todayStr() { return new Date().toISOString().slice(0, 10); }
 
@@ -37,9 +38,8 @@ const emptyLoanForm = (defaultCurrency) => ({
 
 export default function Loans() {
   const { t } = useTranslation();
-  const { settings } = useSettings();
+  const { settings, currencies } = useSettings();
   const [loans, setLoans] = useState([]);
-  const [currencies, setCurrencies] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showLoanModal, setShowLoanModal] = useState(false);
   const [deleteData, setDeleteData] = useState({ id: null, name: null });
@@ -67,9 +67,8 @@ export default function Loans() {
 
   const fetchAll = async () => {
     try {
-      const [lRes, cRes] = await Promise.all([api.get(API_URL), api.get(CURR_URL)]);
+      const lRes = await api.get(API_URL);
       setLoans(lRes.data);
-      setCurrencies(cRes.data);
     } catch (e) { console.error(e); }
     finally { setIsLoading(false); }
   };
@@ -201,7 +200,7 @@ export default function Loans() {
 
   // ---- Helpers ----
   const fmt = (amount, curr) =>
-    new Intl.NumberFormat(settings?.language || 'en-US', { style: 'currency', currency: curr || 'USD' }).format(amount);
+    formatC(amount, curr || settings?.defaultCurrency || 'USD', currencies, settings?.language);
 
   const calcRemaining = (loan) =>
     loan.monthlyPayment > 0 ? Math.max(0, Math.ceil(loan.balance / loan.monthlyPayment)) : null;
@@ -623,14 +622,16 @@ export default function Loans() {
                 <div>
                   <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Loan Amount')}</label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-serif">{(() => { const p = new Intl.NumberFormat('en-US', { style: 'currency', currency: loanForm.currency || 'USD' }).formatToParts(0); return p.find(x => x.type === 'currency')?.value || '$'; })()}</span>
-                    <input required type="number" step="0.01" min="0.01" value={loanForm.originalBalance === 0 ? '' : loanForm.originalBalance} onChange={e => setLoanForm({ ...loanForm, originalBalance: e.target.value })} className="w-full pl-8 pr-3 py-3 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif" placeholder="200,000.00" />
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-serif">
+                      {currencies.find(c => c.code === (loanForm.currency || 'USD'))?.symbol || '$'}
+                    </span>
+                    <AmountInput required value={loanForm.originalBalance === 0 ? '' : loanForm.originalBalance} onChange={e => setLoanForm({ ...loanForm, originalBalance: e.target.value })} className="w-full pl-8 pr-3 py-3 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif" placeholder="200,000.00" />
                   </div>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Interest Rate (% APR)')}</label>
                   <div className="relative">
-                    <input required type="number" step="0.01" min="0" value={loanForm.interestRate === 0 ? '' : loanForm.interestRate} onChange={e => setLoanForm({ ...loanForm, interestRate: e.target.value })} className="w-full pr-8 pl-3 py-3 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif" placeholder="7.75" />
+                    <AmountInput required value={loanForm.interestRate === 0 ? '' : loanForm.interestRate} onChange={e => setLoanForm({ ...loanForm, interestRate: e.target.value })} className="w-full pr-8 pl-3 py-3 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif" placeholder="7.75" />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 font-serif">%</span>
                   </div>
                 </div>
@@ -639,13 +640,15 @@ export default function Loans() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
                   <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Term (Months)')}</label>
-                  <input required type="number" min="1" value={loanForm.termMonths || ''} onChange={e => setLoanForm({ ...loanForm, termMonths: e.target.value })} className="w-full p-3 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif" />
+                  <AmountInput required value={loanForm.termMonths || ''} onChange={e => setLoanForm({ ...loanForm, termMonths: e.target.value })} className="w-full p-3 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif" />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Insurance Cost / month')}</label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-serif">{(() => { const p = new Intl.NumberFormat('en-US', { style: 'currency', currency: loanForm.currency || 'USD' }).formatToParts(0); return p.find(x => x.type === 'currency')?.value || '$'; })()}</span>
-                    <input type="number" step="0.01" min="0" value={loanForm.insuranceCost === 0 ? '' : loanForm.insuranceCost} onChange={e => setLoanForm({ ...loanForm, insuranceCost: e.target.value })} className="w-full pl-8 pr-3 py-3 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif" placeholder="0.00" />
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-serif">
+                      {currencies.find(c => c.code === (loanForm.currency || 'USD'))?.symbol || '$'}
+                    </span>
+                    <AmountInput value={loanForm.insuranceCost === 0 ? '' : loanForm.insuranceCost} onChange={e => setLoanForm({ ...loanForm, insuranceCost: e.target.value })} className="w-full pl-8 pr-3 py-3 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif" placeholder="0.00" />
                   </div>
                 </div>
               </div>
@@ -686,7 +689,7 @@ export default function Loans() {
                 <div className="bg-gold-500/10 border border-gold-500/20 rounded-xl px-6 py-5 flex justify-between items-center mt-6">
                   <span className="text-xs uppercase tracking-widest text-gold-400/80 font-medium">{t('Calculated Monthly Payment:')}</span>
                   <span className="text-2xl font-serif text-gold-400 glow-text-gold">
-                    {new Intl.NumberFormat(settings?.language || 'en-US', { style: 'currency', currency: loanForm.currency || 'USD' }).format(previewPayment + (parseFloat(loanForm.insuranceCost) || 0))}
+                    {fmt(previewPayment + (parseFloat(loanForm.insuranceCost) || 0), loanForm.currency)}
                     <span className="text-sm ml-1 text-gold-400/60 uppercase tracking-widest font-sans">/{t('mo')}</span>
                   </span>
                 </div>
@@ -720,14 +723,13 @@ export default function Loans() {
             <form onSubmit={handleUpdateAPR} className="space-y-5">
               <div>
                 <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('New APR (%)')}</label>
-                <input required type="number" step="0.01" min="0" value={newApr} onChange={e => setNewApr(e.target.value)} className="w-full p-3 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-amber-500 focus:border-amber-500 outline-none text-white transition-all font-serif text-lg" placeholder="8.50" />
+                <AmountInput required value={newApr} onChange={e => setNewApr(e.target.value)} className="w-full p-3 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-amber-500 focus:border-amber-500 outline-none text-white transition-all font-serif text-lg" placeholder="8.50" />
               </div>
               {newApr && (
                 <div className="bg-brand-900/40 border border-brand-600/30 rounded-xl px-4 py-3 flex justify-between items-center text-sm shadow-inner">
                   <span className="text-xs text-slate-400 uppercase tracking-widest">{t('New payment:')}</span>
                   <span className="font-serif text-amber-400 text-lg glow-text-amber">
-                    {new Intl.NumberFormat(settings?.language || 'en-US', { style: 'currency', currency: selectedLoan.currency || 'USD' })
-                      .format((calcMonthlyPayment(selectedLoan.balance, parseFloat(newApr), selectedLoan.termMonths) || 0) + selectedLoan.insuranceCost)}
+                    {fmt((calcMonthlyPayment(selectedLoan.balance, parseFloat(newApr), selectedLoan.termMonths) || 0) + selectedLoan.insuranceCost, selectedLoan.currency)}
                   </span>
                 </div>
               )}
@@ -774,8 +776,10 @@ export default function Loans() {
                   <div>
                     <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Extra Principal Amount')}</label>
                     <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-400 font-serif">{(() => { const p = new Intl.NumberFormat('en-US', { style: 'currency', currency: selectedLoan?.currency || 'USD' }).formatToParts(0); return p.find(x => x.type === 'currency')?.value || '$'; })()}</span>
-                      <input required type="number" step="0.01" min="0.01"
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-400 font-serif">
+                        {currencies.find(c => c.code === (selectedLoan?.currency || 'USD'))?.symbol || '$'}
+                      </span>
+                      <AmountInput required
                         value={paymentForm.amount === 0 ? '' : paymentForm.amount}
                         onChange={e => setPaymentForm({ ...paymentForm, amount: e.target.value, principal: e.target.value })}
                         className="w-full pl-8 pr-4 py-3 bg-emerald-900/20 border border-emerald-500/30 rounded-lg focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-emerald-400 transition-all text-xl font-serif glow-text-emerald"
@@ -802,21 +806,21 @@ export default function Loans() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <div>
                       <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Total Amount')}</label>
-                      <input required type="number" step="0.01" value={paymentForm.amount === 0 ? '' : paymentForm.amount} onChange={e => setPaymentForm({ ...paymentForm, amount: e.target.value })} className="w-full p-3 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif" />
+                      <AmountInput required value={paymentForm.amount === 0 ? '' : paymentForm.amount} onChange={e => setPaymentForm({ ...paymentForm, amount: e.target.value })} className="w-full p-3 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif" />
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Principal')}</label>
-                      <input required type="number" step="0.01" value={paymentForm.principal === 0 ? '' : paymentForm.principal} onChange={e => setPaymentForm({ ...paymentForm, principal: e.target.value })} className="w-full p-3 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-emerald-400 transition-all font-serif" />
+                      <AmountInput required value={paymentForm.principal === 0 ? '' : paymentForm.principal} onChange={e => setPaymentForm({ ...paymentForm, principal: e.target.value })} className="w-full p-3 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-emerald-400 transition-all font-serif" />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-5">
                     <div>
                       <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Interest')}</label>
-                      <input type="number" step="0.01" value={paymentForm.interest === 0 ? '' : paymentForm.interest} onChange={e => setPaymentForm({ ...paymentForm, interest: e.target.value })} className="w-full p-3 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-amber-400 transition-all font-serif" />
+                      <AmountInput value={paymentForm.interest === 0 ? '' : paymentForm.interest} onChange={e => setPaymentForm({ ...paymentForm, interest: e.target.value })} className="w-full p-3 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-amber-400 transition-all font-serif" />
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Insurance')}</label>
-                      <input type="number" step="0.01" value={paymentForm.insuranceCost === 0 ? '' : paymentForm.insuranceCost} onChange={e => setPaymentForm({ ...paymentForm, insuranceCost: e.target.value })} className="w-full p-3 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-slate-300 transition-all font-serif" />
+                      <AmountInput value={paymentForm.insuranceCost === 0 ? '' : paymentForm.insuranceCost} onChange={e => setPaymentForm({ ...paymentForm, insuranceCost: e.target.value })} className="w-full p-3 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-slate-300 transition-all font-serif" />
                     </div>
                   </div>
                   <div>

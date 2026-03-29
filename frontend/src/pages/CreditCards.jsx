@@ -2,15 +2,15 @@ import React, { useState, useEffect } from 'react';
 import api from '../api';
 import { useSettings } from '../context/SettingsContext';
 import { useTranslation } from 'react-i18next';
+import AmountInput from '../components/AmountInput';
+import { formatCurrency as formatC } from '../lib/currencyUtils';
 
 const API_URL = '/credit-cards';
-const CURR_URL = '/currencies';
 
 export default function CreditCards() {
   const { t } = useTranslation();
-  const { settings } = useSettings();
+  const { settings, currencies } = useSettings();
   const [cards, setCards] = useState([]);
-  const [currencies, setCurrencies] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [deleteData, setDeleteData] = useState({ id: null, name: null });
@@ -25,14 +25,10 @@ export default function CreditCards() {
 
   const fetchData = async () => {
     try {
-      const [cardRes, currRes] = await Promise.all([
-        api.get(API_URL),
-        api.get(CURR_URL)
-      ]);
+      const cardRes = await api.get(API_URL);
       setCards(cardRes.data);
-      setCurrencies(currRes.data);
-      if (currRes.data.length > 0 && formData.currency === 'USD') {
-        setFormData(p => ({ ...p, currency: currRes.data[0].code }));
+      if (currencies.length > 0 && formData.currency === 'USD') {
+        setFormData(p => ({ ...p, currency: currencies[0].code }));
       }
     } catch (err) {
       console.error(err);
@@ -68,10 +64,7 @@ export default function CreditCards() {
   };
 
   const formatCurrency = (amount, currencyCode) => {
-    return new Intl.NumberFormat(settings?.language || 'en-US', {
-      style: 'currency',
-      currency: currencyCode || 'USD'
-    }).format(amount);
+    return formatC(amount, currencyCode || settings?.defaultCurrency || 'USD', currencies, settings?.language);
   };
 
   const openEditModal = (card) => {
@@ -190,15 +183,19 @@ export default function CreditCards() {
                 <div>
                   <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Credit Limit')}</label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-serif">{(() => { const p = new Intl.NumberFormat('en-US', { style: 'currency', currency: formData.currency || 'USD' }).formatToParts(0); return p.find(x => x.type === 'currency')?.value || '$'; })()}</span>
-                    <input required type="number" step="0.01" value={formData.limit === 0 ? '' : formData.limit} onChange={e => setFormData({...formData, limit: e.target.value})} className="w-full pl-8 pr-3 py-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif" placeholder="0.00" />
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-serif">
+                      {currencies.find(c => c.code === (formData.currency || 'USD'))?.symbol || '$'}
+                    </span>
+                    <AmountInput required value={formData.limit === 0 ? '' : formData.limit} onChange={e => setFormData({...formData, limit: e.target.value})} className="w-full pl-8 pr-3 py-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif" placeholder="0.00" />
                   </div>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Current Balance')}</label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-serif">{(() => { const p = new Intl.NumberFormat('en-US', { style: 'currency', currency: formData.currency || 'USD' }).formatToParts(0); return p.find(x => x.type === 'currency')?.value || '$'; })()}</span>
-                    <input required type="number" step="0.01" value={formData.balance === 0 ? '' : formData.balance} onChange={e => setFormData({...formData, balance: e.target.value})} className="w-full pl-8 pr-3 py-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif" placeholder="0.00" />
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-serif">
+                      {currencies.find(c => c.code === (formData.currency || 'USD'))?.symbol || '$'}
+                    </span>
+                    <AmountInput required value={formData.balance === 0 ? '' : formData.balance} onChange={e => setFormData({...formData, balance: e.target.value})} className="w-full pl-8 pr-3 py-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif" placeholder="0.00" />
                   </div>
                 </div>
               </div>
@@ -206,18 +203,18 @@ export default function CreditCards() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('APR (%)')}</label>
-                  <input required type="number" step="0.01" value={formData.apr === 0 ? '' : formData.apr} onChange={e => setFormData({...formData, apr: e.target.value})} className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif" placeholder="19.99" />
+                  <AmountInput required value={formData.apr === 0 ? '' : formData.apr} onChange={e => setFormData({...formData, apr: e.target.value})} className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif" placeholder="19.99" />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Due Date (Day)')}</label>
-                  <input required type="number" min="1" max="31" value={formData.dueDate || ''} onChange={e => setFormData({...formData, dueDate: e.target.value})} className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif" placeholder="15" />
+                  <AmountInput required value={formData.dueDate || ''} onChange={e => setFormData({...formData, dueDate: e.target.value})} className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif" placeholder="15" />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Statement Day')}</label>
-                  <input required type="number" min="1" max="31" value={formData.statementDay || ''} onChange={e => setFormData({...formData, statementDay: e.target.value})} className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif" placeholder="1" />
+                  <AmountInput required value={formData.statementDay || ''} onChange={e => setFormData({...formData, statementDay: e.target.value})} className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif" placeholder="1" />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Currency')}</label>

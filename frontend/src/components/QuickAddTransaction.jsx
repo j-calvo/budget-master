@@ -4,10 +4,11 @@ import api from '../api';
 import { useSettings } from '../context/SettingsContext';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
+import AmountInput from './AmountInput';
 
 export default function QuickAddTransaction() {
   const { t } = useTranslation();
-  const { settings } = useSettings();
+  const { settings, currencies } = useSettings();
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const [accounts, setAccounts] = useState([]);
@@ -107,6 +108,12 @@ export default function QuickAddTransaction() {
     const srcId = formData.sourceId?.replace(/^(account_|card_)/, '');
     const activeSrc = isAcc ? accounts.find(a => a.id === srcId) : creditCards.find(c => c.id === srcId);
     const code = activeSrc?.currency || settings?.defaultCurrency || 'USD';
+    
+    // 1. Try to find the symbol in our global currencies list
+    const currencyRecord = currencies.find(c => c.code === code);
+    if (currencyRecord?.symbol) return currencyRecord.symbol;
+
+    // 2. Fallback to Intl.NumberFormat using the user's language
     const parts = new Intl.NumberFormat(settings?.language || 'en-US', { style: 'currency', currency: code }).formatToParts(0);
     return parts.find(p => p.type === 'currency')?.value || '$';
   };
@@ -210,10 +217,8 @@ export default function QuickAddTransaction() {
                   <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-[0.15em]">{t('Amount')}</label>
                   <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-serif text-lg">{getCurrencySymbol()}</span>
-                    <input
+                    <AmountInput
                       required
-                      type="number"
-                      step="0.01"
                       value={formData.amount}
                       onChange={e => setFormData({...formData, amount: e.target.value})}
                       className="w-full pl-10 pr-4 py-3 bg-brand-900/50 border border-brand-600/50 rounded-xl focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white text-2xl font-serif transition-all"

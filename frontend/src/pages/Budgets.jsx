@@ -2,16 +2,17 @@ import React, { useState, useEffect } from 'react';
 import api from '../api';
 import { useSettings } from '../context/SettingsContext';
 import { useTranslation } from 'react-i18next';
+import AmountInput from '../components/AmountInput';
+import { formatCurrency as formatC } from '../lib/currencyUtils';
 
 const API_URL = '/budgets';
 const CATS_URL = '/categories';
 
 export default function Budgets() {
   const { t } = useTranslation();
-  const { settings } = useSettings();
+  const { settings, currencies } = useSettings();
   const [budgets, setBudgets] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [currencies, setCurrencies] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [editingBudget, setEditingBudget] = useState(null);
   const [newBudget, setNewBudget] = useState({ categoryId: '', amount: '', currency: 'CRC', payDay: '' });
@@ -24,22 +25,15 @@ export default function Budgets() {
 
   const fetchData = async () => {
     try {
-      const [budRes, catRes, currRes] = await Promise.allSettled([
+      const [budRes, catRes] = await Promise.allSettled([
         api.get(API_URL),
-        api.get(CATS_URL),
-        api.get('/currencies')
+        api.get(CATS_URL)
       ]);
 
       if (budRes.status === 'fulfilled') {
         setBudgets(budRes.value.data);
       } else {
         console.error('Failed to fetch budgets:', budRes.reason);
-      }
-
-      if (currRes.status === 'fulfilled') {
-        setCurrencies(currRes.value.data);
-      } else {
-        console.error('Failed to fetch currencies:', currRes.reason);
       }
 
       if (catRes.status === 'fulfilled') {
@@ -104,10 +98,7 @@ export default function Budgets() {
   };
 
   const formatCurrency = (amount, currencyCode) => {
-    return new Intl.NumberFormat(settings?.language || 'en-US', {
-      style: 'currency',
-      currency: currencyCode || settings?.defaultCurrency || 'USD'
-    }).format(amount);
+    return formatC(amount, currencyCode || settings?.defaultCurrency || 'USD', currencies, settings?.language);
   };
 
   return (
@@ -420,11 +411,11 @@ export default function Budgets() {
               <div>
                 <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Monthly Amount')}</label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-serif">{(() => { const p = new Intl.NumberFormat('en-US', { style: 'currency', currency: newBudget.currency || 'CRC' }).formatToParts(0); return p.find(x => x.type === 'currency')?.value || '$'; })()}</span>
-                  <input 
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-serif">
+                    {currencies.find(c => c.code === (newBudget.currency || 'CRC'))?.symbol || '₡'}
+                  </span>
+                  <AmountInput 
                     required 
-                    type="number" 
-                    step="0.01" 
                     value={newBudget.amount} 
                     onChange={e => setNewBudget({...newBudget, amount: e.target.value})} 
                     className="w-full pl-8 pr-3 py-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif" 
@@ -446,9 +437,7 @@ export default function Budgets() {
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Pay Day (Optional)')}</label>
-                  <input 
-                    type="number" 
-                    min="1" max="31"
+                  <AmountInput 
                     value={newBudget.payDay || ''} 
                     onChange={e => setNewBudget({...newBudget, payDay: e.target.value})} 
                     className="w-full px-3 py-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all" 

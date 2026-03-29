@@ -3,11 +3,12 @@ import api from '../api';
 import { useTranslation } from 'react-i18next';
 import { useSettings } from '../context/SettingsContext';
 import { ArrowLeftRight, TrendingUp, Clock, Info, Calculator, Construction } from 'lucide-react';
+import AmountInput from '../components/AmountInput';
+import { formatCurrency } from '../lib/currencyUtils';
 
 export default function Tools() {
   const { t } = useTranslation();
-  const { settings } = useSettings();
-  const [currencies, setCurrencies] = useState([]);
+  const { settings, currencies } = useSettings();
   const [ratesData, setRatesData] = useState(null);
   const [amount, setAmount] = useState(1);
   const [fromCurrency, setFromCurrency] = useState('USD');
@@ -17,11 +18,7 @@ export default function Tools() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const [currRes, rateRes] = await Promise.all([
-          api.get('/currencies'),
-          api.get('/currencies/rates')
-        ]);
-        setCurrencies(currRes.data);
+        const rateRes = await api.get('/currencies/rates');
         setRatesData(rateRes.data);
         
         if (settings?.defaultCurrency) {
@@ -95,10 +92,9 @@ export default function Tools() {
                   {t('Amount')}
                 </label>
                 <div className="relative">
-                  <input
-                    type="number"
+                  <AmountInput
                     value={amount}
-                    onChange={(e) => setAmount(parseFloat(e.target.value) || 0)}
+                    onChange={(e) => setAmount(e.target.value)}
                     className="w-full bg-brand-900/60 border-2 border-brand-600/30 rounded-2xl p-4 text-2xl font-serif text-white focus:border-gold-500/50 focus:ring-4 focus:ring-gold-500/5 outline-none transition-all shadow-inner"
                     placeholder="0.00"
                   />
@@ -135,7 +131,7 @@ export default function Tools() {
 
               <div className="mt-4 p-6 rounded-3xl bg-gradient-to-b from-brand-900/40 to-transparent border border-white/5 text-center">
                 <p className="text-3xl font-serif font-bold text-white tracking-tight break-all">
-                  {new Intl.NumberFormat(settings?.language || 'en-US', { style: 'currency', currency: toCurrency }).format(result)}
+                  {formatCurrency(result, toCurrency, currencies, settings?.language)}
                 </p>
                 <div className="flex items-center justify-center gap-2 text-gold-400/60 text-xs font-serif italic mt-2">
                   <TrendingUp size={14} />

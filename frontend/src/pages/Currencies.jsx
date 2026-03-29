@@ -3,11 +3,12 @@ import api from '../api';
 import { useTranslation } from 'react-i18next';
 import { useSettings } from '../context/SettingsContext';
 import { ArrowLeftRight, TrendingUp, Clock, Info } from 'lucide-react';
+import AmountInput from '../components/AmountInput';
+import { formatCurrency } from '../lib/currencyUtils';
 
 export default function Currencies() {
   const { t } = useTranslation();
-  const { settings } = useSettings();
-  const [currencies, setCurrencies] = useState([]);
+  const { settings, currencies } = useSettings();
   const [ratesData, setRatesData] = useState(null);
   const [amount, setAmount] = useState(1);
   const [fromCurrency, setFromCurrency] = useState('USD');
@@ -17,11 +18,7 @@ export default function Currencies() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const [currRes, rateRes] = await Promise.all([
-          api.get('/currencies'),
-          api.get('/currencies/rates')
-        ]);
-        setCurrencies(currRes.data);
+        const rateRes = await api.get('/currencies/rates');
         setRatesData(rateRes.data);
         
         // Use default currency as initial 'From'
@@ -100,10 +97,9 @@ export default function Currencies() {
                   {t('Amount to Convert')}
                 </label>
                 <div className="relative">
-                  <input
-                    type="number"
+                  <AmountInput
                     value={amount}
-                    onChange={(e) => setAmount(parseFloat(e.target.value) || 0)}
+                    onChange={(e) => setAmount(e.target.value)}
                     className="w-full bg-brand-900/60 border-2 border-brand-600/30 rounded-2xl p-6 text-4xl font-serif text-white focus:border-gold-500/50 focus:ring-4 focus:ring-gold-500/5 outline-none transition-all shadow-inner"
                     placeholder="0.00"
                   />
@@ -156,10 +152,7 @@ export default function Currencies() {
                 <div className="flex flex-col items-center justify-center space-y-2 p-8 rounded-3xl bg-gradient-to-b from-brand-900/40 to-transparent border border-white/5">
                   <p className="text-slate-400 text-sm font-serif italic">{amount} {fromCurrency} {t('equals')}</p>
                   <p className="text-6xl md:text-7xl font-serif font-bold text-white tracking-tight break-all text-center">
-                    {new Intl.NumberFormat(settings?.language || 'en-US', {
-                      style: 'currency',
-                      currency: toCurrency
-                    }).format(result)}
+                    {formatCurrency(result, toCurrency, currencies, settings?.language)}
                   </p>
                   <div className="flex items-center gap-2 text-gold-400/60 text-xs font-serif italic mt-4">
                     <TrendingUp size={14} />
@@ -198,10 +191,7 @@ export default function Currencies() {
                     {val} {fromCurrency}
                   </span>
                   <span className="text-gold-400 font-serif font-bold">
-                    {new Intl.NumberFormat(settings?.language || 'en-US', {
-                      style: 'currency',
-                      currency: toCurrency
-                    }).format(convert(val, fromCurrency, toCurrency))}
+                    {formatCurrency(convert(val, fromCurrency, toCurrency), toCurrency, currencies, settings?.language)}
                   </span>
                 </div>
               ))}

@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import api from '../api';
 import { useTranslation } from 'react-i18next';
 import { useSettings } from '../context/SettingsContext';
+import { formatCurrency as formatC } from '../lib/currencyUtils';
 import {
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
 
 export default function Analytics() {
   const { t } = useTranslation();
-  const { settings } = useSettings();
+  const { settings, currencies } = useSettings();
   const [transactions, setTransactions] = useState([]);
   const [, setCategories] = useState([]);
   const [budgets, setBudgets] = useState([]);
@@ -39,10 +40,7 @@ export default function Analytics() {
   }, []);
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat(settings?.language || 'en-US', {
-      style: 'currency',
-      currency: settings?.defaultCurrency || 'USD'
-    }).format(amount);
+    return formatC(amount, settings?.defaultCurrency || 'USD', currencies, settings?.language);
   };
 
   // Filter transactions by timeRange

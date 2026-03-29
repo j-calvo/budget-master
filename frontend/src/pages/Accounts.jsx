@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api';
 import { useTranslation } from 'react-i18next';
+import { useSettings } from '../context/SettingsContext';
+import AmountInput from '../components/AmountInput';
+import { formatCurrency } from '../lib/currencyUtils';
 
 const API_URL = '/accounts';
-const CURR_URL = '/currencies';
 const BANKS_URL = '/banks';
 const TYPES_URL = '/account-types';
 
 export default function Accounts() {
   const { t } = useTranslation();
+  const { settings, currencies } = useSettings();
   const [accounts, setAccounts] = useState([]);
-  const [currencies, setCurrencies] = useState([]);
   const [banks, setBanks] = useState([]);
   const [accountTypes, setAccountTypes] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -25,14 +27,12 @@ export default function Accounts() {
 
   const fetchAccounts = async () => {
     try {
-      const [accRes, currRes, bankRes, typeRes] = await Promise.all([
+      const [accRes, bankRes, typeRes] = await Promise.all([
         api.get(API_URL),
-        api.get(CURR_URL),
         api.get(BANKS_URL),
         api.get(TYPES_URL)
       ]);
       setAccounts(accRes.data);
-      setCurrencies(currRes.data);
       setBanks(bankRes.data);
       setAccountTypes(typeRes.data);
 
@@ -40,8 +40,8 @@ export default function Accounts() {
       let initType = newAccount.type;
       let initInstitution = newAccount.institution;
 
-      if (currRes.data.length > 0 && !newAccount.currency) {
-        initCurrency = currRes.data[0].code;
+      if (currencies.length > 0 && !newAccount.currency) {
+        initCurrency = currencies[0].code;
       }
       if (typeRes.data.length > 0 && newAccount.type === 'Checking') {
         initType = typeRes.data[0].name;
@@ -161,7 +161,7 @@ export default function Accounts() {
               <div className="mt-8 flex items-end justify-between">
                 <p className="text-sm font-medium text-slate-400 uppercase tracking-wider">{t('Balance')}</p>
                 <p className="text-2xl font-light font-serif text-white tracking-wide">
-                  {new Intl.NumberFormat('en-US', { style: 'currency', currency: acc.currency || 'USD' }).format(acc.balance)}
+                  {formatCurrency(acc.balance, acc.currency, currencies, settings?.language)}
                 </p>
               </div>
             </div>
@@ -223,8 +223,10 @@ export default function Accounts() {
                 <div>
                   <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Starting Balance')}</label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-serif">{(() => { const p = new Intl.NumberFormat('en-US', { style: 'currency', currency: newAccount.currency || 'USD' }).formatToParts(0); return p.find(x => x.type === 'currency')?.value || '$'; })()}</span>
-                    <input type="number" step="0.01" value={newAccount.balance} onChange={e => setNewAccount({ ...newAccount, balance: parseFloat(e.target.value) || 0 })} className="w-full pl-8 pr-3 py-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif" />
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-serif">
+                      {currencies.find(c => c.code === (newAccount.currency || 'USD'))?.symbol || '$'}
+                    </span>
+                    <AmountInput value={newAccount.balance} onChange={e => setNewAccount({ ...newAccount, balance: e.target.value })} className="w-full pl-8 pr-3 py-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif" />
                   </div>
                 </div>
               </div>

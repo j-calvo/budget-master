@@ -6,9 +6,10 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
 import FinancialTimeline from '../components/FinancialTimeline';
+import { formatCurrency } from '../lib/currencyUtils';
 
 export default function Dashboard() {
-  const { settings, isLoading: settingsLoading } = useSettings();
+  const { settings, currencies, isLoading: settingsLoading } = useSettings();
   const { t } = useTranslation();
   
   const [loadingDb, setLoadingDb] = useState(true);
@@ -140,11 +141,8 @@ export default function Dashboard() {
     </div>
   );
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat(settings?.language || 'en-US', {
-      style: 'currency',
-      currency: settings?.defaultCurrency || 'USD'
-    }).format(amount);
+  const displayCurrency = (amount, code) => {
+    return formatCurrency(amount, code || settings?.defaultCurrency || 'USD', currencies, settings?.language);
   };
 
   const CustomTooltip = ({ active, payload, label }) => {
@@ -180,22 +178,22 @@ export default function Dashboard() {
         {/* Net Worth */}
         <div className="glass-card p-4 md:p-6 transition-all hover:border-gold-500/30 hover:shadow-gold-500/10 group cursor-default">
           <p className="text-[10px] md:text-xs font-medium text-slate-400 uppercase tracking-widest group-hover:text-gold-400 transition-colors">{t('Net Worth')}</p>
-          <p className={`text-xl md:text-3xl font-light font-serif mt-2 md:mt-3 tracking-wide ${metrics.netWorth >= 0 ? 'text-white' : 'text-red-400'}`}>
-            {formatCurrency(metrics.netWorth)}
+          <p className="text-xl md:text-3xl font-light font-serif mt-2 md:mt-3 tracking-wide ${metrics.netWorth >= 0 ? 'text-white' : 'text-red-400'}">
+            {displayCurrency(metrics.netWorth)}
           </p>
         </div>
         {/* Total Income */}
         <div className="glass-card p-4 md:p-6 transition-all hover:border-emerald-500/30 hover:shadow-emerald-500/10 group cursor-default">
           <p className="text-[10px] md:text-xs font-medium text-slate-400 uppercase tracking-widest group-hover:text-emerald-400 transition-colors">{t('Monthly Income')}</p>
           <p className="text-xl md:text-3xl font-light font-serif text-emerald-400 mt-2 md:mt-3 drop-shadow-[0_0_8px_rgba(16,185,129,0.3)] tracking-wide">
-            +{formatCurrency(metrics.income)}
+            +{displayCurrency(metrics.income)}
           </p>
         </div>
         {/* Total Expenses */}
         <div className="glass-card p-4 md:p-6 transition-all hover:border-rose-500/30 hover:shadow-rose-500/10 group cursor-default">
           <p className="text-[10px] md:text-xs font-medium text-slate-400 uppercase tracking-widest group-hover:text-rose-400 transition-colors">{t('Monthly Expenses')}</p>
           <p className="text-xl md:text-3xl font-light font-serif text-rose-400 mt-2 md:mt-3 drop-shadow-[0_0_8px_rgba(244,63,94,0.3)] tracking-wide">
-            -{formatCurrency(metrics.expenses)}
+            -{displayCurrency(metrics.expenses)}
           </p>
         </div>
         {/* Savings */}
@@ -275,7 +273,7 @@ export default function Dashboard() {
                     </div>
                     <div className="text-right shrink-0">
                       <p className={`font-serif text-sm md:text-base tracking-wide ${isExpense ? 'text-slate-300' : 'text-gold-400 drop-shadow-[0_0_5px_rgba(212,175,55,0.4)]'}`}>
-                        {isExpense ? '-' : '+'}{formatCurrency(tx.amount)}
+                        {isExpense ? '-' : '+'}{displayCurrency(tx.amount, tx.account?.currency || tx.creditCard?.currency)}
                       </p>
                     </div>
                   </div>

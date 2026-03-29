@@ -3,6 +3,8 @@ import api from '../api';
 import { useSettings } from '../context/SettingsContext';
 import { useTranslation } from 'react-i18next';
 import { Download, Upload, Search, SlidersHorizontal, ArrowUpDown, X, ChevronDown } from 'lucide-react';
+import AmountInput from '../components/AmountInput';
+import { formatCurrency } from '../lib/currencyUtils';
 
 const API_URL = '/transactions';
 const ACCTS_URL = '/accounts';
@@ -10,7 +12,7 @@ const CATS_URL = '/categories';
 
 export default function Transactions() {
   const { t } = useTranslation();
-  const { settings } = useSettings();
+  const { settings, currencies } = useSettings();
   const [transactions, setTransactions] = useState([]);
   const [accounts, setAccounts] = useState([]);
   const [creditCards, setCreditCards] = useState([]);
@@ -528,7 +530,7 @@ export default function Transactions() {
                       <div className="text-right">
                         <div className={`font-serif tracking-wide text-lg ${tx.type === 'expense' ? 'text-slate-100' : 'text-gold-400 drop-shadow-[0_0_8px_rgba(212,175,55,0.3)]'}`}>
                           {tx.type === 'expense' ? '-' : '+'}
-                          {new Intl.NumberFormat(settings?.language || 'en-US', { style: 'currency', currency: tx.account?.currency || tx.creditCard?.currency || settings?.defaultCurrency || 'USD' }).format(tx.amount)}
+                          {formatCurrency(tx.amount, tx.account?.currency || tx.creditCard?.currency || settings?.defaultCurrency || 'USD', currencies, settings?.language)}
                         </div>
                         <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-0.5 font-mono">
                           {new Date(tx.date).toLocaleDateString(settings?.language || 'en-US', { month: 'short', day: 'numeric', year: '2-digit' })}
@@ -578,7 +580,7 @@ export default function Transactions() {
 
                   <div className={`hidden md:block text-right font-serif tracking-wide text-lg ${tx.type === 'expense' ? 'text-slate-300' : 'text-gold-400 drop-shadow-[0_0_5px_rgba(212,175,55,0.4)]'}`}>
                     {tx.type === 'expense' ? '-' : '+'}
-                    {new Intl.NumberFormat(settings?.language || 'en-US', { style: 'currency', currency: tx.account?.currency || tx.creditCard?.currency || settings?.defaultCurrency || 'USD' }).format(tx.amount)}
+                    {formatCurrency(tx.amount, tx.account?.currency || tx.creditCard?.currency || settings?.defaultCurrency || 'USD', currencies, settings?.language)}
                   </div>
 
                   <div className="hidden md:flex justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -617,15 +619,23 @@ export default function Transactions() {
                 const srcId = newTx.sourceId?.replace(/^(account_|card_)/, '');
                 const activeSrc = isAcc ? accounts.find(a => a.id === srcId) : creditCards.find(c => c.id === srcId);
                 const code = activeSrc?.currency || settings?.defaultCurrency || 'USD';
-                const parts = new Intl.NumberFormat(settings?.language || 'en-US', { style: 'currency', currency: code }).formatToParts(0);
-                const sym = parts.find(p => p.type === 'currency')?.value || '$';
+                
+                // 1. Try to find the symbol in our currencies list
+                const currencyRecord = currencies.find(c => c.code === code);
+                const sym = currencyRecord?.symbol || (new Intl.NumberFormat(settings?.language || 'en-US', { style: 'currency', currency: code }).formatToParts(0).find(p => p.type === 'currency')?.value || '$');
 
                 return (
                   <div>
                     <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Amount')}</label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-serif">{sym}</span>
-                      <input required type="number" step="0.01" value={newTx.amount} onChange={e => setNewTx({...newTx, amount: e.target.value})} className="w-full pl-8 pr-3 py-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif" placeholder="0.00" />
+                      <AmountInput
+                        required
+                        value={newTx.amount}
+                        onChange={e => setNewTx({...newTx, amount: e.target.value})}
+                        className="w-full pl-8 pr-3 py-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif"
+                        placeholder="0.00"
+                      />
                     </div>
                   </div>
                 );

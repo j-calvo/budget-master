@@ -5,6 +5,7 @@ import { useSettings } from '../context/SettingsContext';
 import SettingsData from '../components/SettingsData';
 import SettingsBackup from '../components/SettingsBackup';
 import FamilySettings from '../components/FamilySettings';
+import AmountInput from '../components/AmountInput';
 
 const CURR_URL = '/currencies';
 
@@ -167,12 +168,9 @@ export default function Settings() {
                       <label className="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">
                         {formData.payFrequency === 'twice_monthly' ? t('First Pay Day') : t('Preferred Pay Day')}
                       </label>
-                      <input
-                        type="number"
-                        min="1"
-                        max="31"
+                      <AmountInput
                         value={formData.payDay}
-                        onChange={e => setFormData({ ...formData, payDay: parseInt(e.target.value) })}
+                        onChange={e => setFormData({ ...formData, payDay: e.target.value })}
                         className="w-full p-3 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all"
                         placeholder="15"
                       />
@@ -185,12 +183,9 @@ export default function Settings() {
                         <label className="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">
                           {t('Second Pay Day')}
                         </label>
-                        <input
-                          type="number"
-                          min="1"
-                          max="31"
+                        <AmountInput
                           value={formData.payDay2 || 28}
-                          onChange={e => setFormData({ ...formData, payDay2: parseInt(e.target.value) })}
+                          onChange={e => setFormData({ ...formData, payDay2: e.target.value })}
                           className="w-full p-3 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all"
                           placeholder="28"
                         />
@@ -203,12 +198,9 @@ export default function Settings() {
                   <label className="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">
                     {t('Budget Start Day')}
                   </label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="28"
+                  <AmountInput
                     value={formData.budgetStartDay}
-                    onChange={e => setFormData({ ...formData, budgetStartDay: parseInt(e.target.value) })}
+                    onChange={e => setFormData({ ...formData, budgetStartDay: e.target.value })}
                     className="w-full p-3 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all"
                     placeholder="1"
                   />

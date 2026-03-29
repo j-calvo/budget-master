@@ -11,13 +11,18 @@ export function SettingsProvider({ children }) {
     fontFamily: 'Outfit',
     theme: 'light'
   });
+  const [currencies, setCurrencies] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchSettings = async () => {
     try {
-      const res = await api.get('/settings');
-      setSettings(res.data);
-      if (res.data.language) i18n.changeLanguage(res.data.language);
+      const [settRes, currRes] = await Promise.all([
+        api.get('/settings'),
+        api.get('/currencies')
+      ]);
+      setSettings(settRes.data);
+      setCurrencies(currRes.data);
+      if (settRes.data.language) i18n.changeLanguage(settRes.data.language);
     } catch (err) {
       console.error('Failed to load settings', err);
     } finally {
@@ -53,7 +58,7 @@ export function SettingsProvider({ children }) {
   };
 
   return (
-    <SettingsContext.Provider value={{ settings, updateSettings, isLoading }}>
+    <SettingsContext.Provider value={{ settings, updateSettings, currencies, isLoading }}>
       {children}
     </SettingsContext.Provider>
   );
