@@ -1,5 +1,5 @@
 const path = require('path');
-require('dotenv').config();
+require('dotenv').config({ path: path.resolve(__dirname, '..', '.env') });
 const { PrismaClient } = require('./generated/prisma');
 const { PrismaBetterSqlite3 } = require('@prisma/adapter-better-sqlite3');
 
