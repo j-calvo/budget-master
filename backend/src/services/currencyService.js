@@ -1,6 +1,5 @@
 const axios = require('axios');
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../db');
 
 const API_KEY = process.env.CURRENCY_EXCHANGE_API_KEY;
 const BASE_URL = `https://v6.exchangerate-api.com/v6/${API_KEY}/latest`;

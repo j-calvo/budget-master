@@ -1,5 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../src/db');
 const { 
   DEFAULT_CURRENCIES, 
   DEFAULT_BANKS, 
