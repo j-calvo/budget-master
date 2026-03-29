@@ -68,14 +68,14 @@ echo "📦 Installing frontend dependencies..."
 # 4. Apply database schema updates
 echo ""
 echo "🗄️  Applying database schema updates..."
-(cd backend && npx prisma generate)
+(cd backend && npx prisma generate) || { echo "❌ Failed to generate Prisma Client"; exit 1; }
 
 if [ "$FLUSH_DB" = true ]; then
   echo "   ⚠️  FLUSHING DATABASE! (All existing data will be lost)..."
-  (cd backend && npx prisma db push --force-reset)
+  (cd backend && npx prisma db push --force-reset) || { echo "❌ Failed to flush database"; exit 1; }
 else
   echo "   🔄 Syncing schema to database..."
-  (cd backend && npx prisma db push --accept-data-loss 2>/dev/null || npx prisma db push)
+  (cd backend && npx prisma db push --accept-data-loss) || { echo "❌ Failed to sync Prisma schema"; exit 1; }
 fi
 
 # 5. Build frontend production bundle

@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 echo "🚀 Starting Personal Finance App Installation..."
 
 # 1. Check for Node.js and its version
@@ -78,11 +79,11 @@ echo "📦 Installing frontend dependencies..."
 # 5. Setup Database
 echo ""
 echo "🗄️  Setting up the database..."
-(cd backend && npx prisma generate)
+(cd backend && npx prisma generate) || { echo "❌ Failed to generate Prisma Client"; exit 1; }
 
 echo "   🔄 Syncing schema and seeding core data..."
-(cd backend && npx prisma db push --accept-data-loss)
-(cd backend && npx prisma db seed)
+(cd backend && npx prisma db push --accept-data-loss) || { echo "❌ Failed to push Prisma schema"; exit 1; }
+(cd backend && npx prisma db seed) || { echo "❌ Failed to seed database"; exit 1; }
 
 # 6. Build Frontend
 echo ""
