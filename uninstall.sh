@@ -21,8 +21,13 @@ if command -v pm2 &> /dev/null; then
   echo "🛑 Stopping PM2 process '$APP_NAME'..."
   pm2 delete "$APP_NAME" 2>/dev/null || echo "   ⚠️  Could not find active PM2 process '$APP_NAME'."
 else
-  echo "   ℹ️  PM2 not found, skipping process cleanup."
+  echo "   ℹ️  PM2 not found, skipping PM2 process cleanup."
 fi
+
+echo "🛑 Terminating all related node processes..."
+# Kill any node processes running in the current directory or child directories
+pkill -f "node.*$APP_NAME" || echo "   ℹ️  No matching node processes found."
+pkill -f "prisma" || echo "   ℹ️  No matching Prisma processes found."
 
 # 2. Identify and Delete Database
 echo ""
@@ -46,9 +51,9 @@ if [ -f "$ENV_FILE" ]; then
   fi
 
   if [ -f "$ACTUAL_DB_PATH" ]; then
-    echo "   🗑️  Deleting database: $ACTUAL_DB_PATH"
-    rm "$ACTUAL_DB_PATH"
-    echo "   ✅ Database deleted."
+    echo "   🗑️  Deleting database and sidecar files: $ACTUAL_DB_PATH*"
+    rm -f "$ACTUAL_DB_PATH" "$ACTUAL_DB_PATH-journal" "$ACTUAL_DB_PATH-wal" "$ACTUAL_DB_PATH-shm"
+    echo "   ✅ Database files deleted."
   else
     echo "   ⚠️  Database file not found at $ACTUAL_DB_PATH"
   fi
