@@ -7,3 +7,4 @@ node_modules
 # Database backups
 backups/
 *.db
+src/generated
