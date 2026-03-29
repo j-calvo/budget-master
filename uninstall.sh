@@ -38,24 +38,24 @@ if [ -f "$ENV_FILE" ]; then
   DB_URL=$(grep "^DATABASE_URL=" "$ENV_FILE" | cut -d'=' -f2 | tr -d '"' | tr -d "'")
   DB_FILE=$(echo "$DB_URL" | sed 's/^file://')
   
-  # Prisma resolves relative paths in .env relative to the prisma/ directory
-  if [[ "$DB_FILE" == ./* ]]; then
-    # e.g. ./dev.db -> backend/prisma/dev.db
-    ACTUAL_DB_PATH="backend/prisma/${DB_FILE#./}"
-  elif [[ "$DB_FILE" != /* ]]; then
-    # e.g. dev.db -> backend/prisma/dev.db
-    ACTUAL_DB_PATH="backend/prisma/$DB_FILE"
-  else
-    # absolute path
+  # Standardized path resolution:
+  # If DB_FILE is absolute, use it. Otherwise, resolve from backend/ root.
+  if [[ "$DB_FILE" == /* ]]; then
     ACTUAL_DB_PATH="$DB_FILE"
+  else
+    # Strip leading ./ and resolve from backend/
+    CLEAN_DB_FILE=$(echo "$DB_FILE" | sed 's/^\.\///')
+    ACTUAL_DB_PATH="backend/$CLEAN_DB_FILE"
   fi
 
+  # Check if the file exists and delete it along with SQLite sidecars
   if [ -f "$ACTUAL_DB_PATH" ]; then
     echo "   🗑️  Deleting database and sidecar files: $ACTUAL_DB_PATH*"
     rm -f "$ACTUAL_DB_PATH" "$ACTUAL_DB_PATH-journal" "$ACTUAL_DB_PATH-wal" "$ACTUAL_DB_PATH-shm"
     echo "   ✅ Database files deleted."
   else
     echo "   ⚠️  Database file not found at $ACTUAL_DB_PATH"
+    echo "      (Verify your DATABASE_URL in $ENV_FILE)"
   fi
 else
   echo "   ⚠️  No $ENV_FILE found to identify database. Skipping DB cleanup."
