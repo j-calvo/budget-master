@@ -7,8 +7,8 @@ module.exports = {
       node_args: '--max-old-space-size=512',
       env: {
         NODE_ENV: 'production',
-        PORT: 5001,
-        DATABASE_URL: 'file:./dev.db'
+        PORT: 5001
+        // DATABASE_URL is now loaded from backend/.env by the application
       },
       error_file: './logs/err.log',
       out_file: './logs/out.log',
