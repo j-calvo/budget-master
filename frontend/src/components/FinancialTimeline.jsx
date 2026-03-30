@@ -125,7 +125,7 @@ export default function FinancialTimeline({ cards, loans, metrics, budgets = [] 
     return total;
   }, [events, currentDay, nextPayDay]);
 
-  const isLiquidityLow = metrics?.netWorth < billsBeforePayday;
+  const isLiquidityLow = (metrics?.totalAssets ?? metrics?.netWorth) < billsBeforePayday;
 
   const formatC = (amount, currencyCode) => {
     return formatCurrency(amount, currencyCode || settings?.defaultCurrency || 'USD', currencies, settings?.language);
