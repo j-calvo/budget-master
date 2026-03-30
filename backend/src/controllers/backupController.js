@@ -1,8 +1,19 @@
 const path = require('path');
 const fs = require('fs');
 
-const DB_PATH = path.resolve(__dirname, '../../prisma/dev.db');
-const BACKUP_DIR = path.resolve(__dirname, '../../backups');
+// Load environment variables using absolute path
+require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
+
+/**
+ * Robust Database Path Resolution (Same as db.js and prisma.config.cjs)
+ */
+const rawUrl = process.env.DATABASE_URL || 'file:./prisma/dev.db';
+const dbRelativePath = rawUrl.replace('file:', '').replace(/^\.\//, '');
+// Resolve relative to the backend/ root (two levels up from src/controllers/)
+const DB_PATH = path.resolve(__dirname, '../..', dbRelativePath);
+
+// Resolve Backup directory relative to backend/ root
+const BACKUP_DIR = path.resolve(__dirname, '../..', 'backups');
 
 // Ensure backup directory exists
 if (!fs.existsSync(BACKUP_DIR)) {
@@ -11,12 +22,15 @@ if (!fs.existsSync(BACKUP_DIR)) {
 
 exports.createBackup = async (req, res) => {
   try {
+    console.log('🛡️  Creating backup. Source DB:', DB_PATH);
     if (!fs.existsSync(DB_PATH)) {
+      console.error('❌ Backup failed: Database file not found at', DB_PATH);
       return res.status(404).json({ error: 'Database file not found' });
     }
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-    const backupName = `backup-${timestamp}.db`;
+    const dbName = path.basename(DB_PATH);
+    const backupName = `backup-${timestamp}-${dbName}`;
     const backupPath = path.join(BACKUP_DIR, backupName);
 
     // Copy the database file
@@ -125,8 +139,11 @@ exports.restoreBackup = async (req, res) => {
     }
 
     // Create a safety backup of current DB before restoring
-    const safetyName = `pre-restore-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}.db`;
-    fs.copyFileSync(DB_PATH, path.join(BACKUP_DIR, safetyName));
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const safetyName = `pre-restore-${timestamp}-${path.basename(DB_PATH)}`;
+    if (fs.existsSync(DB_PATH)) {
+      fs.copyFileSync(DB_PATH, path.join(BACKUP_DIR, safetyName));
+    }
 
     // Copy backup over current DB
     fs.copyFileSync(backupPath, DB_PATH);
