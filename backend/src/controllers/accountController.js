@@ -29,7 +29,7 @@ exports.getAccountById = async (req, res) => {
 
 exports.createAccount = async (req, res) => {
   try {
-    const { name, type, balance, institution, currency } = req.body;
+    const { name, type, balance, institution, currency, isLiquid } = req.body;
     
     const account = await prisma.account.create({
       data: {
@@ -38,6 +38,7 @@ exports.createAccount = async (req, res) => {
         type,
         currency: currency || 'USD',
         balance: parseFloat(balance) || 0,
+        isLiquid: isLiquid !== undefined ? Boolean(isLiquid) : true,
         institution
       }
     });
@@ -51,7 +52,7 @@ exports.createAccount = async (req, res) => {
 exports.updateAccount = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, type, balance, institution, currency } = req.body;
+    const { name, type, balance, institution, currency, isLiquid } = req.body;
     const account = await prisma.account.update({
       where: { id, familyId: req.user.familyId },
       data: { 
@@ -59,7 +60,8 @@ exports.updateAccount = async (req, res) => {
         type, 
         balance: parseFloat(balance), 
         institution, 
-        currency 
+        currency,
+        isLiquid: isLiquid !== undefined ? Boolean(isLiquid) : true 
       }
     });
     res.json(account);

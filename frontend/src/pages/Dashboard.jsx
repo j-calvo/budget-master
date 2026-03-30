@@ -55,10 +55,14 @@ export default function Dashboard() {
         };
 
         // 1. Net Worth = Accounts (Assets) - Cards (Liabilities) - Loans (Liabilities)
-        const totalAssets = accounts.reduce((sum, a) => sum + convert(a.balance || 0, a.currency || 'USD'), 0);
+        const totalAssets = accounts
+          .filter(a => a.isLiquid !== false) // Default to true if undefined
+          .reduce((sum, a) => sum + convert(a.balance || 0, a.currency || 'USD'), 0);
+          
+        const allAssets = accounts.reduce((sum, a) => sum + convert(a.balance || 0, a.currency || 'USD'), 0);
         const cardDebt = cards.reduce((sum, c) => sum + convert(c.balance || 0, c.currency || 'USD'), 0);
         const loanDebt = loans.reduce((sum, l) => sum + convert(l.balance || 0, l.currency || 'USD'), 0);
-        const netWorth = totalAssets - cardDebt - loanDebt;
+        const netWorth = allAssets - cardDebt - loanDebt;
 
         // 2. This Month's Income & Expenses
         const now = new Date();

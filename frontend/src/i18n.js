@@ -89,6 +89,8 @@ const resources = {
       "Cancel": "Cancel",
       "Save Changes": "Save Changes",
       "Save Account": "Save Account",
+      "Available for spending": "Available for spending",
+      "Long-term asset": "Long-term asset (Pension, etc.)",
 
       // Budgets
       "Create Budget": "Create Budget",
@@ -406,6 +408,8 @@ const resources = {
       "Cancel": "Cancelar",
       "Save Changes": "Guardar Cambios",
       "Save Account": "Guardar Cuenta",
+      "Available for spending": "Disponible para gasto diario",
+      "Long-term asset": "Activo a largo plazo (Pensión, etc.)",
 
       // Budgets
       "Create Budget": "Crear Presupuesto",

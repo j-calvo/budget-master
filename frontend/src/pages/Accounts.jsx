@@ -18,7 +18,7 @@ export default function Accounts() {
   const [isLoading, setIsLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingAccount, setEditingAccount] = useState(null);
-  const [newAccount, setNewAccount] = useState({ name: '', type: 'Checking', institution: '', currency: 'USD', balance: 0 });
+  const [newAccount, setNewAccount] = useState({ name: '', type: 'Checking', institution: '', currency: 'USD', balance: 0, isLiquid: true });
 
   useEffect(() => {
     fetchAccounts();
@@ -78,7 +78,8 @@ export default function Accounts() {
         type: accountTypes.length ? accountTypes[0].name : 'Checking',
         institution: banks.length ? banks[0].name : '',
         currency: currencies.length ? currencies[0].code : 'USD',
-        balance: 0
+        balance: 0,
+        isLiquid: true
       });
       fetchAccounts();
     } catch (err) {
@@ -93,7 +94,8 @@ export default function Accounts() {
       type: acc.type,
       institution: acc.institution,
       currency: acc.currency,
-      balance: acc.balance
+      balance: acc.balance,
+      isLiquid: acc.isLiquid !== false
     });
     setShowModal(true);
   };
@@ -117,7 +119,7 @@ export default function Accounts() {
         </div>
         <button onClick={() => {
           setEditingAccount(null);
-          setNewAccount({ name: '', type: accountTypes.length ? accountTypes[0].name : 'Checking', institution: banks.length ? banks[0].name : '', currency: currencies.length ? currencies[0].code : 'USD', balance: 0 });
+          setNewAccount({ name: '', type: accountTypes.length ? accountTypes[0].name : 'Checking', institution: banks.length ? banks[0].name : '', currency: currencies.length ? currencies[0].code : 'USD', balance: 0, isLiquid: true });
           setShowModal(true);
         }} className="btn-gold px-5 py-2 text-sm shadow-md flex items-center gap-1">
           <span className="text-lg leading-none">+</span> {t('Add Account')}
@@ -147,7 +149,14 @@ export default function Accounts() {
               <div className="flex justify-between items-start mb-6">
                 <div>
                   <h3 className="font-serif italic text-white text-xl tracking-wide line-clamp-1">{acc.name}</h3>
-                  <p className="text-xs font-medium text-slate-400 uppercase tracking-widest mt-1">{acc.institution || 'Bank'} • {acc.type}</p>
+                  <p className="text-xs font-medium text-slate-400 uppercase tracking-widest mt-1">
+                    {acc.institution || 'Bank'} • {acc.type}
+                    {acc.isLiquid === false && (
+                      <span className="ml-2 px-1.5 py-0.5 rounded bg-brand-600/50 text-[10px] text-gold-400/80 border border-gold-500/10">
+                        {t('Long-term asset')}
+                      </span>
+                    )}
+                  </p>
                 </div>
                 <div className="flex gap-2 md:opacity-0 group-hover:opacity-100 transition-opacity">
                   <button onClick={(e) => { e.stopPropagation(); handleEditClick(acc); }} className="text-slate-400 hover:text-gold-400 transition-colors p-2 md:p-1 active:scale-90">
@@ -228,6 +237,16 @@ export default function Accounts() {
                     </span>
                     <AmountInput value={newAccount.balance} onChange={e => setNewAccount({ ...newAccount, balance: e.target.value })} className="w-full pl-8 pr-3 py-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif" />
                   </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 pt-2">
+                <label className="relative inline-flex items-center cursor-pointer group">
+                  <input type="checkbox" checked={newAccount.isLiquid !== false} onChange={e => setNewAccount({ ...newAccount, isLiquid: e.target.checked })} className="sr-only peer" />
+                  <div className="w-9 h-5 bg-brand-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-slate-400 after:border-slate-400 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-gold-500/80 peer-checked:after:bg-white peer-checked:after:border-white"></div>
+                </label>
+                <div className="flex flex-col">
+                  <span className="text-xs font-medium text-slate-300 uppercase tracking-wider">{t('Available for spending')}</span>
+                  <span className="text-[10px] text-slate-500 italic">{t('Used to align your liquidity forecast')}</span>
                 </div>
               </div>
               <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-brand-600/30">
