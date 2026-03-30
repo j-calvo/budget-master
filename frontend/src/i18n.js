@@ -334,7 +334,11 @@ const resources = {
       "Admin access required": "Admin access required",
       "Only workspace administrators can manage database backups.": "Only workspace administrators can manage database backups.",
       "Size": "Size",
-      "Download": "Download"
+      "Download": "Download",
+      // Analytics month navigator
+      "Month": "Month",
+      "Previous month": "Previous month",
+      "Next month": "Next month"
     }
   },
   'es': {
@@ -669,7 +673,11 @@ const resources = {
       "Admin access required": "Acceso de administrador requerido",
       "Only workspace administrators can manage database backups.": "Solo los administradores del espacio de trabajo pueden gestionar los respaldos.",
       "Size": "Tamaño",
-      "Download": "Descargar"
+      "Download": "Descargar",
+      // Analytics month navigator
+      "Month": "Mes",
+      "Previous month": "Mes anterior",
+      "Next month": "Mes siguiente"
     }
   }
 };

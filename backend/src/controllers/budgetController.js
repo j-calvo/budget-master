@@ -3,13 +3,49 @@ const prisma = require('../db');
 exports.getBudgets = async (req, res) => {
   try {
     const { month, year } = req.query;
+    const isCurrentMonth = !month && !year; // only auto-rollover for the "live" view
     const currentMonth = month ? parseInt(month) : new Date().getMonth() + 1;
     const currentYear = year ? parseInt(year) : new Date().getFullYear();
 
-    const budgets = await prisma.budget.findMany({
+    let budgets = await prisma.budget.findMany({
       where: { familyId: req.user.familyId, month: currentMonth, year: currentYear },
       include: { category: true }
     });
+
+    // ── Budget Rollover ───────────────────────────────────────────────────────
+    // If we're viewing the current month and there are no budgets yet,
+    // auto-clone the previous month's definitions (amounts, currency, payDay).
+    // `spent` is always re-calculated live, so it starts clean at 0.
+    if (isCurrentMonth && budgets.length === 0) {
+      const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
+      const prevYear  = currentMonth === 1 ? currentYear - 1 : currentYear;
+
+      const prevBudgets = await prisma.budget.findMany({
+        where: { familyId: req.user.familyId, month: prevMonth, year: prevYear }
+      });
+
+      if (prevBudgets.length > 0) {
+        await prisma.budget.createMany({
+          data: prevBudgets.map(b => ({
+            familyId: req.user.familyId,
+            categoryId: b.categoryId,
+            amount:     b.amount,
+            currency:   b.currency,
+            payDay:     b.payDay,
+            month:      currentMonth,
+            year:       currentYear,
+          })),
+          skipDuplicates: true, // safety net if somehow rows exist
+        });
+
+        // Re-fetch so we include the category relation
+        budgets = await prisma.budget.findMany({
+          where: { familyId: req.user.familyId, month: currentMonth, year: currentYear },
+          include: { category: true }
+        });
+      }
+    }
+    // ─────────────────────────────────────────────────────────────────────────
 
     // Calculate spent for each budget
     const settings = await prisma.setting.findUnique({
@@ -22,12 +58,8 @@ exports.getBudgets = async (req, res) => {
       startDate = new Date(currentYear, currentMonth - 1, 1);
       endDate = new Date(currentYear, currentMonth, 0, 23, 59, 59, 999);
     } else {
-      // If startDay is 18, and we want "March 2026" budget: 
-      // It starts on Feb 18 and ends on Mar 17.
       startDate = new Date(currentYear, currentMonth - 2, budgetStartDay);
       endDate = new Date(currentYear, currentMonth - 1, budgetStartDay - 1, 23, 59, 59, 999);
-      // Wait, let's verify: March (3) -> currentMonth-2 is 1 (Feb). Feb 18.
-      // currentMonth-1 is 2 (Mar). Mar 17. Correct.
     }
 
     const budgetsWithSpent = await Promise.all(budgets.map(async (budget) => {
@@ -56,6 +88,7 @@ exports.getBudgets = async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch budgets' });
   }
 };
+
 
 exports.createBudget = async (req, res) => {
   try {
