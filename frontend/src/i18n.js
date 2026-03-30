@@ -102,6 +102,21 @@ const resources = {
       "Monthly Amount": "Monthly Amount",
       "Delete Budget?": "Delete Budget?",
       "Delete": "Delete",
+      // Budget Status
+      "Paid": "Paid",
+      "Partial": "Partial",
+      "Overdue": "Overdue",
+      "Pending": "Pending",
+      "Auto-tracked via categorized transactions": "Status is auto-tracked via categorized transactions",
+      // Upcoming Obligations Radar
+      "Upcoming Obligations": "Upcoming Obligations",
+      "Nothing due this week": "Nothing due this week",
+      "All clear": "You're all caught up!",
+      "Due in {{days}} day": "Due in {{days}} day",
+      "Due in {{days}} days": "Due in {{days}} days",
+      "Due today": "Due today",
+      "Overdue by {{days}} day": "Overdue by {{days}} day",
+      "Overdue by {{days}} days": "Overdue by {{days}} days",
       "Are you sure you want to delete the \"{{name}}\" budget? This action cannot be undone.": "Are you sure you want to delete the \"{{name}}\" budget? This action cannot be undone.",
 
       // Transactions
@@ -421,6 +436,21 @@ const resources = {
       "Monthly Amount": "Monto Mensual",
       "Delete Budget?": "¿Eliminar Presupuesto?",
       "Delete": "Eliminar",
+      // Budget Status
+      "Paid": "Pagado",
+      "Partial": "Parcial",
+      "Overdue": "Atrasado",
+      "Pending": "Pendiente",
+      "Auto-tracked via categorized transactions": "Estado rastreado automáticamente por transacciones categorizadas",
+      // Upcoming Obligations Radar
+      "Upcoming Obligations": "Próximas Obligaciones",
+      "Nothing due this week": "Nada vence esta semana",
+      "All clear": "¡Estás al día!",
+      "Due in {{days}} day": "Vence en {{days}} día",
+      "Due in {{days}} days": "Vence en {{days}} días",
+      "Due today": "Vence hoy",
+      "Overdue by {{days}} day": "Atrasado por {{days}} día",
+      "Overdue by {{days}} days": "Atrasado por {{days}} días",
       "Are you sure you want to delete the \"{{name}}\" budget? This action cannot be undone.": "¿Estás seguro de que quieres eliminar el presupuesto de \"{{name}}\"? Esta acción no se puede deshacer.",
 
       // Transactions

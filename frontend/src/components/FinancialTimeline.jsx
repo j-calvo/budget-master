@@ -86,13 +86,19 @@ export default function FinancialTimeline({ cards, loans, metrics, budgets = [] 
     // Budget Paydays
     budgets.forEach(budget => {
       if (budget.payDay) {
+        const spent = parseFloat(budget.spent) || 0;
+        const amount = parseFloat(budget.amount) || 0;
+        const isPaid = spent >= amount && amount > 0;
         ev[budget.payDay] = ev[budget.payDay] || [];
         ev[budget.payDay].push({ 
           type: 'budget', 
           label: `${budget.category?.name || 'Budget'} Payday`, 
           amount: budget.amount, 
           currency: budget.currency,
-          icon: <Banknote className="w-4 h-4 text-gold-400" /> 
+          isPaid,
+          icon: isPaid 
+            ? <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+            : <Banknote className="w-4 h-4 text-gold-400" /> 
         });
       }
     });
@@ -171,9 +177,9 @@ export default function FinancialTimeline({ cards, loans, metrics, budgets = [] 
                   {dayEvents.map((ev, idx) => (
                     <div 
                       key={idx} 
-                      className={`w-8 h-8 rounded-full bg-brand-900 border border-brand-500/80 flex items-center justify-center shadow-lg transform transition-all duration-300 relative cursor-pointer ${idx > 0 ? '-ml-4 group-hover/events:ml-1 shadow-[-4px_0_10px_rgba(0,0,0,0.5)]' : 'shadow-xl'} hover:!scale-125 hover:!z-50`} 
+                      className={`w-8 h-8 rounded-full flex items-center justify-center shadow-lg transform transition-all duration-300 relative cursor-pointer ${idx > 0 ? '-ml-4 group-hover/events:ml-1 shadow-[-4px_0_10px_rgba(0,0,0,0.5)]' : 'shadow-xl'} hover:!scale-125 hover:!z-50 ${ev.isPaid ? 'bg-emerald-900/60 border border-emerald-500/60 shadow-[0_0_8px_rgba(16,185,129,0.3)]' : 'bg-brand-900 border border-brand-500/80'}`} 
                       style={{ zIndex: 20 - idx }}
-                      title={`${ev.label} ${ev.amount ? ` - ${formatC(ev.amount, ev.currency)}` : ''}`}
+                      title={`${ev.label}${ev.amount ? ` - ${formatC(ev.amount, ev.currency)}` : ''}${ev.isPaid ? ' ✓ Paid' : ''}`}
                     >
                       <div className="scale-90">{ev.icon}</div>
                     </div>

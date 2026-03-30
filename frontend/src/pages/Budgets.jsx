@@ -101,6 +101,33 @@ export default function Budgets() {
     return formatC(amount, currencyCode || settings?.defaultCurrency || 'USD', currencies, settings?.language);
   };
 
+  const today = new Date();
+  const currentDay = today.getDate();
+
+  const getBudgetStatus = (budget) => {
+    const spent = parseFloat(budget.spent) || 0;
+    const amount = parseFloat(budget.amount) || 0;
+    if (spent >= amount && amount > 0) return 'PAID';
+    if (budget.payDay && budget.payDay < currentDay && spent === 0) return 'OVERDUE';
+    if (spent > 0 && spent < amount) return 'PARTIAL';
+    return 'PENDING';
+  };
+
+  const statusBadge = (status) => {
+    const config = {
+      PAID:    { label: t('Paid'),    classes: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25' },
+      PARTIAL: { label: t('Partial'), classes: 'bg-amber-500/15 text-amber-400 border-amber-500/25' },
+      OVERDUE: { label: t('Overdue'), classes: 'bg-rose-500/15 text-rose-400 border-rose-500/25' },
+      PENDING: { label: t('Pending'), classes: 'bg-slate-500/15 text-slate-400 border-slate-500/25' },
+    }[status] || { label: status, classes: 'bg-slate-500/15 text-slate-400 border-slate-500/25' };
+    return (
+      <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-[0.12em] border ${config.classes}`}>
+        {status === 'PAID' && <span className="mr-1">✓</span>}
+        {config.label}
+      </span>
+    );
+  };
+
   return (
     <div className="space-y-6 md:space-y-8 animate-in fade-in duration-700 pb-8">
       <div className="flex justify-between items-start gap-4">
@@ -140,6 +167,7 @@ export default function Budgets() {
               const pct = Math.min(100, Math.round((budget.spent / budget.amount) * 100)) || 0;
               const isOver = budget.spent > budget.amount;
               const remaining = budget.amount - budget.spent;
+              const status = getBudgetStatus(budget);
               
               // Color scheme based on usage
               const barBg = isOver 
@@ -162,7 +190,7 @@ export default function Budgets() {
                   />
                   
                   <div className="pl-5 pr-4 py-4">
-                    {/* Row 1: Category + Percentage badge */}
+                    {/* Row 1: Category + Status + Percentage badge */}
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex items-center gap-3 min-w-0 flex-1">
                         <div 
@@ -176,9 +204,12 @@ export default function Budgets() {
                           {budget.category?.name?.charAt(0)?.toUpperCase()}
                         </div>
                         <div className="min-w-0">
-                          <p className="font-serif text-white text-[15px] tracking-wide truncate">{budget.category?.name}</p>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-serif text-white text-[15px] tracking-wide truncate">{budget.category?.name}</p>
+                            {statusBadge(status)}
+                          </div>
                           <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-0.5">
-                            {formatCurrency(budget.amount, budget.currency)}
+                            {formatCurrency(budget.amount, budget.currency)}{budget.payDay ? ` · Day ${budget.payDay}` : ''}
                           </p>
                         </div>
                       </div>
@@ -250,8 +281,13 @@ export default function Budgets() {
             })}
           </div>
 
-          {/* ═══ DESKTOP: Table layout (unchanged) ═══ */}
+          {/* ═══ DESKTOP: Table layout ═══ */}
           <div className="hidden md:block glass-card overflow-hidden border-brand-600/30 shadow-[0_10px_30px_rgba(0,0,0,0.2)]">
+            {/* Auto-tracking disclaimer */}
+            <div className="px-8 pt-4 pb-3 border-b border-brand-600/20 flex items-center gap-2">
+              <svg className="w-3 h-3 text-slate-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              <p className="text-[10px] text-slate-500 tracking-wide">{t('Auto-tracked via categorized transactions')}</p>
+            </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
@@ -268,6 +304,7 @@ export default function Budgets() {
                   {budgets.map(budget => {
                     const pct = Math.min(100, Math.round((budget.spent / budget.amount) * 100)) || 0;
                     const isOver = budget.spent > budget.amount;
+                    const status = getBudgetStatus(budget);
                     const barColor = isOver ? 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.6)]' : (pct > 75 ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]' : 'bg-gold-500 shadow-[0_0_8px_rgba(212,175,55,0.6)]');
                     const textColor = isOver ? 'text-rose-400' : 'text-slate-400';
                     const valueColor = isOver ? 'text-rose-300' : 'text-white';
@@ -278,9 +315,15 @@ export default function Budgets() {
                         <td className="p-5 pl-8">
                           <div className="flex items-center gap-3">
                             <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: budget.category?.color || '#d4af37' }} />
-                            <span className="font-serif italic text-white text-[17px] tracking-wide">
-                              {budget.category?.name}
-                            </span>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-serif italic text-white text-[17px] tracking-wide">
+                                  {budget.category?.name}
+                                </span>
+                                {statusBadge(status)}
+                              </div>
+                              {budget.payDay && <p className="text-[10px] text-slate-500 mt-0.5">Day {budget.payDay}</p>}
+                            </div>
                           </div>
                         </td>
                         <td className="p-5">
