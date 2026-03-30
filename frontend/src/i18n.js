@@ -18,6 +18,7 @@ const resources = {
       
       "Overview": "Overview",
       "Net Worth": "Net Worth",
+      "Total Cash": "Total Cash",
       "Total Income (This Month)": "Total Income (This Month)",
       "Total Expenses (This Month)": "Total Expenses (This Month)",
       "Savings Rate": "Savings Rate",
@@ -334,6 +335,7 @@ const resources = {
       
       "Overview": "Resumen",
       "Net Worth": "Patrimonio Neto",
+      "Total Cash": "Efectivo Total",
       "Total Income (This Month)": "Ingresos (Este Mes)",
       "Total Expenses (This Month)": "Gastos (Este Mes)",
       "Savings Rate": "Tasa de Ahorro",

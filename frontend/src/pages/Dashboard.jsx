@@ -174,11 +174,18 @@ export default function Dashboard() {
       />
 
       {/* KPI Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6">
+        {/* Total Cash */}
+        <div className="glass-card p-4 md:p-6 transition-all hover:border-emerald-500/30 hover:shadow-emerald-500/10 group cursor-default">
+          <p className="text-[10px] md:text-xs font-medium text-slate-400 uppercase tracking-widest group-hover:text-emerald-400 transition-colors">{t('Total Cash')}</p>
+          <p className="text-xl md:text-3xl font-light font-serif text-white mt-2 md:mt-3 tracking-wide">
+            {displayCurrency(metrics.totalAssets)}
+          </p>
+        </div>
         {/* Net Worth */}
         <div className="glass-card p-4 md:p-6 transition-all hover:border-gold-500/30 hover:shadow-gold-500/10 group cursor-default">
           <p className="text-[10px] md:text-xs font-medium text-slate-400 uppercase tracking-widest group-hover:text-gold-400 transition-colors">{t('Net Worth')}</p>
-          <p className="text-xl md:text-3xl font-light font-serif mt-2 md:mt-3 tracking-wide ${metrics.netWorth >= 0 ? 'text-white' : 'text-red-400'}">
+          <p className="text-xl md:text-3xl font-light font-serif mt-2 md:mt-3 tracking-wide text-white">
             {displayCurrency(metrics.netWorth)}
           </p>
         </div>
