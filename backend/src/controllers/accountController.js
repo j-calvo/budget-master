@@ -37,7 +37,7 @@ exports.createAccount = async (req, res) => {
         name,
         type,
         currency: currency || 'USD',
-        balance: balance || 0,
+        balance: parseFloat(balance) || 0,
         institution
       }
     });
@@ -54,7 +54,13 @@ exports.updateAccount = async (req, res) => {
     const { name, type, balance, institution, currency } = req.body;
     const account = await prisma.account.update({
       where: { id, familyId: req.user.familyId },
-      data: { name, type, balance, institution, currency }
+      data: { 
+        name, 
+        type, 
+        balance: parseFloat(balance), 
+        institution, 
+        currency 
+      }
     });
     res.json(account);
   } catch (error) {

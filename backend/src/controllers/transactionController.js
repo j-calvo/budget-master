@@ -66,12 +66,13 @@ exports.createTransaction = async (req, res) => {
       return res.status(400).json({ error: 'Must provide accountId or creditCardId' });
     }
 
+    const parsedAmount = parseFloat(amount);
     const transaction = await prisma.transaction.create({
       data: {
         accountId,
         creditCardId,
         categoryId,
-        amount,
+        amount: parsedAmount,
         date: date ? new Date(date) : undefined,
         description,
         payee,
@@ -82,14 +83,14 @@ exports.createTransaction = async (req, res) => {
     
     // Update balance
     if (accountId) {
-      const balanceChange = type === 'expense' ? -Math.abs(amount) : Math.abs(amount);
+      const balanceChange = type === 'expense' ? -Math.abs(parsedAmount) : Math.abs(parsedAmount);
       await prisma.account.update({
         where: { id: accountId },
         data: { balance: { increment: balanceChange } }
       });
     } else if (creditCardId) {
       // CC expense increases balance
-      const balanceChange = type === 'expense' ? Math.abs(amount) : -Math.abs(amount);
+      const balanceChange = type === 'expense' ? Math.abs(parsedAmount) : -Math.abs(parsedAmount);
       await prisma.creditCard.update({
         where: { id: creditCardId },
         data: { balance: { increment: balanceChange } }
@@ -142,10 +143,11 @@ exports.updateTransaction = async (req, res) => {
       });
     }
 
+    const parsedAmount = parseFloat(amount);
     const transaction = await prisma.transaction.update({
       where: { id },
       data: {
-        amount,
+        amount: parsedAmount,
         date: date ? new Date(date) : undefined,
         description,
         payee,
@@ -159,13 +161,13 @@ exports.updateTransaction = async (req, res) => {
 
     // Apply new balance
     if (accountId) {
-      const newBalanceChange = type === 'expense' ? -Math.abs(amount) : Math.abs(amount);
+      const newBalanceChange = type === 'expense' ? -Math.abs(parsedAmount) : Math.abs(parsedAmount);
       await prisma.account.update({
         where: { id: accountId },
         data: { balance: { increment: newBalanceChange } }
       });
     } else if (creditCardId) {
-      const newBalanceChange = type === 'expense' ? Math.abs(amount) : -Math.abs(amount);
+      const newBalanceChange = type === 'expense' ? Math.abs(parsedAmount) : -Math.abs(parsedAmount);
       await prisma.creditCard.update({
         where: { id: creditCardId },
         data: { balance: { increment: newBalanceChange } }
