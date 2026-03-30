@@ -45,12 +45,20 @@ exports.updateSettings = async (req, res) => {
     const settings = await prisma.setting.update({
       where: { familyId: req.user.familyId },
       data: { 
-        defaultCurrency, language, theme, fontFamily, budgetStartDay, 
-        payFrequency, payDay, payDay2, payDayOfWeek 
+        defaultCurrency, 
+        language, 
+        theme, 
+        fontFamily, 
+        budgetStartDay: parseInt(budgetStartDay) || 1, 
+        payFrequency, 
+        payDay: parseInt(payDay) || 1, 
+        payDay2: payDay2 ? parseInt(payDay2) : null, 
+        payDayOfWeek: (payDayOfWeek !== null && payDayOfWeek !== undefined) ? parseInt(payDayOfWeek) : null 
       }
     });
     res.json(settings);
   } catch (error) {
+    console.error('updateSettings error:', error);
     res.status(500).json({ error: 'Failed to update settings' });
   }
 };
