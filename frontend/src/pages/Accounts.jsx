@@ -20,6 +20,16 @@ export default function Accounts() {
   const [editingAccount, setEditingAccount] = useState(null);
   const [newAccount, setNewAccount] = useState({ name: '', type: 'Checking', institution: '', currency: 'USD', balance: 0, isLiquid: true });
 
+  // ── Adjustment State ──
+  const [showAdjustModal, setShowAdjustModal] = useState(false);
+  const [adjustingAccount, setAdjustingAccount] = useState(null);
+  const [adjustAmount, setAdjustAmount] = useState('');
+  const [adjustType, setAdjustType] = useState('contribution');
+  const [adjustNote, setAdjustNote] = useState('');
+  const [adjustDate, setAdjustDate] = useState(new Date().toISOString().split('T')[0]);
+  const [accountHistory, setAccountHistory] = useState({}); // { accountId: [adjustments] }
+  const [expandedHistory, setExpandedHistory] = useState({}); // { accountId: boolean }
+
   useEffect(() => {
     fetchAccounts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -110,6 +120,50 @@ export default function Accounts() {
     }
   };
 
+  // ── Adjustments logic ──
+  const fetchAdjustments = async (id) => {
+    try {
+      const res = await api.get(`${API_URL}/${id}/adjustments`);
+      setAccountHistory(prev => ({ ...prev, [id]: res.data }));
+    } catch (err) {
+      console.error('Failed to fetch adjustments', err);
+    }
+  };
+
+  const toggleHistory = (id) => {
+    if (!expandedHistory[id]) {
+      fetchAdjustments(id);
+    }
+    setExpandedHistory(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const handleAdjustBalance = async (e) => {
+    e.preventDefault();
+    try {
+      await api.post(`${API_URL}/${adjustingAccount.id}/adjust`, {
+        amount: adjustAmount,
+        type: adjustType,
+        note: adjustNote,
+        date: adjustDate
+      });
+      setShowAdjustModal(false);
+      setAdjustAmount('');
+      setAdjustNote('');
+      setAdjustDate(new Date().toISOString().split('T')[0]);
+      fetchAccounts();
+      if (expandedHistory[adjustingAccount.id]) {
+        fetchAdjustments(adjustingAccount.id);
+      }
+    } catch (err) {
+      console.error('Failed to adjust balance', err);
+    }
+  };
+
+  const openAdjustModal = (acc) => {
+    setAdjustingAccount(acc);
+    setShowAdjustModal(true);
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
       <div className="flex justify-between items-center">
@@ -168,11 +222,59 @@ export default function Accounts() {
                 </div>
               </div>
               <div className="mt-8 flex items-end justify-between">
-                <p className="text-sm font-medium text-slate-400 uppercase tracking-wider">{t('Balance')}</p>
+                <div>
+                  <p className="text-sm font-medium text-slate-400 uppercase tracking-wider">{t('Balance')}</p>
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); openAdjustModal(acc); }}
+                      className="px-2 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase tracking-widest rounded border border-emerald-500/20 transition-all flex items-center gap-1"
+                    >
+                      <span>+</span> {t('Adjust')}
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); toggleHistory(acc.id); }}
+                      className={`px-2 py-1 text-[10px] font-bold uppercase tracking-widest rounded border transition-all ${
+                        expandedHistory[acc.id]
+                          ? 'bg-gold-500 text-brand-900 border-gold-500'
+                          : 'bg-brand-900/60 hover:bg-brand-800/60 text-slate-400 border-brand-600/40'
+                      }`}
+                    >
+                      {t('History')}
+                    </button>
+                  </div>
+                </div>
                 <p className="text-2xl font-light font-serif text-white tracking-wide">
                   {formatCurrency(acc.balance, acc.currency, currencies, settings?.language)}
                 </p>
               </div>
+
+              {/* Collapsible History Section */}
+              {expandedHistory[acc.id] && (
+                <div className="mt-6 pt-6 border-t border-brand-600/30 animate-in slide-in-from-top-2 duration-300">
+                  <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-3">{t('Recent Adjustments')}</h4>
+                  <div className="space-y-3">
+                    {accountHistory[acc.id]?.length > 0 ? (
+                      accountHistory[acc.id].slice(0, 5).map(adj => (
+                        <div key={adj.id} className="flex justify-between items-center group/item pb-2 border-b border-white/5 last:border-0">
+                          <div className="min-w-0">
+                            <p className="text-xs text-white font-medium truncate italic capitalize">
+                              {t(adj.type)} {adj.note && <span className="text-slate-500 not-italic ml-1">— {adj.note}</span>}
+                            </p>
+                            <p className="text-[9px] text-slate-500 uppercase tracking-wider mt-0.5">
+                              {new Date(adj.date).toLocaleDateString(settings?.language || 'en-US')}
+                            </p>
+                          </div>
+                          <p className={`text-xs font-serif ${adj.amount >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                            {adj.amount >= 0 ? '+' : ''}{formatCurrency(adj.amount, acc.currency, currencies, settings?.language)}
+                          </p>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-[10px] text-slate-500 italic text-center py-2">{t('No adjustments found')}</p>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -252,6 +354,86 @@ export default function Accounts() {
               <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-brand-600/30">
                 <button type="button" onClick={() => { setShowModal(false); setEditingAccount(null); }} className="px-4 py-2 text-sm text-slate-400 hover:text-white transition-colors">{t('Cancel')}</button>
                 <button type="submit" className="btn-gold px-6 py-2 text-sm">{editingAccount ? t('Save Changes') : t('Save Account')}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* Adjustment Modal */}
+      {showAdjustModal && (
+        <div className="fixed inset-0 bg-brand-900/80 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="glass-card p-8 w-full max-w-md shadow-2xl border-white/10 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl -z-10 mix-blend-screen"></div>
+
+            <h2 className="text-2xl font-serif text-white mb-6 tracking-wide relative">
+              {t('Adjust Balance')}
+              <span className="block text-sm font-sans text-slate-400 tracking-normal italic mt-1">{adjustingAccount?.name}</span>
+              <span className="absolute -bottom-2 left-0 w-12 h-[2px] bg-emerald-500/50"></span>
+            </h2>
+
+            <form onSubmit={handleAdjustBalance} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Amount to add/subtract')}</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-serif">
+                      {currencies.find(c => c.code === adjustingAccount?.currency)?.symbol || '$'}
+                    </span>
+                    <AmountInput
+                      required
+                      value={adjustAmount}
+                      onChange={e => setAdjustAmount(e.target.value)}
+                      className="w-full pl-8 pr-3 py-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-white transition-all font-serif"
+                      placeholder="0.00"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Date')}</label>
+                  <input
+                    type="date"
+                    required
+                    value={adjustDate}
+                    onChange={e => setAdjustDate(e.target.value)}
+                    className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-white transition-all text-sm appearance-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Adjustment Type')}</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {['contribution', 'interest', 'withdrawal', 'correction'].map(type => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => setAdjustType(type)}
+                      className={`px-3 py-2 text-[10px] font-bold uppercase tracking-widest rounded-lg border transition-all ${
+                        adjustType === type
+                          ? 'bg-emerald-500 text-brand-900 border-emerald-500'
+                          : 'bg-brand-900/40 text-slate-400 border-brand-600/30 hover:border-emerald-500/30'
+                      }`}
+                    >
+                      {t(type)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Note')}</label>
+                <input
+                  type="text"
+                  value={adjustNote}
+                  onChange={e => setAdjustNote(e.target.value)}
+                  className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-white transition-all font-serif"
+                  placeholder={t('e.g. Monthly contribution')}
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-brand-600/30">
+                <button type="button" onClick={() => setShowAdjustModal(false)} className="px-4 py-2 text-sm text-slate-400 hover:text-white transition-colors">{t('Cancel')}</button>
+                <button type="submit" className="btn-emerald px-6 py-2 text-sm bg-emerald-500 hover:bg-emerald-600 text-brand-900 font-bold rounded-lg transition-all shadow-[0_0_20px_rgba(16,185,129,0.2)]">{t('Apply Adjustment')}</button>
               </div>
             </form>
           </div>

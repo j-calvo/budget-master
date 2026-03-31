@@ -81,3 +81,60 @@ exports.deleteAccount = async (req, res) => {
     res.status(500).json({ error: 'Failed to delete account' });
   }
 };
+
+// ── Balance Adjustments ───────────────────────────────────────────────────
+
+exports.adjustBalance = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { amount, type = 'contribution', note = '', date } = req.body;
+
+    const delta = parseFloat(amount);
+    if (isNaN(delta) || delta === 0) {
+      return res.status(400).json({ error: 'amount must be a non-zero number' });
+    }
+
+    const account = await prisma.account.findUnique({
+      where: { id, familyId: req.user.familyId }
+    });
+    if (!account) return res.status(404).json({ error: 'Account not found' });
+
+    // Atomic: log the entry + increment the balance
+    const [adjustment, updatedAccount] = await prisma.$transaction([
+      prisma.accountAdjustment.create({
+        data: {
+          accountId: id,
+          familyId:  req.user.familyId,
+          amount:    delta,
+          type,
+          note:      note || '',
+          date:      date ? new Date(date) : new Date(),
+        }
+      }),
+      prisma.account.update({
+        where: { id },
+        data:  { balance: { increment: delta } }
+      })
+    ]);
+
+    res.json({ adjustment, account: updatedAccount });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to record adjustment' });
+  }
+};
+
+exports.getAdjustments = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const adjustments = await prisma.accountAdjustment.findMany({
+      where: { accountId: id, familyId: req.user.familyId },
+      orderBy: { date: 'desc' },
+      take: 50
+    });
+    res.json(adjustments);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch adjustments' });
+  }
+};
+

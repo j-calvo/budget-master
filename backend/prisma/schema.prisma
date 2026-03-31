@@ -27,16 +27,17 @@ model Family {
   inviteCode  String   @unique
   createdAt   DateTime @default(now())
 
-  members     FamilyMember[]
-  settings    Setting?
-  accounts    Account[]
-  creditCards CreditCard[]
-  categories  Category[]
-  budgets     Budget[]
-  loans       Loan[]
-  currencies  Currency[]
-  banks       Bank[]
+  members      FamilyMember[]
+  settings     Setting?
+  accounts     Account[]
+  creditCards  CreditCard[]
+  categories   Category[]
+  budgets      Budget[]
+  loans        Loan[]
+  currencies   Currency[]
+  banks        Bank[]
   accountTypes AccountType[]
+  adjustments  AccountAdjustment[]
 }
 
 model FamilyMember {
@@ -66,6 +67,7 @@ model Account {
   
   family       Family        @relation(fields: [familyId], references: [id], onDelete: Cascade)
   transactions Transaction[]
+  adjustments  AccountAdjustment[]
 }
 
 model CreditCard {
@@ -233,4 +235,18 @@ model ExchangeRate {
   base      String   @unique // e.g., 'USD'
   rates     String   // JSON string: { 'EUR': 0.85, 'CRC': 540.0 }
   updatedAt DateTime @updatedAt
+}
+
+model AccountAdjustment {
+  id        String   @id @default(uuid())
+  accountId String
+  familyId  String
+  amount    Float    // positive = add, negative = subtract
+  type      String   @default("contribution") // contribution | interest | withdrawal | correction
+  note      String?  @default("")
+  date      DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  family  Family  @relation(fields: [familyId], references: [id], onDelete: Cascade)
 }
