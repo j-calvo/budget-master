@@ -88,8 +88,8 @@ export const calculateSalaryCR = ({
   const ccss = sem + ivm + popular; // Total worker contribution
 
   // 3. Income Tax (Renta) Calculation
-  // Base taxable = Gross - (SEM+IVM+Popular) - RPC
-  const taxableBase = Math.max(0, gross - ccss - rpcDeductible);
+  // Base taxable = Gross - RPC (matching image model)
+  const taxableBase = Math.max(0, gross - rpcDeductible);
   
   const baseConfig = TAX_YEARS[year] || TAX_YEARS['2026'];
   

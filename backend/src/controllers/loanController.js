@@ -17,6 +17,12 @@ exports.getLoans = async (req, res) => {
   try {
     const loans = await prisma.loan.findMany({
       where: { familyId: req.user.familyId },
+      include: {
+        payments: {
+          orderBy: { paymentDate: 'desc' },
+          take: 5 // We only need the most recent to check 'paid this month'
+        }
+      },
       orderBy: { nextDueDate: 'asc' },
     });
     // Parse aprHistory JSON string -> array

@@ -295,11 +295,21 @@ export default function Dashboard() {
               });
             });
 
-            // Loans: due this month within 7 days
+            // Loans: due this month within 7 days, skip if already paid this month
             loans.forEach(loan => {
               if (!loan.nextDueDate) return;
               const dueDate = new Date(loan.nextDueDate);
               if (dueDate.getMonth() !== today2.getMonth() || dueDate.getFullYear() !== today2.getFullYear()) return;
+              
+              // NEW: Skip if an 'installment' was already paid this month
+              const paidThisMonth = loan.payments?.some(p => {
+                const pDate = new Date(p.paymentDate);
+                return p.type === 'installment' && 
+                       pDate.getMonth() === today2.getMonth() && 
+                       pDate.getFullYear() === today2.getFullYear();
+              });
+              if (paidThisMonth) return;
+
               const diff = dueDate.getDate() - currentDay2;
               obligations.push({
                 key: `loan-${loan.id}`,
@@ -316,7 +326,12 @@ export default function Dashboard() {
               if (!budget.payDay) return;
               const spent = parseFloat(budget.spent) || 0;
               const amount = parseFloat(budget.amount) || 0;
-              if (spent >= amount && amount > 0) return; // already paid
+              const isFixed = budget.category?.type === 'fixed_expense';
+              
+              // NEW: Match the smart 'isPaid' logic from FinancialTimeline
+              const isPaid = (spent >= amount && amount > 0) || (isFixed && spent > 0);
+              if (isPaid) return; 
+
               const diff = budget.payDay - currentDay2;
               obligations.push({
                 key: `bud-${budget.id}`,
