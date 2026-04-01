@@ -64,20 +64,21 @@ export default function Dashboard() {
         const loanDebt = loans.reduce((sum, l) => sum + convert(l.balance || 0, l.currency || 'USD'), 0);
         const netWorth = allAssets - cardDebt - loanDebt;
 
-        // 2. This Month's Income & Expenses
+        // 2. This Month's Income & Expenses - Align with Local Cycle Boundaries
         const now = new Date();
+        const localCurrentDay = now.getDate();
+        const localCurrentMonth = now.getMonth();
+        const localCurrentYear = now.getFullYear();
         const budgetStartDay = settings?.budgetStartDay || 1;
         let startOfPeriod;
         
         if (budgetStartDay === 1) {
-          startOfPeriod = new Date(now.getFullYear(), now.getMonth(), 1);
+          startOfPeriod = new Date(localCurrentYear, localCurrentMonth, 1);
         } else {
-          // If today is Mar 10 and startDay is 18, we are in the "Feb 18 - Mar 17" period.
-          // If today is Mar 20 and startDay is 18, we are in the "Mar 18 - Apr 17" period.
-          if (now.getDate() < budgetStartDay) {
-            startOfPeriod = new Date(now.getFullYear(), now.getMonth() - 1, budgetStartDay);
+          if (localCurrentDay < budgetStartDay) {
+            startOfPeriod = new Date(localCurrentYear, localCurrentMonth - 1, budgetStartDay);
           } else {
-            startOfPeriod = new Date(now.getFullYear(), now.getMonth(), budgetStartDay);
+            startOfPeriod = new Date(localCurrentYear, localCurrentMonth, budgetStartDay);
           }
         }
         
@@ -85,7 +86,10 @@ export default function Dashboard() {
         let mExpenses = 0;
 
         transactions.forEach(tx => {
-          const tDate = new Date(tx.date);
+          // Timezone Neutral Comparison: Splitting at T and creating a local date
+          const [y, m, d] = tx.date.split('T')[0].split('-').map(Number);
+          const tDate = new Date(y, m - 1, d);
+          
           if (tDate >= startOfPeriod) {
             const txCurrency = tx.account?.currency || tx.creditCard?.currency || 'USD';
             const convertedAmount = convert(tx.amount, txCurrency);
@@ -435,7 +439,10 @@ export default function Dashboard() {
                         <div className="min-w-0">
                           <p className="font-medium text-slate-200 text-sm truncate group-hover:text-white transition-colors">{tx.description}</p>
                           <p className="text-[10px] md:text-xs text-slate-500 mt-0.5 tracking-wide uppercase truncate">
-                            {new Date(tx.date).toLocaleDateString(settings?.language || 'en-US', { month: 'short', day: 'numeric' })}
+                            {(() => {
+                              const [y, m, d] = tx.date.split('T')[0].split('-').map(Number);
+                              return new Date(y, m - 1, d).toLocaleDateString(settings?.language || 'en-US', { month: 'short', day: 'numeric' });
+                            })()}
                             <span className="mx-1 opacity-30">•</span>
                             {tx.account?.name || tx.creditCard?.name}
                           </p>

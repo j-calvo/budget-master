@@ -109,12 +109,13 @@ exports.getBudgets = async (req, res) => {
 
     if (budgetStartDay === 1) {
       // Standard calendar month
-      startDate = new Date(currentYear, currentMonth - 1, 1);
-      endDate = new Date(currentYear, currentMonth, 0, 23, 59, 59, 999);
+      startDate = new Date(Date.UTC(currentYear, currentMonth - 1, 1));
+      endDate = new Date(Date.UTC(currentYear, currentMonth, 0, 23, 59, 59, 999));
     } else {
       // Cycle: e.g. Mar 25 to Apr 24 for 'April' budget
-      startDate = new Date(currentYear, currentMonth - 2, budgetStartDay);
-      endDate = new Date(currentYear, currentMonth - 1, budgetStartDay - 1, 23, 59, 59, 999);
+      // Note: month - 2 to get previous month for the start of the current cycle
+      startDate = new Date(Date.UTC(currentYear, currentMonth - 2, budgetStartDay));
+      endDate = new Date(Date.UTC(currentYear, currentMonth - 1, budgetStartDay - 1, 23, 59, 59, 999));
     }
 
     const budgetsWithSpent = await Promise.all(budgets.map(async (budget) => {
