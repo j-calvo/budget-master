@@ -98,7 +98,8 @@ export default function Analytics() {
   expenses.forEach(tx => {
     const catName = tx.category?.name || 'Uncategorized';
     const catId   = tx.category?.id  || 'uncategorized';
-    const amt = convert(tx.amount, tx.account?.currency || 'USD');
+    const txCurrency = tx.account?.currency || tx.creditCard?.currency || 'USD';
+    const amt = convert(tx.amount, txCurrency);
     spendByCat[catName]  = (spendByCat[catName]  || 0) + amt;
     spendByCatId[catId]  = (spendByCatId[catId]  || 0) + amt;
   });
@@ -113,22 +114,23 @@ export default function Analytics() {
     if (isMonthMode) {
       const key = new Date(viewYear, viewMonth, 1)
         .toLocaleString(settings?.language || 'en-US', { month: 'short', year: '2-digit' });
-      flows[key] = { name: key, [t('Income')]: 0, [t('Expenses')]: 0 };
+      flows[key] = { name: key, income: 0, expenses: 0 };
     } else {
       const count = timeRange === '1M' ? 1 : timeRange === '3M' ? 3 : timeRange === '6M' ? 6 : 12;
       for (let i = count - 1; i >= 0; i--) {
         const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
         const key = d.toLocaleString(settings?.language || 'en-US', { month: 'short', year: '2-digit' });
-        flows[key] = { name: key, [t('Income')]: 0, [t('Expenses')]: 0 };
+        flows[key] = { name: key, income: 0, expenses: 0 };
       }
     }
     filteredTx.forEach(tx => {
       const key = new Date(tx.date)
         .toLocaleString(settings?.language || 'en-US', { month: 'short', year: '2-digit' });
       if (flows[key]) {
-        const amt = convert(tx.amount, tx.account?.currency || 'USD');
-        if (tx.type === 'income') flows[key][t('Income')]   += amt;
-        else                       flows[key][t('Expenses')] += amt;
+        const txCurrency = tx.account?.currency || tx.creditCard?.currency || 'USD';
+        const amt = convert(tx.amount, txCurrency);
+        if (tx.type === 'income') flows[key].income += amt;
+        else if (tx.type === 'expense') flows[key].expenses += amt;
       }
     });
     return Object.values(flows);
@@ -149,11 +151,11 @@ export default function Analytics() {
     const targetAmount = b.amount * multiplier;
     return {
       name:             b.category?.name || 'Unknown',
-      [t('Budget')]:    targetAmount,
-      [t('Spent')]:     catSpend,
-      [t('Remaining')]: targetAmount - catSpend,
+      budget:           targetAmount,
+      spent:            catSpend,
+      remaining:        targetAmount - catSpend,
     };
-  }).sort((a, b) => b[t('Budget')] - a[t('Budget')]);
+  }).sort((a, b) => b.budget - a.budget);
 
   const monthLabel = new Date(viewYear, viewMonth, 1)
     .toLocaleString(settings?.language || 'en-US', { month: 'long', year: 'numeric' });
@@ -315,8 +317,8 @@ export default function Analytics() {
                   formatter={v => <span className="font-serif text-slate-100">{formatCurrency(v)}</span>}
                   {...tooltipStyle} />
                 <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#94a3b8' }} />
-                <Bar dataKey={t('Income')}   fill="url(#incG)" radius={[4,4,0,0]} barSize={isMonthMode ? 40 : 16} />
-                <Bar dataKey={t('Expenses')} fill="url(#expG)" radius={[4,4,0,0]} barSize={isMonthMode ? 40 : 16} />
+                <Bar name={t('Income')}   dataKey="income"   fill="url(#incG)" radius={[4,4,0,0]} barSize={isMonthMode ? 40 : 16} />
+                <Bar name={t('Expenses')} dataKey="expenses" fill="url(#expG)" radius={[4,4,0,0]} barSize={isMonthMode ? 40 : 16} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -353,8 +355,8 @@ export default function Analytics() {
                     formatter={v => <span className="font-serif text-slate-100">{formatCurrency(v)}</span>}
                     {...tooltipStyle} />
                   <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#94a3b8' }} />
-                  <Bar dataKey={t('Budget')} fill="url(#budG)" radius={[0,4,4,0]} barSize={12} />
-                  <Bar dataKey={t('Spent')}  fill="url(#sptG)" radius={[0,4,4,0]} barSize={12} />
+                  <Bar name={t('Budget')} dataKey="budget" fill="url(#budG)" radius={[0,4,4,0]} barSize={12} />
+                  <Bar name={t('Spent')}  dataKey="spent"  fill="url(#sptG)" radius={[0,4,4,0]} barSize={12} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (

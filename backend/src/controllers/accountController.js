@@ -58,7 +58,7 @@ exports.updateAccount = async (req, res) => {
       data: { 
         name, 
         type, 
-        balance: parseFloat(balance), 
+        balance: parseFloat(balance) || 0, 
         institution, 
         currency,
         isLiquid: isLiquid !== undefined ? Boolean(isLiquid) : true 
@@ -66,6 +66,7 @@ exports.updateAccount = async (req, res) => {
     });
     res.json(account);
   } catch (error) {
+    console.error('updateAccount error:', error);
     res.status(500).json({ error: 'Failed to update account' });
   }
 };

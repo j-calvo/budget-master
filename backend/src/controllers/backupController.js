@@ -1,5 +1,6 @@
 const path = require('path');
 const fs = require('fs');
+const prisma = require('../db');
 
 // Load environment variables using absolute path
 require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
@@ -142,16 +143,38 @@ exports.restoreBackup = async (req, res) => {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
     const safetyName = `pre-restore-${timestamp}-${path.basename(DB_PATH)}`;
     if (fs.existsSync(DB_PATH)) {
-      fs.copyFileSync(DB_PATH, path.join(BACKUP_DIR, safetyName));
+      try {
+        fs.copyFileSync(DB_PATH, path.join(BACKUP_DIR, safetyName));
+      } catch (err) {
+        console.warn('Could not create safety backup:', err.message);
+      }
     }
+
+    // IMPORTANT: Close database connection before replacing the file
+    // for SQLite specifically, this prevents the Prisma handle from becoming stale.
+    await prisma.$disconnect();
 
     // Copy backup over current DB
     fs.copyFileSync(backupPath, DB_PATH);
 
     res.json({
-      message: 'Database restored successfully. The server will need to be restarted.',
+      message: 'Database restored successfully. The server is restarting to apply changes.',
       safetyBackup: safetyName
     });
+
+    // Short delay to allow the response to be sent before restarting.
+    // We "touch" server.js to trigger a nodemon restart.
+    setTimeout(() => {
+      try {
+        console.log('🔄 Database restored. Triggering server restart...');
+        const serverPath = path.resolve(__dirname, '../../server.js');
+        const now = new Date();
+        fs.utimesSync(serverPath, now, now);
+      } catch (err) {
+        console.error('Failed to trigger restart via server.js, exiting process instead:', err);
+        process.exit(0);
+      }
+    }, 1000);
   } catch (error) {
     console.error('Failed to restore backup:', error);
     res.status(500).json({ error: 'Failed to restore backup' });

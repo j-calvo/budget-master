@@ -23,6 +23,11 @@ const adapter = new PrismaBetterSqlite3({
   url: connectionUrl 
 });
 
+/**
+ * IMPORTANT: This PrismaClient instance is a singleton.
+ * If the physical .db file is replaced (e.g., during a backup restore), 
+ * this handle must be disconnected and the process restarted to re-sync.
+ */
 const prisma = new PrismaClient({ adapter });
 
 module.exports = prisma;

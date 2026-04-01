@@ -87,7 +87,8 @@ export default function Dashboard() {
         transactions.forEach(tx => {
           const tDate = new Date(tx.date);
           if (tDate >= startOfPeriod) {
-            const convertedAmount = convert(tx.amount, tx.account?.currency || 'USD');
+            const txCurrency = tx.account?.currency || tx.creditCard?.currency || 'USD';
+            const convertedAmount = convert(tx.amount, txCurrency);
             if (tx.type === 'income') mIncome += convertedAmount;
             else if (tx.type === 'expense') mExpenses += convertedAmount;
           }
@@ -101,7 +102,7 @@ export default function Dashboard() {
         for(let i = 5; i >= 0; i--) {
           const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
           const key = d.toLocaleString(settings?.language || 'en-US', { month: 'short' });
-          monthlyFlows[key] = { name: key, [t('Income')]: 0, [t('Expenses')]: 0 };
+          monthlyFlows[key] = { name: key, income: 0, expenses: 0 };
         }
 
         transactions.forEach(tx => {
@@ -110,9 +111,10 @@ export default function Dashboard() {
           if (diffMonths >= 0 && diffMonths <= 5) {
             const key = tDate.toLocaleString(settings?.language || 'en-US', { month: 'short' });
             if (monthlyFlows[key]) {
-              const convertedAmount = convert(tx.amount, tx.account?.currency || 'USD');
-              if (tx.type === 'income') monthlyFlows[key][t('Income')] += convertedAmount;
-              else monthlyFlows[key][t('Expenses')] += convertedAmount;
+              const txCurrency = tx.account?.currency || tx.creditCard?.currency || 'USD';
+              const convertedAmount = convert(tx.amount, txCurrency);
+              if (tx.type === 'income') monthlyFlows[key].income += convertedAmount;
+              else if (tx.type === 'expense') monthlyFlows[key].expenses += convertedAmount;
             }
           }
         });
@@ -156,8 +158,8 @@ export default function Dashboard() {
           <p className="text-gold-400 font-serif italic mb-2">{label}</p>
           {payload.map((entry, index) => (
             <p key={index} className="text-sm font-medium flex justify-between gap-6" style={{ color: entry.color }}>
-              <span>{t(entry.name)}:</span>
-              <span>{formatCurrency(entry.value)}</span>
+              <span>{entry.name}:</span>
+              <span>{displayCurrency(entry.value)}</span>
             </p>
           ))}
         </div>
@@ -177,8 +179,8 @@ export default function Dashboard() {
         budgets={budgets}
       />
 
-      {/* KPI Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6">
+      {/* KPI Grid - Row 1: Balance Sheet */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
         {/* Total Cash */}
         <div className="glass-card p-4 md:p-6 transition-all hover:border-emerald-500/30 hover:shadow-emerald-500/10 group cursor-default">
           <p className="text-[10px] md:text-xs font-medium text-slate-400 uppercase tracking-widest group-hover:text-emerald-400 transition-colors">{t('Total Cash')}</p>
@@ -193,6 +195,10 @@ export default function Dashboard() {
             {displayCurrency(metrics.netWorth)}
           </p>
         </div>
+      </div>
+
+      {/* KPI Grid - Row 2: Cash Flow */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
         {/* Total Income */}
         <div className="glass-card p-4 md:p-6 transition-all hover:border-emerald-500/30 hover:shadow-emerald-500/10 group cursor-default">
           <p className="text-[10px] md:text-xs font-medium text-slate-400 uppercase tracking-widest group-hover:text-emerald-400 transition-colors">
@@ -241,7 +247,7 @@ export default function Dashboard() {
             )}
           </h2>
           
-          <div className="flex-1 min-h-[300px] -ml-4">
+          <div className="flex-1 h-[350px] -ml-4">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <defs>
@@ -258,8 +264,8 @@ export default function Dashboard() {
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12, fontFamily: 'inherit'}} dy={10} />
                 <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12, fontFamily: 'inherit'}} tickFormatter={(value) => `${value >= 1000 ? (value/1000)+'k' : value}`} />
                 <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#F3E5AB', strokeWidth: 1, strokeDasharray: '4 4', opacity: 0.4 }} />
-                <Area type="monotone" dataKey={t('Income')} stroke="#D4AF37" strokeWidth={3} fillOpacity={1} fill="url(#colorIncome)" activeDot={{ r: 6, fill: '#0A0F1C', stroke: '#D4AF37', strokeWidth: 2 }} />
-                <Area type="monotone" dataKey={t('Expenses')} stroke="#f43f5e" strokeWidth={2} fillOpacity={1} fill="url(#colorExpense)" activeDot={{ r: 5, fill: '#0A0F1C', stroke: '#f43f5e', strokeWidth: 2 }} />
+                <Area type="monotone" name={t('Income')} dataKey="income" stroke="#D4AF37" strokeWidth={3} fillOpacity={1} fill="url(#colorIncome)" activeDot={{ r: 6, fill: '#0A0F1C', stroke: '#D4AF37', strokeWidth: 2 }} />
+                <Area type="monotone" name={t('Expenses')} dataKey="expenses" stroke="#f43f5e" strokeWidth={2} fillOpacity={1} fill="url(#colorExpense)" activeDot={{ r: 5, fill: '#0A0F1C', stroke: '#f43f5e', strokeWidth: 2 }} />
               </AreaChart>
             </ResponsiveContainer>
           </div>

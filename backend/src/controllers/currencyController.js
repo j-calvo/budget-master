@@ -36,7 +36,7 @@ exports.getCurrencies = async (req, res) => {
 
     res.json(currencies);
   } catch (error) {
-    console.error('getCurrencies error:', error);
+    console.error(`getCurrencies error for family ${req.user?.familyId}:`, error);
     res.status(500).json({ error: 'Failed to fetch currencies' });
   }
 };
