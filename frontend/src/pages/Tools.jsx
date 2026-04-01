@@ -163,6 +163,7 @@ function SalaryEstimator() {
     baseSalary: 0,
     bonuses: 0,
     rpc: 0,
+    otherDeductions: 0,
     children: 0,
     spouse: false,
     year: '2026',
@@ -273,6 +274,19 @@ function SalaryEstimator() {
             </div>
             <p className="text-[9px] text-slate-500 mt-1 italic ml-1">{t('Deductible up to 10% of gross')}</p>
           </div>
+          <div>
+            <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-widest ml-1">{t('Additional Deductions')}</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-serif">₡</span>
+              <AmountInput
+                value={inputs.otherDeductions}
+                onChange={v => updateInput('otherDeductions', v.target.value)}
+                className="w-full pl-8 pr-3 py-2.5 bg-brand-900/40 border border-brand-600/30 rounded-xl focus:border-rose-500/50 outline-none text-white transition-all font-serif text-sm"
+                placeholder="0.00"
+              />
+            </div>
+            <p className="text-[9px] text-slate-500 mt-1 italic ml-1">{t('Post-tax (Health insurance, gym, etc.)')}</p>
+          </div>
           <div className="flex flex-col justify-end gap-3 pb-1">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">{t('Calculate Spouse Credit')}</span>
@@ -353,6 +367,12 @@ function SalaryEstimator() {
                     <span className="text-slate-400 italic font-medium">{t('Income Tax (Renta)')}</span>
                     <span className="text-rose-400/80">-{formatCurrency(results.renta, 'CRC', currencies, settings?.language)}</span>
                   </div>
+                  {results.otherDeductions > 0 && (
+                    <div className="flex justify-between items-center text-[11px] pt-1 border-t border-brand-600/10">
+                      <span className="text-slate-400 italic font-medium">{t('Other Deductions')}</span>
+                      <span className="text-rose-400/80">-{formatCurrency(results.otherDeductions, 'CRC', currencies, settings?.language)}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

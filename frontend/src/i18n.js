@@ -358,6 +358,8 @@ const resources = {
 
       // Salary Estimator
       "Salary Estimator": "Salary Estimator",
+      "Additional Deductions": "Additional Deductions",
+      "Other Deductions": "Other Deductions",
       "Salary calculator based on Costa Rican work laws": "Salary calculator based on Costa Rican work laws",
       "Monthly Base Salary": "Monthly Base Salary",
       "Bonuses & Allowances": "Bonuses & Allowances",
@@ -744,6 +746,8 @@ const resources = {
 
       // Salary Estimator
       "Salary Estimator": "Estimador de Salario",
+      "Additional Deductions": "Deducciones Adicionales",
+      "Other Deductions": "Otras Deducciones",
       "Salary calculator based on Costa Rican work laws": "Calculadora de salario según leyes laborales de Costa Rica",
       "Monthly Base Salary": "Salario Bruto Mensual",
       "Bonuses & Allowances": "Bonos y Otros Ingresos",

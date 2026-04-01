@@ -52,6 +52,7 @@ export const calculateSalaryCR = ({
   children = 0,
   spouse = false,
   rpc = 0,
+  otherDeductions = 0,
   year = '2026',
   frequency = 'monthly'
 }) => {
@@ -118,9 +119,10 @@ export const calculateSalaryCR = ({
   const renta = Math.max(0, grossTax - familyCredits);
 
   // 5. Net Salary (The actual take-home from the employer)
-  // RPC is NOT subtracted here because the user pays it to their bank,
-  // it only reduces the tax/ccss burden.
-  const net = Math.max(0, gross - ccss - renta);
+  // RPC is NOT subtracted here as it already reduced the tax/ccss burden.
+  // We subtract otherDeductions (e.g. Health Insurance) after all taxes are calculated.
+  const otherDeductionsAmount = parseFloat(otherDeductions || 0);
+  const net = Math.max(0, gross - ccss - renta - otherDeductionsAmount);
 
   // 6. Aguinaldo (Provision per period)
   const aguinaldoProvision = gross / 12;
@@ -133,8 +135,9 @@ export const calculateSalaryCR = ({
     ivm,
     popular,
     renta,
-    rpcExemption: rpcInput, // Rename to clarify it's a tax exemption
-    totalDeductions: ccss + renta,
+    otherDeductions: otherDeductionsAmount,
+    rpcExemption: rpcInput, 
+    totalDeductions: ccss + renta + otherDeductionsAmount,
     net,
     monthlyEquivalent,
     aguinaldoProvision,
