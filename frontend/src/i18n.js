@@ -351,7 +351,38 @@ const resources = {
       // Analytics month navigator
       "Month": "Month",
       "Previous month": "Previous month",
-      "Next month": "Next month"
+      "Next month": "Next month",
+
+      // Salary Estimator
+      "Salary Estimator": "Salary Estimator",
+      "Salary calculator based on Costa Rican work laws": "Salary calculator based on Costa Rican work laws",
+      "Monthly Base Salary": "Monthly Base Salary",
+      "Bonuses & Allowances": "Bonuses & Allowances",
+      "Complementary Pension (RPC)": "Complementary Pension (RPC)",
+      "Calculate Spouse Credit": "Calculate Spouse Credit",
+      "Monthly Net Salary": "Monthly Net Salary",
+      "Progressive tax breakdown": "Progressive tax breakdown",
+      "CCSS Contribution": "CCSS Contribution",
+      "Income Tax (Renta)": "Income Tax (Renta)",
+      "Aguinaldo Provision": "Aguinaldo Provision",
+      "Take-Home": "Take-Home",
+      "Deductions": "Deductions",
+      "Exemptions": "Exemptions",
+      "Total Deductions": "Total Deductions",
+      "Year": "Year",
+      "Frequency": "Frequency",
+      "Monthly": "Monthly",
+      "Bi-weekly": "Bi-weekly",
+      "Weekly": "Weekly",
+      "Net Period Salary": "Net Period Salary",
+      "Monthly Equivalent": "Monthly Equivalent",
+      "Total CCSS": "Total CCSS",
+      "SEM (Health)": "SEM (Health)",
+      "IVM (Pension)": "IVM (Pension)",
+      "Banco Popular": "Banco Popular",
+      "Exchange": "Exchange",
+      "Estimator": "Estimator",
+      "RPC Exemption": "RPC Exemption"
     }
   },
   'es': {
@@ -703,7 +734,38 @@ const resources = {
       // Analytics month navigator
       "Month": "Mes",
       "Previous month": "Mes anterior",
-      "Next month": "Mes siguiente"
+      "Next month": "Mes siguiente",
+
+      // Salary Estimator
+      "Salary Estimator": "Estimador de Salario",
+      "Salary calculator based on Costa Rican work laws": "Calculadora de salario según leyes laborales de Costa Rica",
+      "Monthly Base Salary": "Salario Bruto Mensual",
+      "Bonuses & Allowances": "Bonos y Otros Ingresos",
+      "Complementary Pension (RPC)": "Pensión Complementaria (RPC)",
+      "Calculate Spouse Credit": "Aplicar Crédito de Cónyuge",
+      "Monthly Net Salary": "Salario Neto Mensual",
+      "Progressive tax breakdown": "Desglose progresivo de impuestos",
+      "CCSS Contribution": "Contribución CCSS",
+      "Income Tax (Renta)": "Impuesto sobre la Renta",
+      "Aguinaldo Provision": "Provisión de Aguinaldo",
+      "Take-Home": "Salario Neto",
+      "Deductions": "Deducciones",
+      "Exemptions": "Exenciones",
+      "Total Deductions": "Total de Deducciones",
+      "Year": "Año",
+      "Frequency": "Frecuencia",
+      "Monthly": "Mensual",
+      "Bi-weekly": "Quincenal",
+      "Weekly": "Semanal",
+      "Net Period Salary": "Salario Neto del Periodo",
+      "Monthly Equivalent": "Equivalente Mensual",
+      "Total CCSS": "Total CCSS (Cargas Sociales)",
+      "SEM (Salud)": "SEM (Salud)",
+      "IVM (Pensiones)": "IVM (Pensiones)",
+      "Banco Popular": "Banco Popular",
+      "Exchange": "Conversor",
+      "Estimator": "Estimador",
+      "RPC Exemption": "Exención RPC"
     }
   }
 };

@@ -108,7 +108,40 @@ export default function Budgets() {
     const spent = parseFloat(budget.spent) || 0;
     const amount = parseFloat(budget.amount) || 0;
     if (spent >= amount && amount > 0) return 'PAID';
-    if (budget.payDay && budget.payDay < currentDay && spent === 0) return 'OVERDUE';
+    
+    // Improved Overdue logic: Consider the budget cycle
+    const today = new Date();
+    const currentMetricDay = today.getDate();
+    const currentMonth = today.getMonth() + 1;
+    const currentYear = today.getFullYear();
+    
+    // A budget is overdue if:
+    // 1. It's from a past calendar month and not paid
+    // 2. It's for the current calendar month and payDay has passed
+    // 3. For shifted budgets (e.g. budgetStartDay=25), we also check if 
+    //    the current day is past the payDay relative to the cycle.
+    
+    const isPast = budget.year < currentYear || (budget.year === currentYear && budget.month < currentMonth);
+    const isCurrent = budget.year === currentYear && budget.month === currentMonth;
+
+    if (budget.payDay) {
+      if (isPast && spent === 0) return 'OVERDUE';
+      
+      if (isCurrent) {
+        const startDay = settings?.budgetStartDay || 1;
+        // If payDay is >= startDay, it was due in the PREVIOUS calendar month part of the cycle
+        // If payDay < startDay, it is due in the CURRENT calendar month part of the cycle
+        const isDueInCurrentCalendarMonth = budget.payDay < startDay;
+        
+        if (isDueInCurrentCalendarMonth) {
+          if (currentMetricDay > budget.payDay && spent === 0) return 'OVERDUE';
+        } else {
+          // It was due last month in this cycle's start, so it's already overdue if spent is 0
+          if (spent === 0) return 'OVERDUE';
+        }
+      }
+    }
+    
     if (spent > 0 && spent < amount) return 'PARTIAL';
     return 'PENDING';
   };
@@ -133,7 +166,14 @@ export default function Budgets() {
       <div className="flex justify-between items-start gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-serif text-white tracking-wide">{t('Budgets')}</h1>
-          <p className="text-xs md:text-sm font-medium text-slate-400 mt-1">{t('Manage your monthly spending limits')}</p>
+          <p className="text-xs md:text-sm font-medium text-slate-400 mt-1">
+            {t('Manage your monthly spending limits')} 
+            {budgets.length > 0 && budgets[0].month && (
+              <span className="text-gold-500/80 ml-1">
+                — {new Date(2000, budgets[0].month - 1).toLocaleString(settings?.language || 'en-US', { month: 'long' })}
+              </span>
+            )}
+          </p>
         </div>
         <button onClick={() => {
           setEditingBudget(null);

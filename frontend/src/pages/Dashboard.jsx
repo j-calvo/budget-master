@@ -195,14 +195,24 @@ export default function Dashboard() {
         </div>
         {/* Total Income */}
         <div className="glass-card p-4 md:p-6 transition-all hover:border-emerald-500/30 hover:shadow-emerald-500/10 group cursor-default">
-          <p className="text-[10px] md:text-xs font-medium text-slate-400 uppercase tracking-widest group-hover:text-emerald-400 transition-colors">{t('Monthly Income')}</p>
+          <p className="text-[10px] md:text-xs font-medium text-slate-400 uppercase tracking-widest group-hover:text-emerald-400 transition-colors">
+            {t('Monthly Income')} 
+            {budgets.length > 0 && budgets[0].month && (
+              <span className="opacity-60 ml-1">({new Date(2000, budgets[0].month - 1).toLocaleString(settings?.language || 'en-US', { month: 'short' })})</span>
+            )}
+          </p>
           <p className="text-xl md:text-3xl font-light font-serif text-emerald-400 mt-2 md:mt-3 drop-shadow-[0_0_8px_rgba(16,185,129,0.3)] tracking-wide">
             +{displayCurrency(metrics.income)}
           </p>
         </div>
         {/* Total Expenses */}
         <div className="glass-card p-4 md:p-6 transition-all hover:border-rose-500/30 hover:shadow-rose-500/10 group cursor-default">
-          <p className="text-[10px] md:text-xs font-medium text-slate-400 uppercase tracking-widest group-hover:text-rose-400 transition-colors">{t('Monthly Expenses')}</p>
+          <p className="text-[10px] md:text-xs font-medium text-slate-400 uppercase tracking-widest group-hover:text-rose-400 transition-colors">
+            {t('Monthly Expenses')}
+            {budgets.length > 0 && budgets[0].month && (
+              <span className="opacity-60 ml-1">({new Date(2000, budgets[0].month - 1).toLocaleString(settings?.language || 'en-US', { month: 'short' })})</span>
+            )}
+          </p>
           <p className="text-xl md:text-3xl font-light font-serif text-rose-400 mt-2 md:mt-3 drop-shadow-[0_0_8px_rgba(244,63,94,0.3)] tracking-wide">
             -{displayCurrency(metrics.expenses)}
           </p>
@@ -223,7 +233,12 @@ export default function Dashboard() {
           
           <h2 className="text-lg font-serif italic text-white mb-8 tracking-wide flex items-center gap-3">
             <span className="w-8 h-[1px] bg-gold-500/50 block"></span>
-            {t('Cash Flow (6 Months)')}
+            {t('Cash Flow')} 
+            {budgets.length > 0 && budgets[0].month && (
+              <span className="text-gold-500/50 ml-1">
+                — {new Date(2000, budgets[0].month - 1).toLocaleString(settings?.language || 'en-US', { month: 'long' })}
+              </span>
+            )}
           </h2>
           
           <div className="flex-1 min-h-[300px] -ml-4">
