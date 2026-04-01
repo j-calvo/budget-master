@@ -196,6 +196,29 @@ exports.createBudget = async (req, res) => {
   }
 };
 
+exports.updateBudget = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { categoryId, amount, currency, payDay } = req.body;
+    
+    const budget = await prisma.budget.update({
+      where: { id, familyId: req.user.familyId },
+      data: {
+        categoryId,
+        amount: parseFloat(amount),
+        currency,
+        payDay: payDay ? parseInt(payDay) : null
+      },
+      include: { category: true }
+    });
+
+    res.json(budget);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to update budget' });
+  }
+};
+
 exports.deleteBudget = async (req, res) => {
   try {
     const { id } = req.params;
