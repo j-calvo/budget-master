@@ -199,7 +199,9 @@ export default function SettingsData() {
                     <div className="w-10 h-10 rounded-full border-2 border-brand-900 shadow-[0_0_10px_rgba(0,0,0,0.5)] shrink-0" style={{ backgroundColor: cat.color }}></div>
                     <div className="min-w-0 pr-2">
                       <p className="font-bold text-slate-200 tracking-wide truncate">{cat.name}</p>
-                      <p className="text-[10px] uppercase tracking-widest text-slate-400 mt-1">{cat.type.replace('_', ' ')}</p>
+                      <p className="text-[10px] uppercase tracking-widest text-slate-400 mt-1">
+                        {t(cat.type === 'fixed_expense' ? 'Fixed Expense' : cat.type === 'variable_expense' ? 'Variable Expense' : cat.type === 'savings_goal' ? 'Savings Goal' : 'Income')}
+                      </p>
                     </div>
                   </div>
                   <div className="flex justify-end gap-6 md:gap-4 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity shrink-0 mt-2 md:mt-0 pb-1 md:pb-0 border-b border-white/5 md:border-0 pl-14 md:pl-0">
@@ -328,7 +330,9 @@ export default function SettingsData() {
                 <div>
                   <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">{t('Type')}</label>
                   <select value={catForm.type} onChange={e => setCatForm({ ...catForm, type: e.target.value })} className="w-full bg-brand-900/50 border border-brand-600/30 text-white rounded-lg p-3 focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 transition-all appearance-none cursor-pointer">
-                    <option value="expense" className="bg-brand-800">{t('Expense')}</option>
+                    <option value="fixed_expense" className="bg-brand-800">{t('Fixed Expense')}</option>
+                    <option value="variable_expense" className="bg-brand-800">{t('Variable Expense')}</option>
+                    <option value="savings_goal" className="bg-brand-800">{t('Savings Goal')}</option>
                     <option value="income" className="bg-brand-800">{t('Income')}</option>
                   </select>
                 </div>

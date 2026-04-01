@@ -88,7 +88,9 @@ export default function FinancialTimeline({ cards, loans, metrics, budgets = [] 
       if (budget.payDay) {
         const spent = parseFloat(budget.spent) || 0;
         const amount = parseFloat(budget.amount) || 0;
-        const isPaid = spent >= amount && amount > 0;
+        const isFixed = budget.category?.type === 'fixed_expense';
+        // Paid if spent meets budget OR if it's a fixed bill and we've paid something
+        const isPaid = (spent >= amount && amount > 0) || (isFixed && spent > 0);
         ev[budget.payDay] = ev[budget.payDay] || [];
         ev[budget.payDay].push({ 
           type: 'budget', 
@@ -168,22 +170,35 @@ export default function FinancialTimeline({ cards, loans, metrics, budgets = [] 
         <div className="flex flex-wrap gap-y-14 gap-x-1 sm:gap-x-2 md:gap-x-4 justify-center px-2 items-end">
           {daysInMonth.map(day => {
             const isToday = day === currentDay;
-            const dayEvents = events[day] || [];
+            const isPast = day < currentDay;
+            const dayEvents = (events[day] || []).map(ev => ({
+              ...ev,
+              // If it's a general payday (income) and it's in the past, treat it as Done
+              isPaid: ev.isPaid || (ev.type === 'payday' && isPast)
+            }));
             
             return (
-              <div key={day} className="flex flex-col items-center group/day relative w-10 sm:w-12">
+              <div key={day} className={`flex flex-col items-center group/day relative w-10 sm:w-12 transition-opacity ${isPast ? 'opacity-40 hover:opacity-100' : 'opacity-100'}`}>
                 {/* Event Markers */}
                 <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex flex-row items-center justify-center z-10 w-max hover:z-30 group/events">
-                  {dayEvents.map((ev, idx) => (
-                    <div 
-                      key={idx} 
-                      className={`w-8 h-8 rounded-full flex items-center justify-center shadow-lg transform transition-all duration-300 relative cursor-pointer ${idx > 0 ? '-ml-4 group-hover/events:ml-1 shadow-[-4px_0_10px_rgba(0,0,0,0.5)]' : 'shadow-xl'} hover:!scale-125 hover:!z-50 ${ev.isPaid ? 'bg-emerald-900/60 border border-emerald-500/60 shadow-[0_0_8px_rgba(16,185,129,0.3)]' : 'bg-brand-900 border border-brand-500/80'}`} 
-                      style={{ zIndex: 20 - idx }}
-                      title={`${ev.label}${ev.amount ? ` - ${formatC(ev.amount, ev.currency)}` : ''}${ev.isPaid ? ' ✓ Paid' : ''}`}
-                    >
-                      <div className="scale-90">{ev.icon}</div>
-                    </div>
-                  ))}
+                  {dayEvents.map((ev, idx) => {
+                    const statusClass = ev.isPaid 
+                      ? 'bg-emerald-500/20 border-emerald-400/50 shadow-[0_0_12px_rgba(16,185,129,0.4)]' 
+                      : (isPast ? 'bg-slate-800/50 border-slate-700/50' : 'bg-brand-900 border-brand-500/80');
+
+                    return (
+                      <div 
+                        key={idx} 
+                        className={`w-8 h-8 rounded-full flex items-center justify-center shadow-lg transform transition-all duration-300 relative cursor-pointer ${idx > 0 ? '-ml-4 group-hover/events:ml-1 shadow-[-4px_0_10px_rgba(0,0,0,0.5)]' : 'shadow-xl'} hover:!scale-125 hover:!z-50 ${statusClass}`} 
+                        style={{ zIndex: 20 - idx }}
+                        title={`${ev.label}${ev.amount ? ` - ${formatC(ev.amount, ev.currency)}` : ''}${ev.isPaid ? ` - ${t('Paid')}` : ''}`}
+                      >
+                        <div className="scale-90">
+                          {ev.isPaid ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : ev.icon}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
 
                 {/* Day Line & Number */}

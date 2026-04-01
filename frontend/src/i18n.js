@@ -27,6 +27,9 @@ const resources = {
       "Cash Flow (6 Months)": "Cash Flow (6 Months)",
       "Income": "Income",
       "Expenses": "Expenses",
+      "Fixed Expense": "Fixed Expense",
+      "Variable Expense": "Variable Expense",
+      "Savings Goal": "Savings Goal",
       
       "Global Settings": "Global Settings",
       "Localization": "Localization",
@@ -409,6 +412,9 @@ const resources = {
       "Cash Flow (6 Months)": "Flujo de Efectivo (6 Meses)",
       "Income": "Ingresos",
       "Expenses": "Gastos",
+      "Fixed Expense": "Gasto Fijo",
+      "Variable Expense": "Gasto Variable",
+      "Savings Goal": "Meta de Ahorro",
       
       "Global Settings": "Configuración Global",
       "Localization": "Localización",
