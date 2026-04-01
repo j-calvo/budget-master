@@ -20,7 +20,14 @@ export default function Transactions() {
   const [budgets, setBudgets] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [editingTx, setEditingTx] = useState(null);
-  const [newTx, setNewTx] = useState({ amount: '', date: '', description: '', sourceId: '', categoryId: '', type: 'expense' });
+  const [newTx, setNewTx] = useState({ 
+    amount: '', 
+    date: new Date().toISOString().split('T')[0], 
+    description: '', 
+    sourceId: '', 
+    categoryId: '', 
+    type: 'expense' 
+  });
 
   // Filter & Sort state
   const [showFilters, setShowFilters] = useState(false);
@@ -211,7 +218,7 @@ export default function Transactions() {
     setEditingTx(tx);
     setNewTx({
       amount: tx.amount,
-      date: tx.date ? new Date(tx.date).toISOString().split('T')[0] : '',
+      date: tx.date ? tx.date.split('T')[0] : new Date().toISOString().split('T')[0],
       description: tx.description,
       sourceId: tx.accountId ? `account_${tx.accountId}` : `card_${tx.creditCardId}`,
       categoryId: tx.categoryId,
@@ -333,7 +340,14 @@ export default function Transactions() {
               setEditingTx(null);
               const outOfBudgetCat = categories.find(c => c.name.toLowerCase() === 'out of budget') || categories[0];
               const defaultSource = accounts.length > 0 ? `account_${accounts[0].id}` : `card_${creditCards[0].id}`;
-              setNewTx({ amount: '', date: '', description: '', sourceId: defaultSource, categoryId: outOfBudgetCat?.id || '', type: 'expense' });
+              setNewTx({ 
+                amount: '', 
+                date: new Date().toISOString().split('T')[0], 
+                description: '', 
+                sourceId: defaultSource, 
+                categoryId: outOfBudgetCat?.id || '', 
+                type: 'expense' 
+              });
               setShowModal(true);
             }} className="btn-gold px-5 py-2 text-sm shadow-md ml-2 flex items-center gap-1">
               <span className="text-lg leading-none">+</span> {t('New')}
@@ -641,9 +655,21 @@ export default function Transactions() {
                 );
               })()}
               
-              <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Description')}</label>
-                <input required type="text" value={newTx.description} onChange={e => setNewTx({...newTx, description: e.target.value})} className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all" placeholder="e.g. Weekly Groceries" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Description')}</label>
+                  <input required type="text" value={newTx.description} onChange={e => setNewTx({...newTx, description: e.target.value})} className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all" placeholder="e.g. Weekly Groceries" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Date')}</label>
+                  <input 
+                    required 
+                    type="date" 
+                    value={newTx.date} 
+                    onChange={e => setNewTx({...newTx, date: e.target.value})} 
+                    className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all appearance-none cursor-pointer" 
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
