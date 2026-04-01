@@ -101,30 +101,31 @@ export default function Dashboard() {
         // 3. Savings Rate = (Income - Expenses) / Income * 100
         const savingsRate = mIncome > 0 ? Math.max(0, ((mIncome - mExpenses) / mIncome) * 100).toFixed(1) : 0;
 
-        // 4. Chart Data (Group last 6 months)
-        const monthlyFlows = {};
-        for(let i = 5; i >= 0; i--) {
-          const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-          const key = d.toLocaleString(settings?.language || 'en-US', { month: 'short' });
-          monthlyFlows[key] = { name: key, income: 0, expenses: 0 };
+        // 4. Chart Data (Group last 6 financial cycles)
+        const cycles = [];
+        for (let i = 5; i >= 0; i--) {
+          const cycStart = new Date(localCurrentYear, localCurrentMonth - i, budgetStartDay);
+          const cycEnd = new Date(localCurrentYear, localCurrentMonth - i + 1, budgetStartDay - 1, 23, 59, 59, 999);
+          const label = cycEnd.toLocaleString(settings?.language || 'en-US', { month: 'short' });
+          cycles.push({ name: label, start: cycStart, end: cycEnd, income: 0, expenses: 0 });
         }
-
+        
         transactions.forEach(tx => {
-          const tDate = new Date(tx.date);
-          const diffMonths = (now.getFullYear() - tDate.getFullYear()) * 12 + (now.getMonth() - tDate.getMonth());
-          if (diffMonths >= 0 && diffMonths <= 5) {
-            const key = tDate.toLocaleString(settings?.language || 'en-US', { month: 'short' });
-            if (monthlyFlows[key]) {
-              const txCurrency = tx.account?.currency || tx.creditCard?.currency || 'USD';
-              const convertedAmount = convert(tx.amount, txCurrency);
-              if (tx.type === 'income') monthlyFlows[key].income += convertedAmount;
-              else if (tx.type === 'expense') monthlyFlows[key].expenses += convertedAmount;
-            }
+          // Timezone Neutral: Use just the date portion
+          const [y, m, d] = tx.date.split('T')[0].split('-').map(Number);
+          const tDate = new Date(y, m - 1, d);
+          
+          const cycle = cycles.find(c => tDate >= c.start && tDate <= c.end);
+          if (cycle) {
+            const txCurrency = tx.account?.currency || tx.creditCard?.currency || 'USD';
+            const convertedAmount = convert(tx.amount, txCurrency);
+            if (tx.type === 'income') cycle.income += convertedAmount;
+            else if (tx.type === 'expense') cycle.expenses += convertedAmount;
           }
         });
 
         setMetrics({ totalAssets, netWorth, income: mIncome, expenses: mExpenses, savingsRate });
-        setChartData(Object.values(monthlyFlows));
+        setChartData(cycles);
         
         // 5. Recent 5 Transactions
         const sortedTx = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
