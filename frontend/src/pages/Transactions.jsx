@@ -14,6 +14,18 @@ export default function Transactions() {
   const { t } = useTranslation();
   const { settings, currencies } = useSettings();
   const [transactions, setTransactions] = useState([]);
+
+  // Timezone-safe date formatting helper
+  const formatDateSafe = (dateStr, options = {}) => {
+    if (!dateStr) return '';
+    try {
+      // Split the YYYY-MM-DD part and create a local date to avoid UTC shifts
+      const [year, month, day] = dateStr.split('T')[0].split('-').map(Number);
+      return new Date(year, month - 1, day).toLocaleDateString(settings?.language || 'en-US', options);
+    } catch (e) {
+      return new Date(dateStr).toLocaleDateString(settings?.language || 'en-US', options);
+    }
+  };
   const [accounts, setAccounts] = useState([]);
   const [creditCards, setCreditCards] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -547,7 +559,7 @@ export default function Transactions() {
                           {formatCurrency(tx.amount, tx.account?.currency || tx.creditCard?.currency || settings?.defaultCurrency || 'USD', currencies, settings?.language)}
                         </div>
                         <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-0.5 font-mono">
-                          {new Date(tx.date).toLocaleDateString(settings?.language || 'en-US', { month: 'short', day: 'numeric', year: '2-digit' })}
+                          {formatDateSafe(tx.date, { month: 'short', day: 'numeric', year: '2-digit' })}
                         </p>
                       </div>
                     </div>
@@ -589,7 +601,7 @@ export default function Transactions() {
                   </div>
 
                   <div className="hidden md:block text-sm text-slate-400 uppercase tracking-wide">
-                    {new Date(tx.date).toLocaleDateString(settings?.language || 'en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    {formatDateSafe(tx.date, { month: 'short', day: 'numeric', year: 'numeric' })}
                   </div>
 
                   <div className={`hidden md:block text-right font-serif tracking-wide text-lg ${tx.type === 'expense' ? 'text-slate-300' : 'text-gold-400 drop-shadow-[0_0_5px_rgba(212,175,55,0.4)]'}`}>
