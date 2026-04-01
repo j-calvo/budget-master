@@ -75,18 +75,24 @@ exports.getBudgets = async (req, res) => {
       }
 
       if (prevBudgets.length > 0) {
-        await prisma.budget.createMany({
-          data: prevBudgets.map(b => ({
-            familyId: req.user.familyId,
-            categoryId: b.categoryId,
-            amount:     b.amount,
-            currency:   b.currency,
-            payDay:     b.payDay,
-            month:      currentMonth,
-            year:       currentYear,
-          })),
-          skipDuplicates: true,
-        });
+        try {
+          await prisma.budget.createMany({
+            data: prevBudgets.map(b => ({
+              familyId: req.user.familyId,
+              categoryId: b.categoryId,
+              amount:     b.amount,
+              currency:   b.currency,
+              payDay:     b.payDay,
+              month:      currentMonth,
+              year:       currentYear,
+            })),
+            // skipDuplicates is not supported by SQLite connector
+          });
+        } catch (rolloverError) {
+          console.error('Failed to auto-rollover budgets:', rolloverError);
+          // We continue anyway so the user can at least see the "No budgets" screen 
+          // or partial results if some were created.
+        }
 
         // Re-fetch so we include the category relation
         budgets = await prisma.budget.findMany({
