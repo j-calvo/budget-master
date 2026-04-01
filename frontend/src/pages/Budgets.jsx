@@ -19,14 +19,47 @@ export default function Budgets() {
   const [deleteData, setDeleteData] = useState({ id: null, name: null });
   const [isLoading, setIsLoading] = useState(true);
 
+  // ── Time range state ──────────────────────────────────────────────────────
+  const [viewMonth, setViewMonth] = useState(new Date().getMonth() + 1);
+  const [viewYear,  setViewYear]  = useState(new Date().getFullYear());
+
+  const getEffectiveBudgetPeriod = (startDay = 1) => {
+    const now = new Date();
+    const day = now.getDate();
+    const m = now.getMonth() + 1;
+    const y = now.getFullYear();
+    if (startDay <= 1 || day < startDay) return { month: m, year: y };
+    let effMonth = m + 1;
+    let effYear = y;
+    if (effMonth > 12) { effMonth = 1; effYear++; }
+    return { month: effMonth, year: effYear };
+  };
+
+  const stepMonth = (dir) => {
+    setViewMonth(prev => {
+      let next = prev + dir;
+      if (next < 1)  { setViewYear(y => y - 1); return 12; }
+      if (next > 12) { setViewYear(y => y + 1); return  1; }
+      return next;
+    });
+  };
+
+  const jumpToToday = () => {
+    const startDay = settings?.budgetStartDay || 1;
+    const { month, year } = getEffectiveBudgetPeriod(startDay);
+    setViewMonth(month);
+    setViewYear(year);
+  };
+
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [viewMonth, viewYear]);
 
   const fetchData = async () => {
     try {
+      setIsLoading(true);
       const [budRes, catRes] = await Promise.allSettled([
-        api.get(API_URL),
+        api.get(`${API_URL}?month=${viewMonth}&year=${viewYear}`),
         api.get(CATS_URL)
       ]);
 
@@ -65,7 +98,7 @@ export default function Budgets() {
       if (editingBudget) {
         await api.put(`${API_URL}/${editingBudget.id}`, payload);
       } else {
-        await api.post(API_URL, payload);
+        await api.post(API_URL, { ...payload, month: viewMonth, year: viewYear });
       }
       setShowModal(false);
       setEditingBudget(null);
@@ -101,45 +134,26 @@ export default function Budgets() {
     return formatC(amount, currencyCode || settings?.defaultCurrency || 'USD', currencies, settings?.language);
   };
 
-  const today = new Date();
-  const currentDay = today.getDate();
-
   const getBudgetStatus = (budget) => {
     const spent = parseFloat(budget.spent) || 0;
     const amount = parseFloat(budget.amount) || 0;
     if (spent >= amount && amount > 0) return 'PAID';
     
-    // Improved Overdue logic: Consider the budget cycle
     const today = new Date();
-    const currentMetricDay = today.getDate();
-    const currentMonth = today.getMonth() + 1;
-    const currentYear = today.getFullYear();
+    const currentDay = today.getDate();
+    const { month: currentMonth, year: currentYear } = getEffectiveBudgetPeriod(settings?.budgetStartDay || 1);
     
-    // A budget is overdue if:
-    // 1. It's from a past calendar month and not paid
-    // 2. It's for the current calendar month and payDay has passed
-    // 3. For shifted budgets (e.g. budgetStartDay=25), we also check if 
-    //    the current day is past the payDay relative to the cycle.
-    
-    const isPast = budget.year < currentYear || (budget.year === currentYear && budget.month < currentMonth);
-    const isCurrent = budget.year === currentYear && budget.month === currentMonth;
+    // Status Logic relative to VIEW
+    const isPast = viewYear < currentYear || (viewYear === currentYear && viewMonth < currentMonth);
+    const isFuture = viewYear > currentYear || (viewYear === currentYear && viewMonth > currentMonth);
+    const isCurrent = viewYear === currentYear && viewMonth === currentMonth;
 
     if (budget.payDay) {
-      if (isPast && spent === 0) return 'OVERDUE';
-      
+      if (isPast && spent < amount) return 'OVERDUE';
       if (isCurrent) {
-        const startDay = settings?.budgetStartDay || 1;
-        // If payDay is >= startDay, it was due in the PREVIOUS calendar month part of the cycle
-        // If payDay < startDay, it is due in the CURRENT calendar month part of the cycle
-        const isDueInCurrentCalendarMonth = budget.payDay < startDay;
-        
-        if (isDueInCurrentCalendarMonth) {
-          if (currentMetricDay > budget.payDay && spent === 0) return 'OVERDUE';
-        } else {
-          // It was due last month in this cycle's start, so it's already overdue if spent is 0
-          if (spent === 0) return 'OVERDUE';
-        }
+        if (currentDay > budget.payDay && spent < amount) return 'OVERDUE';
       }
+      if (isFuture) return 'PENDING';
     }
     
     if (spent > 0 && spent < amount) return 'PARTIAL';
@@ -163,25 +177,31 @@ export default function Budgets() {
 
   return (
     <div className="space-y-6 md:space-y-8 animate-in fade-in duration-700 pb-8">
-      <div className="flex justify-between items-start gap-4">
-        <div>
+      <div className="flex flex-col sm:flex-row justify-between items-center sm:items-start gap-4 mb-2">
+        <div className="text-center sm:text-left">
           <h1 className="text-2xl md:text-3xl font-serif text-white tracking-wide">{t('Budgets')}</h1>
           <p className="text-xs md:text-sm font-medium text-slate-400 mt-1">
-            {t('Manage your monthly spending limits')} 
-            {budgets.length > 0 && budgets[0].month && (
-              <span className="text-gold-500/80 ml-1">
-                — {new Date(2000, budgets[0].month - 1).toLocaleString(settings?.language || 'en-US', { month: 'long' })}
-              </span>
-            )}
+            {t('Manage your monthly spending limits')}
           </p>
         </div>
-        <button onClick={() => {
-          setEditingBudget(null);
-          setNewBudget(p => ({ ...p, amount: '', currency: 'CRC', payDay: '' }));
-          setShowModal(true);
-        }} className="btn-gold px-4 md:px-5 py-2 text-xs md:text-sm shadow-md flex items-center gap-1 shrink-0">
-          <span className="text-lg leading-none">+</span> <span className="hidden sm:inline">{t('Create Budget')}</span><span className="sm:hidden">{t('New')}</span>
-        </button>
+
+        <div className="flex items-center gap-3">
+          <div className="flex items-center bg-brand-900/60 p-1 rounded-xl border border-brand-600/30">
+            <button onClick={() => stepMonth(-1)} className="p-2 text-slate-400 hover:text-white transition-all"><span className="text-lg">‹</span></button>
+            <button onClick={jumpToToday} className="px-3 py-1 text-[10px] font-bold text-gold-400 hover:text-gold-200 uppercase tracking-widest transition-all">
+              {new Date(viewYear, viewMonth - 1).toLocaleString(settings?.language || 'en-US', { month: 'long', year: 'numeric' })}
+            </button>
+            <button onClick={() => stepMonth(1)} className="p-2 text-slate-400 hover:text-white transition-all"><span className="text-lg">›</span></button>
+          </div>
+
+          <button onClick={() => {
+            setEditingBudget(null);
+            setNewBudget(p => ({ ...p, amount: '', currency: 'CRC', payDay: '' }));
+            setShowModal(true);
+          }} className="btn-gold px-4 md:px-5 py-2 text-xs md:text-sm shadow-md flex items-center gap-1 shrink-0">
+            <span className="text-lg leading-none">+</span> <span className="hidden sm:inline">{t('Create Budget')}</span><span className="sm:hidden">{t('New')}</span>
+          </button>
+        </div>
       </div>
 
       {isLoading ? (
