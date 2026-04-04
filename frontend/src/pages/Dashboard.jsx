@@ -93,8 +93,14 @@ export default function Dashboard() {
           if (tDate >= startOfPeriod) {
             const txCurrency = tx.account?.currency || tx.creditCard?.currency || 'USD';
             const convertedAmount = convert(tx.amount, txCurrency);
-            if (tx.type === 'income') mIncome += convertedAmount;
-            else if (tx.type === 'expense') mExpenses += convertedAmount;
+            
+            if (tx.type === 'income') {
+              if (tx.category?.type === 'income') mIncome += convertedAmount;
+              else mExpenses -= convertedAmount; // Reimbursement offsets expenses
+            } else if (tx.type === 'expense') {
+              if (tx.category?.type === 'income') mIncome -= convertedAmount; // Negative income
+              else mExpenses += convertedAmount;
+            }
           }
         });
 
@@ -119,8 +125,14 @@ export default function Dashboard() {
           if (cycle) {
             const txCurrency = tx.account?.currency || tx.creditCard?.currency || 'USD';
             const convertedAmount = convert(tx.amount, txCurrency);
-            if (tx.type === 'income') cycle.income += convertedAmount;
-            else if (tx.type === 'expense') cycle.expenses += convertedAmount;
+            
+            if (tx.type === 'income') {
+              if (tx.category?.type === 'income') cycle.income += convertedAmount;
+              else cycle.expenses -= convertedAmount;
+            } else if (tx.type === 'expense') {
+              if (tx.category?.type === 'income') cycle.income -= convertedAmount;
+              else cycle.expenses += convertedAmount;
+            }
           }
         });
 

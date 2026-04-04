@@ -84,7 +84,7 @@ export default function Analytics() {
     return transactions.filter(tx => new Date(tx.date) >= d);
   }, [transactions, timeRange, isMonthMode, viewMonth, viewYear]);
 
-  const expenses = filteredTx.filter(tx => tx.type === 'expense');
+  const expenses = filteredTx.filter(tx => tx.type === 'expense' && tx.category?.type !== 'income');
 
   const convert = (amount, fromCode) => {
     if (!ratesData?.rates || fromCode === ratesData.base) return amount;
@@ -95,15 +95,29 @@ export default function Analytics() {
   // 1. Spending by Category (Pie)
   const spendByCat   = {};
   const spendByCatId = {};
-  expenses.forEach(tx => {
+  
+  filteredTx.forEach(tx => {
     const catName = tx.category?.name || 'Uncategorized';
     const catId   = tx.category?.id  || 'uncategorized';
+    const catType = tx.category?.type;
     const txCurrency = tx.account?.currency || tx.creditCard?.currency || 'USD';
     const amt = convert(tx.amount, txCurrency);
-    spendByCat[catName]  = (spendByCat[catName]  || 0) + amt;
-    spendByCatId[catId]  = (spendByCatId[catId]  || 0) + amt;
+    
+    if (tx.type === 'expense') {
+      if (catType !== 'income') {
+        spendByCat[catName]  = (spendByCat[catName]  || 0) + amt;
+        spendByCatId[catId]  = (spendByCatId[catId]  || 0) + amt;
+      }
+    } else if (tx.type === 'income') {
+      if (catType && catType !== 'income') {
+        spendByCat[catName]  = (spendByCat[catName]  || 0) - amt;
+        spendByCatId[catId]  = (spendByCatId[catId]  || 0) - amt;
+      }
+    }
   });
+
   const categoryData = Object.entries(spendByCat)
+    .filter(([_, value]) => value > 0)
     .map(([name, value]) => ({ name, value }))
     .sort((a, b) => b.value - a.value);
   const COLORS = ['#d4af37','#10b981','#0ea5e9','#f43f5e','#a855f7','#14b8a6','#f59e0b','#6366f1','#ec4899'];
@@ -129,8 +143,13 @@ export default function Analytics() {
       if (flows[key]) {
         const txCurrency = tx.account?.currency || tx.creditCard?.currency || 'USD';
         const amt = convert(tx.amount, txCurrency);
-        if (tx.type === 'income') flows[key].income += amt;
-        else if (tx.type === 'expense') flows[key].expenses += amt;
+        if (tx.type === 'income') {
+          if (tx.category?.type === 'income' || !tx.category) flows[key].income += amt;
+          else flows[key].expenses -= amt;
+        } else if (tx.type === 'expense') {
+          if (tx.category?.type === 'income') flows[key].income -= amt;
+          else flows[key].expenses += amt;
+        }
       }
     });
     return Object.values(flows);

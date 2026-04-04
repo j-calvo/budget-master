@@ -119,7 +119,7 @@ exports.getBudgets = async (req, res) => {
     }
 
     const budgetsWithSpent = await Promise.all(budgets.map(async (budget) => {
-      const transactions = await prisma.transaction.aggregate({
+      const expenses = await prisma.transaction.aggregate({
         where: {
           categoryId: budget.categoryId,
           type: 'expense',
@@ -128,13 +128,22 @@ exports.getBudgets = async (req, res) => {
             lte: endDate
           }
         },
-        _sum: {
-          amount: true
-        }
+        _sum: { amount: true }
+      });
+      const incomes = await prisma.transaction.aggregate({
+        where: {
+          categoryId: budget.categoryId,
+          type: 'income',
+          date: {
+            gte: startDate,
+            lte: endDate
+          }
+        },
+        _sum: { amount: true }
       });
       return {
         ...budget,
-        spent: transactions._sum.amount || 0
+        spent: (expenses._sum.amount || 0) - (incomes._sum.amount || 0)
       };
     }));
 
