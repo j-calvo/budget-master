@@ -18,7 +18,7 @@ export default function Accounts() {
   const [isLoading, setIsLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingAccount, setEditingAccount] = useState(null);
-  const [newAccount, setNewAccount] = useState({ name: '', type: 'Checking', institution: '', currency: 'USD', balance: 0, isLiquid: true });
+  const [newAccount, setNewAccount] = useState({ name: '', type: 'Checking', institution: '', currency: 'USD', balance: 0, isLiquid: true, last4Digits: '' });
 
   // ── Adjustment State ──
   const [showAdjustModal, setShowAdjustModal] = useState(false);
@@ -89,7 +89,8 @@ export default function Accounts() {
         institution: banks.length ? banks[0].name : '',
         currency: currencies.length ? currencies[0].code : 'USD',
         balance: 0,
-        isLiquid: true
+        isLiquid: true,
+        last4Digits: ''
       });
       fetchAccounts();
     } catch (err) {
@@ -105,7 +106,8 @@ export default function Accounts() {
       institution: acc.institution,
       currency: acc.currency,
       balance: acc.balance,
-      isLiquid: acc.isLiquid !== false
+      isLiquid: acc.isLiquid !== false,
+      last4Digits: acc.last4Digits || ''
     });
     setShowModal(true);
   };
@@ -173,7 +175,7 @@ export default function Accounts() {
         </div>
         <button onClick={() => {
           setEditingAccount(null);
-          setNewAccount({ name: '', type: accountTypes.length ? accountTypes[0].name : 'Checking', institution: banks.length ? banks[0].name : '', currency: currencies.length ? currencies[0].code : 'USD', balance: 0, isLiquid: true });
+          setNewAccount({ name: '', type: accountTypes.length ? accountTypes[0].name : 'Checking', institution: banks.length ? banks[0].name : '', currency: currencies.length ? currencies[0].code : 'USD', balance: 0, isLiquid: true, last4Digits: '' });
           setShowModal(true);
         }} className="btn-gold px-5 py-2 text-sm shadow-md flex items-center gap-1">
           <span className="text-lg leading-none">+</span> {t('Add Account')}
@@ -205,6 +207,7 @@ export default function Accounts() {
                   <h3 className="font-serif italic text-white text-xl tracking-wide line-clamp-1">{acc.name}</h3>
                   <p className="text-xs font-medium text-slate-400 uppercase tracking-widest mt-1">
                     {acc.institution || 'Bank'} • {acc.type}
+                    {acc.last4Digits && <span className="ml-2 font-mono text-gold-400/80">•••• {acc.last4Digits}</span>}
                     {acc.isLiquid === false && (
                       <span className="ml-2 px-1.5 py-0.5 rounded bg-brand-600/50 text-[10px] text-gold-400/80 border border-gold-500/10">
                         {t('Long-term asset')}
@@ -291,9 +294,15 @@ export default function Accounts() {
             </h2>
             
             <form onSubmit={handleCreateAccount} className="space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Account Name')}</label>
-                <input required type="text" value={newAccount.name} onChange={e => setNewAccount({ ...newAccount, name: e.target.value })} className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif" placeholder="e.g. Premium Checking" />
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                <div className="sm:col-span-3">
+                  <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Account Name')}</label>
+                  <input required type="text" value={newAccount.name} onChange={e => setNewAccount({ ...newAccount, name: e.target.value })} className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif" placeholder="e.g. Premium Checking" />
+                </div>
+                <div className="sm:col-span-1">
+                  <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Last 4')}</label>
+                  <input type="text" maxLength="4" value={newAccount.last4Digits || ''} onChange={e => setNewAccount({...newAccount, last4Digits: e.target.value.replace(/\D/g, '')})} className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-mono tracking-widest text-center" placeholder="1234" />
+                </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>

@@ -4,6 +4,7 @@ import { useSettings } from '../context/SettingsContext';
 import { useTranslation } from 'react-i18next';
 import { Download, Upload, Search, SlidersHorizontal, ArrowUpDown, X, ChevronDown } from 'lucide-react';
 import AmountInput from '../components/AmountInput';
+import InboxQueue from '../components/InboxQueue';
 import { formatCurrency } from '../lib/currencyUtils';
 
 const API_URL = '/transactions';
@@ -369,6 +370,13 @@ export default function Transactions() {
           )}
         </div>
       </div>
+
+      <InboxQueue 
+        onActionComplete={fetchData} 
+        categories={categories} 
+        accounts={accounts} 
+        creditCards={creditCards} 
+      />
 
       {/* ── Filter & Sort Bar ── */}
       <div className="glass-card overflow-hidden border-brand-600/30">

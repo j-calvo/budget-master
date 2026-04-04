@@ -43,6 +43,9 @@ app.use('/api/loans', authenticateToken, loanRoutes);
 app.use('/api/banks', authenticateToken, bankRoutes);
 app.use('/api/account-types', authenticateToken, accountTypeRoutes);
 
+const pendingTransactionRoutes = require('./src/routes/pendingTransactionRoutes');
+app.use('/api/pending-transactions', authenticateToken, pendingTransactionRoutes);
+
 const backupRoutes = require('./src/routes/backupRoutes');
 app.use('/api/backups', authenticateToken, backupRoutes);
 
@@ -65,6 +68,9 @@ if (process.env.NODE_ENV === 'production') {
     res.type('html').send(indexHtml);
   });
 }
+
+// Initialize background jobs
+require('./src/services/emailSyncService').init();
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

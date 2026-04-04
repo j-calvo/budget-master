@@ -15,7 +15,7 @@ export default function CreditCards() {
   const [showModal, setShowModal] = useState(false);
   const [deleteData, setDeleteData] = useState({ id: null, name: null });
   const [formData, setFormData] = useState({ 
-    id: null, name: '', limit: '', balance: 0, dueDate: 1, statementDay: 1, apr: 0, currency: 'USD' 
+    id: null, name: '', limit: '', balance: 0, dueDate: 1, statementDay: 1, apr: 0, currency: 'USD', last4Digits: '' 
   });
 
   useEffect(() => {
@@ -46,7 +46,7 @@ export default function CreditCards() {
         await api.post(API_URL, formData);
       }
       setShowModal(false);
-      setFormData({ id: null, name: '', limit: '', balance: 0, dueDate: 1, statementDay: 1, apr: 0, currency: currencies[0]?.code || 'USD' });
+      setFormData({ id: null, name: '', limit: '', balance: 0, dueDate: 1, statementDay: 1, apr: 0, currency: currencies[0]?.code || 'USD', last4Digits: '' });
       fetchData();
     } catch (err) {
       console.error('Failed to save credit card', err);
@@ -81,7 +81,7 @@ export default function CreditCards() {
         </div>
         <button 
           onClick={() => {
-            setFormData({ id: null, name: '', limit: '', balance: 0, dueDate: 1, apr: 0, currency: currencies.length ? currencies[0].code : 'USD' });
+            setFormData({ id: null, name: '', limit: '', balance: 0, dueDate: 1, apr: 0, currency: currencies.length ? currencies[0].code : 'USD', last4Digits: '' });
             setShowModal(true);
           }} 
           className="btn-gold px-5 py-2 text-sm shadow-md flex items-center gap-1"
@@ -102,7 +102,7 @@ export default function CreditCards() {
           <p className="text-slate-400 font-serif italic text-lg mb-6">{t('No credit cards added yet.')}</p>
           <button 
             onClick={() => {
-              setFormData({ id: null, name: '', limit: '', balance: 0, dueDate: 1, statementDay: 1, apr: 0, currency: currencies.length ? currencies[0].code : 'USD' });
+              setFormData({ id: null, name: '', limit: '', balance: 0, dueDate: 1, statementDay: 1, apr: 0, currency: currencies.length ? currencies[0].code : 'USD', last4Digits: '' });
               setShowModal(true);
             }} 
             className="btn-glass px-6 py-2"
@@ -131,6 +131,7 @@ export default function CreditCards() {
 
                 <div className="mb-6 pr-16">
                   <h3 className="font-serif italic text-white text-xl tracking-wide line-clamp-1">{card.name}</h3>
+                  {card.last4Digits && <p className="text-xs text-gold-400 font-mono tracking-widest mt-1 opacity-80">•••• {card.last4Digits}</p>}
                   <div className="flex gap-3 text-xs font-medium uppercase tracking-widest mt-2">
                     <span className="text-slate-400">{t('Due:')} <span className="text-slate-300">{card.dueDate}</span></span>
                     <span className="text-brand-600">•</span>
@@ -174,9 +175,15 @@ export default function CreditCards() {
             </h2>
             
             <form onSubmit={handleSaveCard} className="space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Card Name')}</label>
-                <input required type="text" value={formData.name || ''} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif" placeholder="e.g. Sapphire Reserve" />
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                <div className="sm:col-span-3">
+                  <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Card Name')}</label>
+                  <input required type="text" value={formData.name || ''} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif" placeholder="e.g. Sapphire Reserve" />
+                </div>
+                <div className="sm:col-span-1">
+                  <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Last 4')}</label>
+                  <input type="text" maxLength="4" value={formData.last4Digits || ''} onChange={e => setFormData({...formData, last4Digits: e.target.value.replace(/\D/g, '')})} className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-mono tracking-widest text-center" placeholder="1234" />
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
