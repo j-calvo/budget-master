@@ -185,3 +185,53 @@ pm2 restart personal-finance-app
 | Database errors              | Run `cd backend && npx prisma migrate deploy`                            |
 | PM2 not found                | Run `npm install -g pm2`                                                 |
 | App crashes on startup       | Check logs: `pm2 logs personal-finance-app` or `cat logs/err.log`        |
+
+---
+
+## Public Access via Cloudflare Tunnel
+
+To securely access your local dashboard from the public internet (without port-forwarding your home router), the best approach is using **Cloudflare Tunnels**. 
+
+### 1. Quick Temporary Access (No Domain Required)
+If you just want to test on your phone instantly via a temporary random URL:
+
+1. Install `cloudflared` via Homebrew:
+   ```bash
+   brew install cloudflare/cloudflare/cloudflared
+   ```
+2. Start a Quick Tunnel pointing to the PM2 port:
+   ```bash
+   cloudflared tunnel --url http://localhost:5001
+   ```
+3. Look for the output line: `https://<random-words>.trycloudflare.com`. This is your secure public link.
+
+### 2. Permanent Setup (Requires a Cloudflare Account & Domain)
+To bind the app to a custom domain (e.g., `budget.yourdomain.com`) permanently:
+
+1. Log in to Cloudflare from your terminal:
+   ```bash
+   cloudflared tunnel login
+   ```
+2. Create a new tunnel:
+   ```bash
+   cloudflared tunnel create finance-app
+   ```
+3. Route your domain to the tunnel:
+   ```bash
+   cloudflared tunnel route dns finance-app budget.yourdomain.com
+   ```
+4. Create a configuration file at `~/.cloudflared/config.yml`:
+   ```yaml
+   tunnel: <Tunnel-UUID-from-step-2>
+   credentials-file: /Users/<your-user>/.cloudflared/<Tunnel-UUID>.json
+
+   ingress:
+     - hostname: budget.yourdomain.com
+       service: http://localhost:5001
+     - service: http_status:404
+   ```
+5. Install and run the tunnel as a persistent background service (just like PM2):
+   ```bash
+   sudo cloudflared service install
+   sudo cloudflared service start
+   ```
