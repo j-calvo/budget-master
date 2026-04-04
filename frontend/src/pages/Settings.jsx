@@ -5,6 +5,7 @@ import { useSettings } from '../context/SettingsContext';
 import SettingsData from '../components/SettingsData';
 import SettingsBackup from '../components/SettingsBackup';
 import FamilySettings from '../components/FamilySettings';
+import SettingsEmail from '../components/SettingsEmail';
 import AmountInput from '../components/AmountInput';
 
 const CURR_URL = '/currencies';
@@ -53,7 +54,7 @@ export default function Settings() {
       <h1 className="text-3xl md:text-4xl text-white tracking-wide glow-text-white mb-1 break-words leading-tight">{t('Global Settings')}</h1>
 
       <div className="flex bg-brand-900/60 p-1.5 rounded-2xl border border-brand-600/30 mb-8 shadow-inner max-w-lg mx-auto w-full overflow-x-auto custom-scrollbar relative z-10">
-        {['preferences', 'family', 'data', 'backup'].map((tab) => (
+        {['preferences', 'family', 'email', 'data', 'backup'].map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -63,7 +64,7 @@ export default function Settings() {
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            {t(tab === 'preferences' ? 'Localization' : tab === 'family' ? 'Workspace' : tab === 'data' ? 'Data' : 'Backup')}
+            {t(tab === 'preferences' ? 'Localization' : tab === 'family' ? 'Workspace' : tab === 'email' ? 'Email Sync' : tab === 'data' ? 'Data' : 'Backup')}
           </button>
         ))}
       </div>
@@ -226,6 +227,8 @@ export default function Settings() {
         <SettingsData />
       ) : activeTab === 'backup' ? (
         <SettingsBackup />
+      ) : activeTab === 'email' ? (
+        <SettingsEmail />
       ) : (
         <FamilySettings />
       )}

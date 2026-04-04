@@ -38,6 +38,9 @@ model Family {
   banks        Bank[]
   accountTypes AccountType[]
   adjustments  AccountAdjustment[]
+  emailConfig  EmailServerConfig?
+  parsingRules ParsingRule[]
+  pendingTransactions PendingTransaction[]
 }
 
 model FamilyMember {
@@ -59,6 +62,7 @@ model Account {
   name        String
   type        String   // checking, savings, investment
   currency    String   @default("USD")
+  last4Digits String?  // the last 4 digits of the account
   balance     Float    @default(0)
   isLiquid    Boolean  @default(true) // true = available for daily spending, false = long-term asset
   institution String?
@@ -77,8 +81,9 @@ model CreditCard {
   limit     Float
   balance   Float    @default(0)
   dueDate   Int      // day of the month (1-31)
-  apr       Float
+  apr          Float
   currency     String   @default("USD")
+  last4Digits  String?  // the last 4 digits of the card
   statementDay Int      @default(1)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -249,4 +254,58 @@ model AccountAdjustment {
 
   account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
   family  Family  @relation(fields: [familyId], references: [id], onDelete: Cascade)
+}
+
+model EmailServerConfig {
+  id            String   @id @default(uuid())
+  familyId      String   @unique
+  host          String
+  port          Int      @default(993)
+  secure        Boolean  @default(true)
+  user          String
+  password      String   // Encrypted app password
+  syncInterval  Int      @default(15) // Minutes
+  isActive      Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+}
+
+model ParsingRule {
+  id              String   @id @default(uuid())
+  familyId        String
+  name            String
+  senderEmail     String   // e.g. "notifican@bac.com"
+  subjectRegex    String?
+  bodyRegex       String   // e.g. "Monto: (.*?) Comercio: (.*)"
+  currency        String   @default("USD")
+  amountGroup     Int      @default(1)
+  merchantGroup   Int      @default(2)
+  currencyGroup   Int?     // Optional regex group index for dynamic extraction (e.g. USD or CRC)
+  cardGroup       Int?     // Optional regex group index to extract last 4 digits
+  transactionType String   @default("expense")
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+}
+
+model PendingTransaction {
+  id                  String   @id @default(uuid())
+  familyId            String
+  date                DateTime @default(now())
+  amount              Float
+  currency            String   @default("USD")
+  type                String   @default("expense")
+  merchantDescription String
+  cardLast4           String?  // extracted last 4 digits of the card
+  sourceEmailId       String?  @unique // IMAP UID to prevent duplicates
+  status              String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  rawBody             String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  
+  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
 }

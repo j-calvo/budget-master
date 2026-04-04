@@ -18,7 +18,7 @@ exports.getCreditCards = async (req, res) => {
 // Create a new credit card
 exports.createCreditCard = async (req, res) => {
   try {
-    const { name, limit, balance, dueDate, statementDay, apr, currency } = req.body;
+    const { name, limit, balance, dueDate, statementDay, apr, currency, last4Digits } = req.body;
     
     if (!name || !limit) {
       return res.status(400).json({ error: 'Name and limit are required' });
@@ -34,6 +34,7 @@ exports.createCreditCard = async (req, res) => {
         statementDay: parseInt(statementDay) || 1,
         apr: parseFloat(apr) || 0,
         currency: currency || 'USD',
+        last4Digits: last4Digits ? String(last4Digits).slice(-4) : null,
       },
     });
     
@@ -48,7 +49,7 @@ exports.createCreditCard = async (req, res) => {
 exports.updateCreditCard = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, limit, balance, dueDate, statementDay, apr, currency } = req.body;
+    const { name, limit, balance, dueDate, statementDay, apr, currency, last4Digits } = req.body;
     
     const card = await prisma.creditCard.update({
       where: { id, familyId: req.user.familyId },
@@ -60,6 +61,7 @@ exports.updateCreditCard = async (req, res) => {
         statementDay: parseInt(statementDay),
         apr: parseFloat(apr),
         currency,
+        last4Digits: last4Digits ? String(last4Digits).slice(-4) : null,
       },
     });
     
