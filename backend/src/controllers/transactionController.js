@@ -56,13 +56,20 @@ exports.createTransaction = async (req, res) => {
     const { accountId, creditCardId, categoryId, amount, date, description, payee, type } = req.body;
     
     // Verify account or credit card belongs to user
+    let account = null;
+    let card = null;
+    
     if (accountId) {
-      const account = await prisma.account.findUnique({ where: { id: accountId } });
+      account = await prisma.account.findUnique({ where: { id: accountId } });
       if (!account || account.familyId !== req.user.familyId) return res.status(403).json({ error: 'Unauthorized or account not found' });
-    } else if (creditCardId) {
-      const card = await prisma.creditCard.findUnique({ where: { id: creditCardId } });
+    }
+    
+    if (creditCardId) {
+      card = await prisma.creditCard.findUnique({ where: { id: creditCardId } });
       if (!card || card.familyId !== req.user.familyId) return res.status(403).json({ error: 'Unauthorized or credit card not found' });
-    } else {
+    }
+    
+    if (!accountId && !creditCardId) {
       return res.status(400).json({ error: 'Must provide accountId or creditCardId' });
     }
 
@@ -82,19 +89,31 @@ exports.createTransaction = async (req, res) => {
     });
     
     // Update balance
-    if (accountId) {
-      const balanceChange = type === 'expense' ? -Math.abs(parsedAmount) : Math.abs(parsedAmount);
+    if (type === 'transfer' && accountId && creditCardId) {
+      // Direct transfer (Credit Card Payment)
       await prisma.account.update({
         where: { id: accountId },
-        data: { balance: { increment: balanceChange } }
+        data: { balance: { decrement: parsedAmount } }
       });
-    } else if (creditCardId) {
-      // CC expense increases balance
-      const balanceChange = type === 'expense' ? Math.abs(parsedAmount) : -Math.abs(parsedAmount);
       await prisma.creditCard.update({
         where: { id: creditCardId },
-        data: { balance: { increment: balanceChange } }
+        data: { balance: { decrement: parsedAmount } }
       });
+    } else {
+      if (accountId) {
+        const balanceChange = type === 'expense' ? -Math.abs(parsedAmount) : Math.abs(parsedAmount);
+        await prisma.account.update({
+          where: { id: accountId },
+          data: { balance: { increment: balanceChange } }
+        });
+      } else if (creditCardId) {
+        // CC expense increases balance
+        const balanceChange = type === 'expense' ? Math.abs(parsedAmount) : -Math.abs(parsedAmount);
+        await prisma.creditCard.update({
+          where: { id: creditCardId },
+          data: { balance: { increment: balanceChange } }
+        });
+      }
     }
 
     res.status(201).json(transaction);
@@ -120,27 +139,47 @@ exports.updateTransaction = async (req, res) => {
     if (familyId !== req.user.familyId) return res.status(403).json({ error: 'Unauthorized' });
 
     // Verify new source
+    let account = null;
+    let card = null;
+
     if (accountId) {
-      const account = await prisma.account.findUnique({ where: { id: accountId } });
+      account = await prisma.account.findUnique({ where: { id: accountId } });
       if (!account || account.familyId !== req.user.familyId) return res.status(403).json({ error: 'Unauthorized account' });
-    } else if (creditCardId) {
-      const card = await prisma.creditCard.findUnique({ where: { id: creditCardId } });
+    }
+    
+    if (creditCardId) {
+      card = await prisma.creditCard.findUnique({ where: { id: creditCardId } });
       if (!card || card.familyId !== req.user.familyId) return res.status(403).json({ error: 'Unauthorized credit card' });
     }
 
+    if (!accountId && !creditCardId) {
+      return res.status(400).json({ error: 'Must provide accountId or creditCardId' });
+    }
+
     // Revert old balance
-    if (oldTx.accountId) {
-      const oldBalanceChange = oldTx.type === 'expense' ? Math.abs(oldTx.amount) : -Math.abs(oldTx.amount);
-      await prisma.account.update({
-        where: { id: oldTx.accountId },
-        data: { balance: { increment: oldBalanceChange } }
-      });
-    } else if (oldTx.creditCardId) {
-      const oldBalanceChange = oldTx.type === 'expense' ? -Math.abs(oldTx.amount) : Math.abs(oldTx.amount);
-      await prisma.creditCard.update({
-        where: { id: oldTx.creditCardId },
-        data: { balance: { increment: oldBalanceChange } }
-      });
+    if (oldTx.type === 'transfer' && oldTx.accountId && oldTx.creditCardId) {
+       await prisma.account.update({
+         where: { id: oldTx.accountId },
+         data: { balance: { increment: Math.abs(oldTx.amount) } }
+       });
+       await prisma.creditCard.update({
+         where: { id: oldTx.creditCardId },
+         data: { balance: { increment: Math.abs(oldTx.amount) } }
+       });
+    } else {
+      if (oldTx.accountId) {
+        const oldBalanceChange = oldTx.type === 'expense' ? Math.abs(oldTx.amount) : -Math.abs(oldTx.amount);
+        await prisma.account.update({
+          where: { id: oldTx.accountId },
+          data: { balance: { increment: oldBalanceChange } }
+        });
+      } else if (oldTx.creditCardId) {
+        const oldBalanceChange = oldTx.type === 'expense' ? -Math.abs(oldTx.amount) : Math.abs(oldTx.amount);
+        await prisma.creditCard.update({
+          where: { id: oldTx.creditCardId },
+          data: { balance: { increment: oldBalanceChange } }
+        });
+      }
     }
 
     const parsedAmount = parseFloat(amount);
@@ -160,18 +199,29 @@ exports.updateTransaction = async (req, res) => {
     });
 
     // Apply new balance
-    if (accountId) {
-      const newBalanceChange = type === 'expense' ? -Math.abs(parsedAmount) : Math.abs(parsedAmount);
+    if (type === 'transfer' && accountId && creditCardId) {
       await prisma.account.update({
         where: { id: accountId },
-        data: { balance: { increment: newBalanceChange } }
+        data: { balance: { decrement: parsedAmount } }
       });
-    } else if (creditCardId) {
-      const newBalanceChange = type === 'expense' ? Math.abs(parsedAmount) : -Math.abs(parsedAmount);
       await prisma.creditCard.update({
         where: { id: creditCardId },
-        data: { balance: { increment: newBalanceChange } }
+        data: { balance: { decrement: parsedAmount } }
       });
+    } else {
+      if (accountId) {
+        const newBalanceChange = type === 'expense' ? -Math.abs(parsedAmount) : Math.abs(parsedAmount);
+        await prisma.account.update({
+          where: { id: accountId },
+          data: { balance: { increment: newBalanceChange } }
+        });
+      } else if (creditCardId) {
+        const newBalanceChange = type === 'expense' ? Math.abs(parsedAmount) : -Math.abs(parsedAmount);
+        await prisma.creditCard.update({
+          where: { id: creditCardId },
+          data: { balance: { increment: newBalanceChange } }
+        });
+      }
     }
 
     res.json(transaction);
@@ -196,18 +246,29 @@ exports.deleteTransaction = async (req, res) => {
     await prisma.transaction.delete({ where: { id } });
 
     // Revert balance
-    if (transaction.accountId) {
-      const revertChange = transaction.type === 'expense' ? Math.abs(transaction.amount) : -Math.abs(transaction.amount);
+    if (transaction.type === 'transfer' && transaction.accountId && transaction.creditCardId) {
       await prisma.account.update({
         where: { id: transaction.accountId },
-        data: { balance: { increment: revertChange } }
+        data: { balance: { increment: Math.abs(transaction.amount) } }
       });
-    } else if (transaction.creditCardId) {
-      const revertChange = transaction.type === 'expense' ? -Math.abs(transaction.amount) : Math.abs(transaction.amount);
       await prisma.creditCard.update({
         where: { id: transaction.creditCardId },
-        data: { balance: { increment: revertChange } }
+        data: { balance: { increment: Math.abs(transaction.amount) } }
       });
+    } else {
+      if (transaction.accountId) {
+        const revertChange = transaction.type === 'expense' ? Math.abs(transaction.amount) : -Math.abs(transaction.amount);
+        await prisma.account.update({
+          where: { id: transaction.accountId },
+          data: { balance: { increment: revertChange } }
+        });
+      } else if (transaction.creditCardId) {
+        const revertChange = transaction.type === 'expense' ? -Math.abs(transaction.amount) : Math.abs(transaction.amount);
+        await prisma.creditCard.update({
+          where: { id: transaction.creditCardId },
+          data: { balance: { increment: revertChange } }
+        });
+      }
     }
 
     res.json({ success: true });

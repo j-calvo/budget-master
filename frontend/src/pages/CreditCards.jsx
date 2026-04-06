@@ -11,8 +11,14 @@ export default function CreditCards() {
   const { t } = useTranslation();
   const { settings, currencies } = useSettings();
   const [cards, setCards] = useState([]);
+  const [accounts, setAccounts] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentData, setPaymentData] = useState({
+    creditCardId: null, accountId: '', amount: '', date: new Date().toISOString().split('T')[0], categoryId: ''
+  });
   const [deleteData, setDeleteData] = useState({ id: null, name: null });
   const [formData, setFormData] = useState({ 
     id: null, name: '', limit: '', balance: 0, dueDate: 1, statementDay: 1, apr: 0, currency: 'USD', last4Digits: '' 
@@ -25,8 +31,14 @@ export default function CreditCards() {
 
   const fetchData = async () => {
     try {
-      const cardRes = await api.get(API_URL);
+      const [cardRes, accRes, catRes] = await Promise.all([
+        api.get(API_URL),
+        api.get('/accounts'),
+        api.get('/categories')
+      ]);
       setCards(cardRes.data);
+      setAccounts(accRes.data);
+      setCategories(catRes.data);
       if (currencies.length > 0 && formData.currency === 'USD') {
         setFormData(p => ({ ...p, currency: currencies[0].code }));
       }
@@ -70,6 +82,41 @@ export default function CreditCards() {
   const openEditModal = (card) => {
     setFormData(card);
     setShowModal(true);
+  };
+
+  const openPaymentModal = (card) => {
+    const defaultCat = categories.find(c => c.name.toLowerCase().includes('payment') || c.name.toLowerCase().includes('transfer'));
+    setPaymentData({
+      creditCardId: card.id,
+      accountId: accounts.length > 0 ? accounts[0].id : '',
+      amount: '',
+      date: new Date().toISOString().split('T')[0],
+      categoryId: defaultCat ? defaultCat.id : (categories.length > 0 ? categories[0].id : '')
+    });
+    setShowPaymentModal(true);
+  };
+
+  const handleSubmitPayment = async (e) => {
+    e.preventDefault();
+    if (!paymentData.accountId || !paymentData.categoryId) {
+      alert(t('Please select a funding account and category.'));
+      return;
+    }
+    try {
+      await api.post('/transactions', {
+        accountId: paymentData.accountId,
+        creditCardId: paymentData.creditCardId,
+        categoryId: paymentData.categoryId,
+        amount: parseFloat(paymentData.amount),
+        date: paymentData.date,
+        description: 'Credit Card Payment',
+        type: 'transfer'
+      });
+      setShowPaymentModal(false);
+      fetchData();
+    } catch (err) {
+      console.error('Payment failed', err);
+    }
   };
 
   return (
@@ -152,10 +199,18 @@ export default function CreditCards() {
                   <div className="w-full bg-brand-900/50 rounded-full h-1.5 mb-2 overflow-hidden border border-brand-600/30">
                     <div className={`${isHighUtil ? 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.6)]' : 'bg-gold-500 shadow-[0_0_8px_rgba(212,175,55,0.6)]'} h-full rounded-full transition-all duration-1000`} style={{ width: `${utilization}%` }}></div>
                   </div>
-                  <div className="flex justify-between text-xs font-medium uppercase tracking-wider">
+                  <div className="flex justify-between items-baseline mb-4 text-xs font-medium uppercase tracking-wider">
                     <span className={isHighUtil ? 'text-rose-400' : 'text-gold-400'}>{t('{{utilization}}% Utilized', { utilization })}</span>
                     <span className="text-slate-400">{t('{{available}} avl.', { available: formatCurrency(card.limit - card.balance, card.currency) })}</span>
                   </div>
+                  
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); openPaymentModal(card); }} 
+                    className="w-full py-2.5 text-[11px] uppercase tracking-widest font-bold text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 rounded-xl flex justify-center items-center gap-2 transition-colors border border-emerald-500/20"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                    {t('Pay Card')}
+                  </button>
                 </div>
               </div>
             );
@@ -271,6 +326,75 @@ export default function CreditCards() {
                 {t('Delete')}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payment Modal */}
+      {showPaymentModal && (
+        <div className="fixed inset-0 bg-brand-900/80 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="glass-card p-8 w-full max-w-sm shadow-2xl border-emerald-500/20 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl -z-10 mix-blend-screen"></div>
+            
+            <h2 className="text-2xl font-serif text-white mb-6 tracking-wide relative">
+              {t('Pay Credit Card')}
+              <span className="absolute -bottom-2 left-0 w-12 h-[2px] bg-emerald-500/50"></span>
+            </h2>
+            
+            <form onSubmit={handleSubmitPayment} className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('From Account')}</label>
+                <select 
+                  required
+                  value={paymentData.accountId} 
+                  onChange={e => setPaymentData({...paymentData, accountId: e.target.value})} 
+                  className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-white transition-all appearance-none cursor-pointer"
+                >
+                  {accounts.map(acc => <option key={acc.id} value={acc.id} className="bg-brand-800">{acc.name} - {formatCurrency(acc.balance, acc.currency)}</option>)}
+                  {accounts.length === 0 && <option value="">{t('No accounts available')}</option>}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Amount')}</label>
+                <AmountInput 
+                  required 
+                  value={paymentData.amount} 
+                  onChange={e => setPaymentData({...paymentData, amount: e.target.value})} 
+                  className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-white transition-all font-serif" 
+                  placeholder="0.00" 
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Date')}</label>
+                  <input 
+                    type="date" 
+                    required 
+                    value={paymentData.date} 
+                    onChange={e => setPaymentData({...paymentData, date: e.target.value})} 
+                    className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-slate-300 transition-all font-serif" 
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Category')}</label>
+                  <select 
+                    required
+                    value={paymentData.categoryId} 
+                    onChange={e => setPaymentData({...paymentData, categoryId: e.target.value})} 
+                    className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-white transition-all appearance-none cursor-pointer text-xs"
+                  >
+                    {categories.map(cat => <option key={cat.id} value={cat.id} className="bg-brand-800 truncate">{cat.name}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-brand-600/30">
+                <button type="button" onClick={() => setShowPaymentModal(false)} className="px-4 py-2 text-sm text-slate-400 hover:text-white transition-colors">{t('Cancel')}</button>
+                <button type="submit" className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg px-6 py-2 text-sm transition-colors shadow-[0_0_15px_rgba(16,185,129,0.3)] font-medium tracking-wide">{t('Pay Now')}</button>
+              </div>
+            </form>
           </div>
         </div>
       )}
