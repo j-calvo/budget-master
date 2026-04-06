@@ -137,7 +137,9 @@ export default function Budgets() {
   const getBudgetStatus = (budget) => {
     const spent = parseFloat(budget.spent) || 0;
     const amount = parseFloat(budget.amount) || 0;
-    if (spent >= amount && amount > 0) return 'PAID';
+    const isFixed = budget.category?.type === 'fixed_expense';
+    
+    if ((spent >= amount && amount > 0) || (isFixed && spent > 0)) return 'PAID';
     
     const today = new Date();
     const currentDay = today.getDate();
