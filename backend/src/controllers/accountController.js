@@ -92,9 +92,14 @@ exports.adjustBalance = async (req, res) => {
     const { id } = req.params;
     const { amount, type = 'contribution', note = '', date } = req.body;
 
-    const delta = parseFloat(amount);
+    let delta = parseFloat(amount);
     if (isNaN(delta) || delta === 0) {
       return res.status(400).json({ error: 'amount must be a non-zero number' });
+    }
+
+    // Force negative for withdrawals
+    if (type === 'withdrawal') {
+      delta = -Math.abs(delta);
     }
 
     const account = await prisma.account.findUnique({
