@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  personal-finance-app:
+    build: .
+    container_name: personal-finance-app
+    restart: unless-stopped
+    ports:
+      - "5001:5001"
+    volumes:
+      # Persist the SQLite database
+      - ./data:/app/backend/data
+      # Persist any file uploads (receipts, CSVs, etc.)
+      - ./uploads:/app/backend/uploads
+    environment:
+      - NODE_ENV=production
+      - PORT=5001
+      - DATABASE_URL=file:./data/dev.db
