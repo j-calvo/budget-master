@@ -20,6 +20,7 @@ export default function Dashboard() {
     savingsRate: 0,
   });
   const [chartData, setChartData] = useState([]);
+  const [transactions, setTransactions] = useState([]);
   const [recentTransactions, setRecentTransactions] = useState([]);
   const [cards, setCards] = useState([]);
   const [loans, setLoans] = useState([]);
@@ -140,6 +141,7 @@ export default function Dashboard() {
         setChartData(cycles);
         
         // 5. Recent 5 Transactions
+        setTransactions(transactions);
         const sortedTx = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
         setRecentTransactions(sortedTx.slice(0, 5));
 
