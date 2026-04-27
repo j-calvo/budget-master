@@ -1,253 +1,253 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { formatCurrency } from '../lib/currencyUtils';
 import { useSettings } from '../context/SettingsContext';
 import { 
-  Calendar, 
+  Calendar as CalendarIcon, 
   CreditCard, 
   Banknote, 
-  ArrowRightLeft, 
-  AlertCircle,
+  Clock,
   CheckCircle2,
-  Clock
+  ChevronLeft,
+  ChevronRight,
+  Info
 } from 'lucide-react';
 
-export default function FinancialTimeline({ cards, loans, metrics, budgets = [], transactions = [] }) {
+export default function FinancialCalendar({ cards, loans, metrics, budgets = [], transactions = [] }) {
   const { t } = useTranslation();
   const { settings, currencies } = useSettings();
+  const [selectedDay, setSelectedDay] = useState(new Date().getDate());
+  
   const today = new Date();
   const currentYear = today.getFullYear();
   const currentMonth = today.getMonth();
   const currentDay = today.getDate();
-  const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-  const payFrequency = settings?.payFrequency || 'monthly';
-  const payDay1 = settings?.payDay || 15;
-  const payDay2 = settings?.payDay2 || 28;
-  const payDayOfWeek = settings?.payDayOfWeek ?? 5;
+  const firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay();
+  const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+  
+  const daysInMonth = Array.from({ length: lastDayOfMonth }, (_, i) => i + 1);
+  const blankDays = Array.from({ length: firstDayOfMonth }, (_, i) => i);
 
   const payDays = useMemo(() => {
     const days = [];
+    const lastDay = lastDayOfMonth;
+    const { payFrequency = 'monthly', payDay: payDay1 = 15, payDay2 = 28, payDayOfWeek = 5 } = settings || {};
+
     if (payFrequency === 'monthly') {
-      days.push(Math.min(payDay1, lastDayOfMonth));
+      days.push(Math.min(payDay1, lastDay));
     } else if (payFrequency === 'twice_monthly') {
-      days.push(Math.min(payDay1, lastDayOfMonth));
-      days.push(Math.min(payDay2, lastDayOfMonth));
+      days.push(Math.min(payDay1, lastDay));
+      days.push(Math.min(payDay2, lastDay));
     } else if (payFrequency === 'weekly') {
-      for (let d = 1; d <= lastDayOfMonth; d++) {
+      for (let d = 1; d <= lastDay; d++) {
         const dateObj = new Date(currentYear, currentMonth, d);
-        if (dateObj.getDay() === payDayOfWeek) {
-          days.push(d);
-        }
+        if (dateObj.getDay() === payDayOfWeek) days.push(d);
       }
     }
-    // Remove duplicates (e.g., if payDay1 == payDay2 somehow) and sort
     return [...new Set(days)].sort((a, b) => a - b);
-  }, [payFrequency, payDay1, payDay2, payDayOfWeek, lastDayOfMonth, currentYear, currentMonth]);
-  const daysInMonth = Array.from({ length: lastDayOfMonth }, (_, i) => i + 1);
+  }, [settings, lastDayOfMonth, currentYear, currentMonth]);
 
-  // Identify important days
   const events = useMemo(() => {
     const ev = {};
-    
-    // Pay Days
-    payDays.forEach(pd => {
-      ev[pd] = ev[pd] || [];
-      ev[pd].push({ type: 'payday', label: t('Pay Day'), icon: <Banknote className="w-4 h-4 text-emerald-400" /> });
-    });
+    const addEvent = (day, data) => {
+      if (!ev[day]) ev[day] = [];
+      ev[day].push(data);
+    };
 
-    // Credit Card Due Dates
+    payDays.forEach(pd => addEvent(pd, { 
+      type: 'payday', label: t('Salary Payment'), icon: <Banknote className="w-3 h-3 text-emerald-400" />, color: 'emerald' 
+    }));
+
     cards.forEach(card => {
-      // Logic: Paid if any payment transaction exists this month
       const isPaid = transactions.some(tx => 
         tx.creditCardId === card.id && 
         (tx.type === 'transfer' || tx.type === 'expense') && 
-        new Date(tx.date).getMonth() === today.getMonth() &&
-        new Date(tx.date).getFullYear() === today.getFullYear()
+        new Date(tx.date).getMonth() === currentMonth &&
+        new Date(tx.date).getFullYear() === currentYear
       );
-
-      ev[card.dueDate] = ev[card.dueDate] || [];
-      ev[card.dueDate].push({ 
+      addEvent(card.dueDate, { 
         type: 'card', 
-        label: `${card.name}`, 
-        amount: isPaid ? 0 : card.balance, 
+        label: card.name, 
+        amount: card.balance, 
         currency: card.currency,
         isPaid,
-        icon: isPaid 
-          ? <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-          : <CreditCard className="w-4 h-4 text-gold-400" /> 
+        icon: <CreditCard className="w-3 h-3 text-gold-400" />,
+        color: 'gold'
       });
     });
 
-    // Loan Due Dates
     loans.forEach(loan => {
       const loanDate = new Date(loan.nextDueDate);
-      if (loanDate.getMonth() === today.getMonth() && loanDate.getFullYear() === today.getFullYear()) {
-        const day = loanDate.getDate();
-        
-        // Logic: Paid if any 'installment' payment exists this month
+      if (loanDate.getMonth() === currentMonth && loanDate.getFullYear() === currentYear) {
         const isPaid = loan.payments?.some(p => {
           const pDate = new Date(p.paymentDate);
-          return p.type === 'installment' && 
-                 pDate.getMonth() === today.getMonth() && 
-                 pDate.getFullYear() === today.getFullYear();
+          return p.type === 'installment' && pDate.getMonth() === currentMonth && pDate.getFullYear() === currentYear;
         });
-
-        ev[day] = ev[day] || [];
-        ev[day].push({ 
+        addEvent(loanDate.getDate(), { 
           type: 'loan', 
-          label: `${loan.name}`, 
-          amount: isPaid ? 0 : loan.monthlyPayment, 
+          label: loan.name, 
+          amount: loan.monthlyPayment, 
           currency: loan.currency,
           isPaid,
-          icon: isPaid 
-            ? <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-            : <Clock className="w-4 h-4 text-blue-400" /> 
+          icon: <Clock className="w-3 h-3 text-blue-400" />,
+          color: 'blue'
         });
       }
     });
 
-    // Budget Paydays
     budgets.forEach(budget => {
       if (budget.payDay) {
         const spent = parseFloat(budget.spent) || 0;
         const amount = parseFloat(budget.amount) || 0;
         const isFixed = budget.category?.type === 'fixed_expense';
-        // Paid if spent meets budget OR if it's a fixed bill and we've paid something
         const isPaid = (spent >= amount && amount > 0) || (isFixed && spent > 0);
-        ev[budget.payDay] = ev[budget.payDay] || [];
-        ev[budget.payDay].push({ 
+        addEvent(budget.payDay, { 
           type: 'budget', 
-          label: `${budget.category?.name || 'Budget'} Payday`, 
+          label: budget.category?.name || 'Budget', 
           amount: budget.amount, 
           currency: budget.currency,
           isPaid,
-          icon: isPaid 
-            ? <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-            : <Banknote className="w-4 h-4 text-gold-400" /> 
+          icon: <Banknote className="w-3 h-3 text-amber-400" />,
+          color: 'amber'
         });
       }
     });
 
     return ev;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cards, loans, budgets, payDays, t, currentMonth, currentYear]);
+  }, [cards, loans, budgets, payDays, transactions, currentMonth, currentYear, t]);
 
-  // Calculate liquidity forecast
-  // "Bills due before next payday"
-  const nextPayDay = useMemo(() => {
-    return payDays.find(d => d > currentDay) || (lastDayOfMonth + 1);
-  }, [payDays, currentDay, lastDayOfMonth]);
-
-  const billsBeforePayday = useMemo(() => {
-    let total = 0;
-    
-    // This is a simplified calculation for the UI
-    Object.keys(events).forEach(day => {
-      const d = parseInt(day);
-      if (d >= currentDay && d < nextPayDay) {
-        events[day].forEach(e => {
-          if (e.type === 'card' || e.type === 'loan') {
-            // We'd ideally convert here, but for UI we assume base currency if it's just a forecast
-            total += e.amount || 0;
-          }
-        });
-      }
-    });
-    return total;
-  }, [events, currentDay, nextPayDay]);
-
-  const isLiquidityLow = (metrics?.totalAssets ?? metrics?.netWorth) < billsBeforePayday;
-
-  const formatC = (amount, currencyCode) => {
-    return formatCurrency(amount, currencyCode || settings?.defaultCurrency || 'USD', currencies, settings?.language);
-  };
+  const selectedEvents = events[selectedDay] || [];
 
   return (
-    <div className="glass-card p-6 relative overflow-hidden group">
-      <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl -z-10 mix-blend-screen transition-colors group-hover:bg-emerald-500/10"></div>
+    <div className="glass-card p-6 min-h-[500px] flex flex-col md:flex-row gap-8 relative overflow-hidden">
+      <div className="absolute top-0 left-0 w-64 h-64 bg-gold-500/5 rounded-full blur-3xl -z-10 mix-blend-screen"></div>
       
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-        <div>
-          <h2 className="text-xl font-serif text-white tracking-wide flex items-center gap-3">
-            <Calendar className="w-5 h-5 text-gold-500" />
-            {t('Payment Timeline')}
-          </h2>
-          <p className="text-xs font-medium text-slate-400 mt-1 uppercase tracking-widest">
-            {today.toLocaleString(settings?.language || 'en-US', { month: 'long', year: 'numeric' })}
-          </p>
-        </div>
-
-        <div className={`px-4 py-2 rounded-xl flex items-center gap-3 border ${isLiquidityLow ? 'bg-rose-500/10 border-rose-500/20' : 'bg-emerald-500/10 border-emerald-500/20'}`}>
-          {isLiquidityLow ? <AlertCircle className="w-5 h-5 text-rose-400" /> : <CheckCircle2 className="w-5 h-5 text-emerald-400" />}
-          <div>
-            <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">{t('Liquidity Forecast')}</p>
-            <p className={`text-sm font-serif ${isLiquidityLow ? 'text-rose-400' : 'text-emerald-400'}`}>
-              {isLiquidityLow ? t('Low funds for upcoming bills') : t('Safe to Spend')}
-            </p>
+      {/* Calendar Side */}
+      <div className="flex-1 flex flex-col">
+        <div className="flex justify-between items-center mb-6">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-gold-500/10 text-gold-400 shadow-[0_0_15px_rgba(212,175,55,0.2)]">
+              <CalendarIcon className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-xl font-serif text-white tracking-tight">{t('Financial Calendar')}</h2>
+              <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">
+                {today.toLocaleString(settings?.language || 'en-US', { month: 'long', year: 'numeric' })}
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button className="p-2 rounded-lg bg-brand-800/50 text-slate-500 hover:text-white transition-colors cursor-not-allowed opacity-50"><ChevronLeft className="w-4 h-4" /></button>
+            <button className="p-2 rounded-lg bg-brand-800/50 text-slate-500 hover:text-white transition-colors cursor-not-allowed opacity-50"><ChevronRight className="w-4 h-4" /></button>
           </div>
         </div>
-      </div>
 
-      {/* Timeline Area (Responsive grid/wrap instead of horizontal scroll) */}
-      <div className="w-full pb-6 mt-8">
-        <div className="flex flex-wrap gap-y-14 gap-x-1 sm:gap-x-2 md:gap-x-4 justify-center px-2 items-end">
+        {/* Days Header */}
+        <div className="grid grid-cols-7 gap-1 mb-2">
+          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+            <div key={d} className="text-center text-[10px] uppercase tracking-widest text-slate-500 font-black py-2">{t(d)}</div>
+          ))}
+        </div>
+
+        {/* Grid */}
+        <div className="grid grid-cols-7 gap-1 md:gap-2 flex-1">
+          {blankDays.map(i => <div key={`blank-${i}`} className="aspect-square opacity-0"></div>)}
           {daysInMonth.map(day => {
             const isToday = day === currentDay;
-            const isPast = day < currentDay;
-            const dayEvents = (events[day] || []).map(ev => ({
-              ...ev,
-              // If it's a general payday (income) and it's in the past, treat it as Done
-              isPaid: ev.isPaid || (ev.type === 'payday' && isPast)
-            }));
-            
+            const isSelected = day === selectedDay;
+            const dayEvents = events[day] || [];
+            const hasUnpaid = dayEvents.some(ev => ev.amount > 0 && !ev.isPaid);
+            const hasPaid = dayEvents.some(ev => ev.isPaid);
+
             return (
-              <div key={day} className={`flex flex-col items-center group/day relative w-10 sm:w-12 transition-opacity ${isPast ? 'opacity-40 hover:opacity-100' : 'opacity-100'}`}>
-                {/* Event Markers */}
-                <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex flex-row items-center justify-center z-10 w-max hover:z-30 group/events">
-                  {dayEvents.map((ev, idx) => {
-                    const statusClass = ev.isPaid 
-                      ? 'bg-emerald-500/20 border-emerald-400/50 shadow-[0_0_12px_rgba(16,185,129,0.4)]' 
-                      : (isPast ? 'bg-slate-800/50 border-slate-700/50' : 'bg-brand-900 border-brand-500/80');
-
-                    return (
-                      <div 
-                        key={idx} 
-                        className={`w-8 h-8 rounded-full flex items-center justify-center shadow-lg transform transition-all duration-300 relative cursor-pointer ${idx > 0 ? '-ml-4 group-hover/events:ml-1 shadow-[-4px_0_10px_rgba(0,0,0,0.5)]' : 'shadow-xl'} hover:!scale-125 hover:!z-50 ${statusClass}`} 
-                        style={{ zIndex: 20 - idx }}
-                        title={`${ev.label}${ev.amount ? ` - ${formatC(ev.amount, ev.currency)}` : ''}${ev.isPaid ? ` - ${t('Paid')}` : ''}`}
-                      >
-                        <div className="scale-90">
-                          {ev.isPaid ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : ev.icon}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Day Line & Number */}
-                <div className={`w-1 transition-all rounded-full ${isToday ? 'h-10 bg-gold-500 shadow-[0_0_10px_rgba(212,175,55,0.8)]' : 'h-6 bg-brand-600/30 group-hover/day:bg-brand-600/60'}`}></div>
-                <span className={`text-[10px] mt-2 font-bold tracking-tighter ${isToday ? 'text-gold-400' : 'text-slate-400 group-hover/day:text-slate-300'}`}>
+              <button
+                key={day}
+                onClick={() => setSelectedDay(day)}
+                className={`aspect-square rounded-xl md:rounded-2xl transition-all relative flex flex-col p-1.5 md:p-3 items-center md:items-start group
+                  ${isSelected ? 'bg-gold-500/20 ring-1 ring-gold-500/50 shadow-[0_0_20px_rgba(212,175,55,0.15)] z-10' : 'bg-brand-900/40 hover:bg-brand-800/60'}
+                  ${isToday ? 'border border-gold-500/40' : 'border border-brand-600/20'}
+                `}
+              >
+                <span className={`text-xs md:text-sm font-medium ${isSelected ? 'text-gold-400' : (isToday ? 'text-gold-400 font-bold' : 'text-slate-400')}`}>
                   {day}
                 </span>
                 
-                {isToday && (
-                  <span className="absolute -bottom-5 text-[8px] uppercase tracking-widest text-gold-500 font-black animate-pulse whitespace-nowrap">
-                    {t('Today')}
-                  </span>
-                )}
-              </div>
+                {/* Event Dots/Indicators */}
+                <div className="mt-auto flex flex-wrap gap-1 justify-center md:justify-start">
+                  {dayEvents.slice(0, 4).map((ev, i) => (
+                    <div 
+                      key={i} 
+                      className={`w-1 h-1 md:w-1.5 md:h-1.5 rounded-full shadow-sm
+                        ${ev.isPaid ? 'bg-emerald-400 shadow-emerald-400/50' : 
+                         ev.color === 'emerald' ? 'bg-emerald-400' : 
+                         ev.color === 'gold' ? 'bg-gold-400' : 
+                         ev.color === 'blue' ? 'bg-blue-400' : 'bg-slate-400'}
+                      `}
+                    />
+                  ))}
+                  {dayEvents.length > 4 && <div className="text-[8px] text-slate-500 font-bold leading-none">+{dayEvents.length - 4}</div>}
+                </div>
+
+                {isToday && <div className="absolute -top-1 -right-1 w-2 h-2 bg-gold-400 rounded-full animate-pulse shadow-[0_0_8px_rgba(212,175,55,1)]"></div>}
+              </button>
             );
           })}
         </div>
       </div>
 
-      <div className="mt-4 pt-4 border-t border-brand-600/30 flex flex-wrap gap-4 text-[10px] uppercase tracking-widest font-bold text-slate-400">
-        <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-emerald-400"></div> {t('Pay Day')}</div>
-        <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-gold-400"></div> {t('Credit Card Due')}</div>
-        <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-blue-400"></div> {t('Loan Installment')}</div>
-        <div className="flex items-center gap-1.5 ml-auto text-slate-400">
-          <ArrowRightLeft className="w-3 h-3" />
-          {t('Next Pay Day')}: {nextPayDay > lastDayOfMonth ? t('Next Month') : `${nextPayDay} ${t('of month')}`}
+      {/* Details Side */}
+      <div className="w-full md:w-64 lg:w-80 flex flex-col pt-4 md:pt-0">
+        <div className="bg-brand-900/40 rounded-3xl p-5 border border-brand-600/30 flex-1 flex flex-col">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 rounded-2xl bg-brand-800/80 flex items-center justify-center text-gold-400 font-serif italic text-xl">
+              {selectedDay}
+            </div>
+            <div>
+              <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">{t('Schedule for')}</p>
+              <h3 className="text-white font-medium">{new Date(currentYear, currentMonth, selectedDay).toLocaleDateString(settings?.language || 'en-US', { day: 'numeric', month: 'long' })}</h3>
+            </div>
+          </div>
+
+          <div className="flex-1 space-y-3 overflow-y-auto pr-1 custom-scrollbar">
+            {selectedEvents.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full opacity-30 text-center py-8">
+                <Info className="w-8 h-8 mb-2 text-slate-600" />
+                <p className="text-sm font-serif italic text-slate-400">{t('No obligations for this day')}</p>
+              </div>
+            ) : (
+              selectedEvents.map((ev, i) => (
+                <div key={i} className={`p-3 rounded-2xl border transition-all flex items-center gap-3 relative group
+                  ${ev.isPaid ? 'bg-emerald-500/5 border-emerald-500/10' : 'bg-brand-800/40 border-brand-600/30'}
+                `}>
+                  {ev.isPaid && <div className="absolute top-2 right-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /></div>}
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0
+                    ${ev.color === 'emerald' ? 'bg-emerald-500/10 text-emerald-400' : 
+                      ev.color === 'gold' ? 'bg-gold-500/10 text-gold-400' : 
+                      ev.color === 'blue' ? 'bg-blue-500/10 text-blue-400' : 'bg-slate-500/10 text-slate-400'}
+                  `}>
+                    {ev.icon}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className={`text-xs font-bold tracking-tight truncate ${ev.isPaid ? 'text-emerald-400/70' : 'text-white'}`}>{ev.label}</p>
+                    {ev.amount !== undefined && (
+                      <p className={`text-[10px] font-mono mt-0.5 ${ev.isPaid ? 'text-emerald-400/50 line-through' : 'text-slate-400'}`}>
+                        {formatCurrency(ev.amount, ev.currency, currencies, settings?.language)}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div className="mt-6 pt-6 border-t border-brand-600/30 flex flex-col gap-3">
+              <div className="flex items-center justify-between text-[10px] uppercase tracking-tighter font-bold">
+                <span className="text-slate-500">{t('Total for Day')}</span>
+                <span className="text-white">
+                  {formatCurrency(selectedEvents.reduce((sum, e) => sum + (e.amount || 0), 0), settings?.defaultCurrency, currencies, settings?.language)}
+                </span>
+              </div>
+          </div>
         </div>
       </div>
     </div>
