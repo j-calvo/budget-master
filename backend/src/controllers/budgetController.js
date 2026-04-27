@@ -122,6 +122,7 @@ exports.getBudgets = async (req, res) => {
     const allTransactions = await prisma.transaction.findMany({
       where: {
         date: { gte: startDate, lte: endDate },
+        type: 'expense',
         OR: [
           { account: { familyId: req.user.familyId } },
           { creditCard: { familyId: req.user.familyId } }
@@ -142,8 +143,8 @@ exports.getBudgets = async (req, res) => {
       if (!spendingMap[key]) {
         spendingMap[key] = { spent: 0, category: tx.category, currency };
       }
-      if (tx.type === 'expense') spendingMap[key].spent += tx.amount;
-      else if (tx.type === 'income') spendingMap[key].spent -= tx.amount;
+      // Since we filtered by type: 'expense' in the DB query, we just add the amount
+      spendingMap[key].spent += tx.amount;
     });
 
     // 3. Match with existing budgets and calculate spent
