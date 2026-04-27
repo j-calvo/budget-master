@@ -453,24 +453,30 @@ export default function Budgets() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
             {Object.entries(
               budgets.reduce((acc, b) => {
-                if (!acc[b.currency]) acc[b.currency] = { budgeted: 0, spent: 0 };
-                acc[b.currency].budgeted += parseFloat(b.amount) || 0;
-                acc[b.currency].spent += parseFloat(b.spent) || 0;
+                if (!acc[b.currency]) acc[b.currency] = { budgeted: 0, onBudgetPool: 0, unbudgetedPool: 0 };
+                if (b.isVirtual) {
+                  acc[b.currency].unbudgetedPool += parseFloat(b.spent) || 0;
+                } else {
+                  acc[b.currency].budgeted += parseFloat(b.amount) || 0;
+                  acc[b.currency].onBudgetPool += parseFloat(b.spent) || 0;
+                }
                 return acc;
               }, {})
             ).map(([curr, data]) => {
-              const isOver = data.spent > data.budgeted;
-              const pct = Math.min(100, Math.round((data.spent / data.budgeted) * 100)) || 0;
+              const totalSpent = data.onBudgetPool + data.unbudgetedPool;
+              const isOver = totalSpent > data.budgeted;
+              const pct = data.budgeted > 0 ? Math.round((totalSpent / data.budgeted) * 100) : (totalSpent > 0 ? 100 : 0);
+              
               return (
-                <div key={curr} className="glass-card p-5 md:p-6 border-brand-600/30 group relative overflow-hidden shadow-lg">
+                <div key={curr} className="glass-card p-5 md:p-6 border-brand-600/30 group relative overflow-hidden shadow-lg flex flex-col">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-gold-500/5 rounded-full blur-2xl -z-10 mix-blend-screen group-hover:bg-gold-500/10 transition-all"></div>
                   
-                  <div className="flex justify-between items-start mb-3">
+                  <div className="flex justify-between items-start mb-4">
                     <div>
-                      <h4 className="text-[10px] uppercase tracking-[0.2em] font-bold text-slate-400 mb-1">{t('Total in')} {curr}</h4>
-                      <p className="text-xl md:text-2xl font-serif text-white">{formatCurrency(data.budgeted, curr)}</p>
+                      <h4 className="text-[10px] uppercase tracking-[0.2em] font-bold text-slate-500 mb-1">{t('Summary for')} {curr}</h4>
+                      <p className="text-xl md:text-2xl font-serif text-white tracking-tight">{formatCurrency(data.budgeted, curr)} <span className="text-xs font-sans text-slate-500 italic tracking-normal ml-1 font-normal">{t('Planned')}</span></p>
                     </div>
-                    <div className={`px-2.5 py-1 rounded-lg text-[11px] font-bold ${
+                    <div className={`px-2.5 py-1 rounded-lg text-[11px] font-bold shadow-sm ${
                       isOver 
                         ? 'bg-rose-500/15 text-rose-400 border border-rose-500/20'
                         : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20'
@@ -479,23 +485,49 @@ export default function Budgets() {
                     </div>
                   </div>
 
-                  {/* Mini progress bar */}
-                  <div className="w-full bg-brand-900/60 rounded-full h-1.5 overflow-hidden border border-brand-600/30 mb-3">
+                  {/* Progress Bar with Unbudgeted Segment */}
+                  <div className="w-full bg-brand-900/60 rounded-full h-2 overflow-hidden border border-brand-600/30 mb-6 relative">
+                    {/* Budgeted Portion */}
                     <div 
-                      className={`h-full rounded-full transition-all duration-1000 ${isOver ? 'bg-rose-500 shadow-[0_0_6px_rgba(244,63,94,0.5)]' : 'bg-gold-500 shadow-[0_0_6px_rgba(212,175,55,0.4)]'}`}
-                      style={{ width: `${pct}%` }}
+                      className={`h-full rounded-l-full transition-all duration-1000 ${isOver ? 'bg-rose-500/60' : 'bg-gold-500/80 shadow-[0_0_8px_rgba(212,175,55,0.3)]'}`}
+                      style={{ width: `${Math.min(100, (data.onBudgetPool / Math.max(totalSpent, data.budgeted)) * 100)}%` }}
                     />
+                    {/* Unbudgeted Portion */}
+                    {data.unbudgetedPool > 0 && (
+                      <div 
+                        className="h-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.4)] transition-all duration-1000"
+                        style={{ width: `${Math.min(100, (data.unbudgetedPool / Math.max(totalSpent, data.budgeted)) * 100)}%` }}
+                      />
+                    )}
                   </div>
 
-                  <div className="flex justify-between items-baseline">
-                    <p className={`text-xs font-medium ${isOver ? 'text-rose-400' : 'text-slate-300'}`}>
-                      {formatCurrency(data.spent, curr)} {t('spent')}
-                    </p>
-                    <p className={`text-[11px] font-bold tracking-wider uppercase ${isOver ? 'text-rose-500' : 'text-emerald-400'}`}>
-                      {isOver 
-                        ? t('Over by {{amt}}', { amt: formatCurrency(data.spent - data.budgeted, curr) }) 
-                        : t('{{amt}} left', { amt: formatCurrency(data.budgeted - data.spent, curr) })}
-                    </p>
+                  <div className="space-y-3 mt-auto">
+                    <div className="flex justify-between items-center text-[11px]">
+                      <span className="text-slate-400">{t('On Budget Spending')}</span>
+                      <span className="text-white font-medium tabular-nums">{formatCurrency(data.onBudgetPool, curr)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-[11px]">
+                      <span className="text-slate-400">{t('Unbudgeted Spending')}</span>
+                      <span className={`${data.unbudgetedPool > 0 ? 'text-rose-400 font-bold' : 'text-slate-500'} tabular-nums`}>
+                        + {formatCurrency(data.unbudgetedPool, curr)}
+                      </span>
+                    </div>
+                    <div className="pt-2 border-t border-brand-600/30 flex justify-between items-end">
+                      <div>
+                        <p className="text-[9px] uppercase tracking-widest text-slate-500 font-bold mb-0.5">{t('Total Spent')}</p>
+                        <p className={`text-lg font-serif ${isOver ? 'text-rose-300' : 'text-white'}`}>
+                          {formatCurrency(totalSpent, curr)}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[9px] uppercase tracking-widest text-slate-500 font-bold mb-0.5">{isOver ? t('Over Budget') : t('Left to spend')}</p>
+                        <p className={`text-sm font-serif font-bold ${isOver ? 'text-rose-500' : 'text-emerald-400'}`}>
+                          {isOver 
+                            ? formatCurrency(totalSpent - data.budgeted, curr) 
+                            : formatCurrency(data.budgeted - totalSpent, curr)}
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               );
