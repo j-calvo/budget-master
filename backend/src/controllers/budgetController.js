@@ -118,34 +118,68 @@ exports.getBudgets = async (req, res) => {
       endDate = new Date(Date.UTC(currentYear, currentMonth - 1, budgetStartDay - 1, 23, 59, 59, 999));
     }
 
-    const budgetsWithSpent = await Promise.all(budgets.map(async (budget) => {
-      const expenses = await prisma.transaction.aggregate({
-        where: {
-          categoryId: budget.categoryId,
-          type: 'expense',
-          date: {
-            gte: startDate,
-            lte: endDate
-          }
-        },
-        _sum: { amount: true }
-      });
-      const incomes = await prisma.transaction.aggregate({
-        where: {
-          categoryId: budget.categoryId,
-          type: 'income',
-          date: {
-            gte: startDate,
-            lte: endDate
-          }
-        },
-        _sum: { amount: true }
-      });
+    // 1. Fetch all transactions for the period to calculate spent amounts accurately by currency
+    const allTransactions = await prisma.transaction.findMany({
+      where: {
+        date: { gte: startDate, lte: endDate },
+        OR: [
+          { account: { familyId: req.user.familyId } },
+          { creditCard: { familyId: req.user.familyId } }
+        ]
+      },
+      include: {
+        account: { select: { currency: true } },
+        creditCard: { select: { currency: true } },
+        category: true
+      }
+    });
+
+    // 2. Map spending by category and currency
+    const spendingMap = {}; // key: categoryId-currency
+    allTransactions.forEach(tx => {
+      const currency = tx.account?.currency || tx.creditCard?.currency || 'USD';
+      const key = `${tx.categoryId}-${currency}`;
+      if (!spendingMap[key]) {
+        spendingMap[key] = { spent: 0, category: tx.category, currency };
+      }
+      if (tx.type === 'expense') spendingMap[key].spent += tx.amount;
+      else if (tx.type === 'income') spendingMap[key].spent -= tx.amount;
+    });
+
+    // 3. Match with existing budgets and calculate spent
+    const budgetsWithSpent = budgets.map(budget => {
+      const key = `${budget.categoryId}-${budget.currency}`;
+      const spentInfo = spendingMap[key];
+      
+      // If we match, remove from map so we can identify unbudgeted ones later
+      if (spentInfo) {
+        delete spendingMap[key];
+      }
+      
       return {
         ...budget,
-        spent: (expenses._sum.amount || 0) - (incomes._sum.amount || 0)
+        spent: spentInfo ? spentInfo.spent : 0
       };
-    }));
+    });
+
+    // 4. Add virtual budgets for remaining unbudgeted spending
+    // We only add them if the spent amount is non-zero
+    Object.values(spendingMap).forEach(info => {
+      if (Math.abs(info.spent) > 0.001) {
+        budgetsWithSpent.push({
+          id: `virtual-${info.category.id}-${info.currency}`,
+          familyId: req.user.familyId,
+          categoryId: info.category.id,
+          category: info.category,
+          amount: 0,
+          spent: info.spent,
+          currency: info.currency,
+          month: currentMonth,
+          year: currentYear,
+          isVirtual: true
+        });
+      }
+    });
 
     res.json(budgetsWithSpent);
   } catch (error) {

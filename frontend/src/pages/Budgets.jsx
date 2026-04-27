@@ -269,6 +269,11 @@ export default function Budgets() {
                           <div className="flex items-center gap-2 flex-wrap">
                             <p className="font-serif text-white text-[15px] tracking-wide truncate">{budget.category?.name}</p>
                             {statusBadge(status)}
+                            {budget.isVirtual && (
+                              <span className="bg-slate-500/10 text-slate-500 border border-slate-500/20 text-[8px] px-1.5 py-0.5 rounded uppercase font-bold tracking-wider">
+                                {t('Unbudgeted')}
+                              </span>
+                            )}
                           </div>
                           <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-0.5">
                             {formatCurrency(budget.amount, budget.currency)}{budget.payDay ? ` · Day ${budget.payDay}` : ''}
@@ -321,7 +326,8 @@ export default function Budgets() {
                       <div className="flex gap-1">
                         <button 
                           onClick={() => handleEditClick(budget)}
-                          className="p-2 text-slate-400 hover:text-gold-400 rounded-lg hover:bg-white/5 transition-colors active:scale-90"
+                          disabled={budget.isVirtual}
+                          className={`p-2 rounded-lg transition-colors active:scale-90 ${budget.isVirtual ? 'text-slate-700 cursor-not-allowed' : 'text-slate-400 hover:text-gold-400 hover:bg-white/5'}`}
                         >
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -329,7 +335,8 @@ export default function Budgets() {
                         </button>
                         <button 
                           onClick={() => setDeleteData({ id: budget.id, name: budget.category?.name })}
-                          className="p-2 text-slate-400 hover:text-rose-400 rounded-lg hover:bg-white/5 transition-colors active:scale-90"
+                          disabled={budget.isVirtual}
+                          className={`p-2 rounded-lg transition-colors active:scale-90 ${budget.isVirtual ? 'text-slate-700 cursor-not-allowed' : 'text-slate-400 hover:text-rose-400 hover:bg-white/5'}`}
                         >
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -383,6 +390,11 @@ export default function Budgets() {
                                   {budget.category?.name}
                                 </span>
                                 {statusBadge(status)}
+                                {budget.isVirtual && (
+                                  <span className="bg-slate-500/10 text-slate-500 border border-slate-500/20 text-[8px] px-1.5 py-0.5 rounded uppercase font-bold tracking-wider">
+                                    {t('Unbudgeted')}
+                                  </span>
+                                )}
                               </div>
                               {budget.payDay && <p className="text-[10px] text-slate-500 mt-0.5">Day {budget.payDay}</p>}
                             </div>
@@ -411,7 +423,8 @@ export default function Budgets() {
                           <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button 
                               onClick={() => handleEditClick(budget)}
-                              className="p-2 text-slate-400 hover:text-gold-400 rounded-lg hover:bg-white/5 transition-colors"
+                              disabled={budget.isVirtual}
+                              className={`p-2 rounded-lg transition-colors ${budget.isVirtual ? 'text-slate-700 cursor-not-allowed' : 'text-slate-400 hover:text-gold-400 hover:bg-white/5'}`}
                             >
                               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -419,7 +432,8 @@ export default function Budgets() {
                             </button>
                             <button 
                               onClick={() => setDeleteData({ id: budget.id, name: budget.category?.name })}
-                              className="p-2 text-slate-400 hover:text-rose-400 rounded-lg hover:bg-white/5 transition-colors"
+                              disabled={budget.isVirtual}
+                              className={`p-2 rounded-lg transition-colors ${budget.isVirtual ? 'text-slate-700 cursor-not-allowed' : 'text-slate-400 hover:text-gold-400 hover:bg-white/5'}`}
                             >
                               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
