@@ -194,6 +194,7 @@ export default function Dashboard() {
         settings={settings} 
         metrics={metrics}
         budgets={budgets}
+        transactions={transactions}
       />
 
       {/* KPI Grid - Row 1: Balance Sheet */}

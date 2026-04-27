@@ -12,7 +12,7 @@ import {
   Clock
 } from 'lucide-react';
 
-export default function FinancialTimeline({ cards, loans, metrics, budgets = [] }) {
+export default function FinancialTimeline({ cards, loans, metrics, budgets = [], transactions = [] }) {
   const { t } = useTranslation();
   const { settings, currencies } = useSettings();
   const today = new Date();
@@ -57,13 +57,24 @@ export default function FinancialTimeline({ cards, loans, metrics, budgets = [] 
 
     // Credit Card Due Dates
     cards.forEach(card => {
+      // Logic: Paid if any payment transaction exists this month
+      const isPaid = transactions.some(tx => 
+        tx.creditCardId === card.id && 
+        (tx.type === 'transfer' || tx.type === 'expense') && 
+        new Date(tx.date).getMonth() === today.getMonth() &&
+        new Date(tx.date).getFullYear() === today.getFullYear()
+      );
+
       ev[card.dueDate] = ev[card.dueDate] || [];
       ev[card.dueDate].push({ 
         type: 'card', 
         label: `${card.name}`, 
-        amount: card.balance, 
+        amount: isPaid ? 0 : card.balance, 
         currency: card.currency,
-        icon: <CreditCard className="w-4 h-4 text-gold-400" /> 
+        isPaid,
+        icon: isPaid 
+          ? <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+          : <CreditCard className="w-4 h-4 text-gold-400" /> 
       });
     });
 
@@ -72,13 +83,25 @@ export default function FinancialTimeline({ cards, loans, metrics, budgets = [] 
       const loanDate = new Date(loan.nextDueDate);
       if (loanDate.getMonth() === today.getMonth() && loanDate.getFullYear() === today.getFullYear()) {
         const day = loanDate.getDate();
+        
+        // Logic: Paid if any 'installment' payment exists this month
+        const isPaid = loan.payments?.some(p => {
+          const pDate = new Date(p.paymentDate);
+          return p.type === 'installment' && 
+                 pDate.getMonth() === today.getMonth() && 
+                 pDate.getFullYear() === today.getFullYear();
+        });
+
         ev[day] = ev[day] || [];
         ev[day].push({ 
           type: 'loan', 
           label: `${loan.name}`, 
-          amount: loan.monthlyPayment, 
+          amount: isPaid ? 0 : loan.monthlyPayment, 
           currency: loan.currency,
-          icon: <Clock className="w-4 h-4 text-blue-400" /> 
+          isPaid,
+          icon: isPaid 
+            ? <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+            : <Clock className="w-4 h-4 text-blue-400" /> 
         });
       }
     });
