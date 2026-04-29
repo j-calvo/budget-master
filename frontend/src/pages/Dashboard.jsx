@@ -304,6 +304,16 @@ export default function Dashboard() {
             // Credit Cards: due within 7 days (balance > 0)
             cards.forEach(card => {
               if (!card.dueDate || card.balance <= 0) return;
+
+              // NEW: Match the 'isPaid' logic from FinancialTimeline
+              const isPaid = transactions.some(tx => 
+                tx.creditCardId === card.id && 
+                (tx.type === 'transfer' || tx.type === 'expense') && 
+                new Date(tx.date).getMonth() === today2.getMonth() &&
+                new Date(tx.date).getFullYear() === today2.getFullYear()
+              );
+              if (isPaid) return;
+
               const diff = card.dueDate - currentDay2;
               obligations.push({
                 key: `cc-${card.id}`,
