@@ -23,7 +23,7 @@ export default function Transactions() {
       // Split the YYYY-MM-DD part and create a local date to avoid UTC shifts
       const [year, month, day] = dateStr.split('T')[0].split('-').map(Number);
       return new Date(year, month - 1, day).toLocaleDateString(settings?.language || 'en-US', options);
-    } catch (e) {
+    } catch {
       return new Date(dateStr).toLocaleDateString(settings?.language || 'en-US', options);
     }
   };
@@ -50,6 +50,8 @@ export default function Transactions() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortField, setSortField] = useState('date');
   const [sortDirection, setSortDirection] = useState('desc');
+  const [selectedMonth, setSelectedMonth] = useState('all');
+  const [hasManuallySelectedMonth, setHasManuallySelectedMonth] = useState(false);
 
   const fileInputRef = useRef(null);
 
@@ -87,6 +89,92 @@ export default function Transactions() {
   const budgetCategoryIds = useMemo(() => {
     return new Set(budgets.map(b => b.categoryId));
   }, [budgets]);
+
+  // Derive sorted list of unique transaction months (YYYY-MM)
+  const monthsList = useMemo(() => {
+    if (!transactions.length) return [];
+    const months = new Set();
+    transactions.forEach(tx => {
+      if (tx.date) {
+        const [year, month] = tx.date.split('T')[0].split('-');
+        if (year && month) {
+          months.add(`${year}-${month}`);
+        }
+      }
+    });
+    return Array.from(months).sort((a, b) => b.localeCompare(a));
+  }, [transactions]);
+
+  // Format YYYY-MM key into localized name (e.g. "May 2026")
+  const formatMonthKey = (monthKey) => {
+    if (monthKey === 'all') return t('All Time');
+    try {
+      const [year, month] = monthKey.split('-');
+      const date = new Date(parseInt(year), parseInt(month) - 1, 1);
+      return date.toLocaleDateString(settings?.language || 'en-US', { month: 'short', year: 'numeric' });
+    } catch {
+      return monthKey;
+    }
+  };
+
+  // Auto-select the latest month on initial data load
+  useEffect(() => {
+    if (monthsList.length > 0 && selectedMonth === 'all' && !hasManuallySelectedMonth) {
+      setSelectedMonth(monthsList[0]);
+    }
+  }, [monthsList, selectedMonth, hasManuallySelectedMonth]);
+
+  // Adjust selectedMonth if it disappears from the available months
+  useEffect(() => {
+    if (monthsList.length > 0 && selectedMonth !== 'all' && !monthsList.includes(selectedMonth)) {
+      setSelectedMonth(monthsList[0]);
+    }
+  }, [monthsList, selectedMonth]);
+
+  // Compute counts for each month dynamically based on active filters (excluding selectedMonth filter)
+  const monthCounts = useMemo(() => {
+    const counts = {};
+    let baseFiltered = [...transactions];
+
+    if (filterSource !== 'all') {
+      if (filterSource.startsWith('account_')) {
+        const accId = filterSource.replace('account_', '');
+        baseFiltered = baseFiltered.filter(tx => tx.accountId === accId);
+      } else if (filterSource.startsWith('card_')) {
+        const cardId = filterSource.replace('card_', '');
+        baseFiltered = baseFiltered.filter(tx => tx.creditCardId === cardId);
+      }
+    }
+
+    if (filterCategory !== 'all') {
+      baseFiltered = baseFiltered.filter(tx => tx.categoryId === filterCategory);
+    }
+
+    if (filterType !== 'all') {
+      baseFiltered = baseFiltered.filter(tx => tx.type === filterType);
+    }
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      baseFiltered = baseFiltered.filter(tx =>
+        tx.description.toLowerCase().includes(q) ||
+        (tx.account?.name || '').toLowerCase().includes(q) ||
+        (tx.creditCard?.name || '').toLowerCase().includes(q) ||
+        (tx.category?.name || '').toLowerCase().includes(q)
+      );
+    }
+
+    baseFiltered.forEach(tx => {
+      if (tx.date) {
+        const [year, month] = tx.date.split('T')[0].split('-');
+        const key = `${year}-${month}`;
+        counts[key] = (counts[key] || 0) + 1;
+      }
+    });
+
+    counts['all'] = baseFiltered.length;
+    return counts;
+  }, [transactions, filterSource, filterCategory, filterType, searchQuery]);
 
   // Build source options for filter dropdown
   const sourceOptions = useMemo(() => {
@@ -155,6 +243,15 @@ export default function Transactions() {
       );
     }
 
+    // Month filter
+    if (selectedMonth !== 'all') {
+      filtered = filtered.filter(tx => {
+        if (!tx.date) return false;
+        const [year, month] = tx.date.split('T')[0].split('-');
+        return `${year}-${month}` === selectedMonth;
+      });
+    }
+
     // Sort
     filtered.sort((a, b) => {
       let comparison = 0;
@@ -167,7 +264,7 @@ export default function Transactions() {
     });
 
     return filtered;
-  }, [transactions, filterSource, filterCategory, filterType, searchQuery, sortField, sortDirection]);
+  }, [transactions, filterSource, filterCategory, filterType, searchQuery, sortField, sortDirection, selectedMonth]);
 
   const activeFilterCount = useMemo(() => {
     let count = 0;
@@ -185,6 +282,12 @@ export default function Transactions() {
     setSearchQuery('');
     setSortField('date');
     setSortDirection('desc');
+    setHasManuallySelectedMonth(false);
+    if (monthsList.length > 0) {
+      setSelectedMonth(monthsList[0]);
+    } else {
+      setSelectedMonth('all');
+    }
   };
 
   const toggleSort = (field) => {
@@ -497,8 +600,56 @@ export default function Transactions() {
         </div>
       </div>
 
+      {/* ── Month Selector Slider ── */}
+      {monthsList.length > 0 && (
+        <div className="glass-card p-3 border-brand-600/30">
+          <div className="flex gap-2 overflow-x-auto pb-1.5 snap-x">
+            <button
+              onClick={() => {
+                setSelectedMonth('all');
+                setHasManuallySelectedMonth(true);
+              }}
+              className={`px-4 py-2 rounded-full text-xs font-semibold tracking-wider transition-all whitespace-nowrap snap-start flex items-center gap-2 cursor-pointer
+                ${selectedMonth === 'all'
+                  ? 'bg-gold-500/20 text-gold-400 border border-gold-500/40 shadow-sm'
+                  : 'bg-brand-900/40 text-slate-400 hover:text-slate-200 border border-brand-600/30 hover:bg-brand-600/30'}`}
+            >
+              {t('All Time')}
+              <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${selectedMonth === 'all' ? 'bg-gold-500/30 text-gold-300' : 'bg-brand-900/80 text-slate-500'}`}>
+                {monthCounts['all'] || 0}
+              </span>
+            </button>
+            
+            {monthsList.map(monthKey => {
+              const count = monthCounts[monthKey] || 0;
+              const isSelected = selectedMonth === monthKey;
+              return (
+                <button
+                  key={monthKey}
+                  onClick={() => {
+                    setSelectedMonth(monthKey);
+                    setHasManuallySelectedMonth(true);
+                  }}
+                  className={`px-4 py-2 rounded-full text-xs font-semibold tracking-wider transition-all whitespace-nowrap snap-start flex items-center gap-2 cursor-pointer
+                    ${isSelected
+                      ? 'bg-gold-500/20 text-gold-400 border border-gold-500/40 shadow-sm'
+                      : count === 0
+                        ? 'bg-brand-900/10 text-slate-600 border border-brand-600/10 opacity-50'
+                        : 'bg-brand-900/40 text-slate-400 hover:text-slate-200 border border-brand-600/30 hover:bg-brand-600/30'}`}
+                >
+                  {formatMonthKey(monthKey)}
+                  <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${isSelected ? 'bg-gold-500/30 text-gold-300' : 'bg-brand-900/80 text-slate-500'}`}>
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* ── Results summary ── */}
-      {(activeFilterCount > 0 || searchQuery.trim()) && (
+      {(activeFilterCount > 0 || searchQuery.trim() || selectedMonth !== 'all') && (
         <div className="flex items-center gap-2 text-xs text-slate-500 px-1">
           <span>
             {t('Showing {{count}} of {{total}} transactions', {
@@ -528,6 +679,33 @@ export default function Transactions() {
             <div className="p-16 text-center">
               {transactions.length === 0 ? (
                 <p className="text-slate-400 italic font-serif">{t('No transactions found.')}</p>
+              ) : selectedMonth !== 'all' && monthCounts['all'] > 0 ? (
+                <div>
+                  <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-brand-600/20 flex items-center justify-center text-slate-500">
+                    <Search size={24} />
+                  </div>
+                  <p className="text-slate-400 font-serif italic text-lg mb-2">{t('No matches found in this month')}</p>
+                  <p className="text-sm text-slate-500 mb-4">
+                    {t('We found {{count}} matching transactions in other months.', { count: monthCounts['all'] })}
+                  </p>
+                  <div className="flex justify-center gap-3">
+                    <button
+                      onClick={() => {
+                        setSelectedMonth('all');
+                        setHasManuallySelectedMonth(true);
+                      }}
+                      className="btn-gold px-5 py-2 text-sm"
+                    >
+                      {t('Search All Time')}
+                    </button>
+                    <button
+                      onClick={clearFilters}
+                      className="btn-glass px-5 py-2 text-sm"
+                    >
+                      {t('Clear Filters')}
+                    </button>
+                  </div>
+                </div>
               ) : (
                 <div>
                   <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-brand-600/20 flex items-center justify-center text-slate-500">
