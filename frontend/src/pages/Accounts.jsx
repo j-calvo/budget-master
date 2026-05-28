@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import api from '../api';
 import { useTranslation } from 'react-i18next';
 import { useSettings } from '../context/SettingsContext';
@@ -166,6 +166,31 @@ export default function Accounts() {
     setShowAdjustModal(true);
   };
 
+  // Group and summarize accounts by currency (total, available, and long term)
+  const currencySummaries = useMemo(() => {
+    const summaries = {};
+    accounts.forEach(acc => {
+      const cur = acc.currency || 'USD';
+      if (!summaries[cur]) {
+        summaries[cur] = {
+          total: 0,
+          available: 0,
+          longTerm: 0,
+          accountsCount: 0
+        };
+      }
+      const val = parseFloat(acc.balance) || 0;
+      summaries[cur].total += val;
+      if (acc.isLiquid !== false) {
+        summaries[cur].available += val;
+      } else {
+        summaries[cur].longTerm += val;
+      }
+      summaries[cur].accountsCount += 1;
+    });
+    return summaries;
+  }, [accounts]);
+
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
       <div className="flex justify-between items-center">
@@ -197,8 +222,94 @@ export default function Accounts() {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {accounts.map(acc => (
+        <div className="space-y-8">
+          {/* ── Currency Summaries ── */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {Object.entries(currencySummaries)
+              .sort((a, b) => a[0].localeCompare(b[0]))
+              .map(([curCode, summary]) => {
+                const total = summary.total;
+                const available = summary.available;
+                const longTerm = summary.longTerm;
+
+                const availablePct = total > 0 ? (available / total) * 100 : 0;
+                const longTermPct = total > 0 ? (longTerm / total) * 100 : 0;
+
+                return (
+                  <div key={curCode} className="glass-card p-6 border-brand-600/30 relative overflow-hidden flex flex-col justify-between group">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-gold-500/5 rounded-full blur-2xl -z-10 mix-blend-screen transition-all group-hover:bg-gold-500/10"></div>
+
+                    <div>
+                      <div className="flex justify-between items-center mb-4">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('Currency Summary')}</span>
+                        <span className="px-2.5 py-1 bg-brand-900/50 border border-brand-600/40 text-gold-400 rounded-full text-xs font-semibold tracking-wider font-mono">
+                          {curCode}
+                        </span>
+                      </div>
+
+                      <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">{t('Total Balance')}</p>
+                      <p className="text-3xl font-light font-serif text-white tracking-wide mt-1">
+                        {formatCurrency(total, curCode, currencies, settings?.language)}
+                      </p>
+
+                      {/* Progress bar split */}
+                      {total > 0 && (
+                        <div className="mt-6 space-y-4">
+                          <div className="h-2 w-full bg-brand-900/60 rounded-full overflow-hidden flex border border-brand-600/30">
+                            {available > 0 && (
+                              <div
+                                className="h-full bg-emerald-500/80 transition-all duration-500"
+                                style={{ width: `${availablePct}%` }}
+                                title={`${t('Available')}: ${availablePct.toFixed(1)}%`}
+                              ></div>
+                            )}
+                            {longTerm > 0 && (
+                              <div
+                                className="h-full bg-gold-500/80 transition-all duration-500"
+                                style={{ width: `${longTermPct}%` }}
+                                title={`${t('Long-term')}: ${longTermPct.toFixed(1)}%`}
+                              ></div>
+                            )}
+                          </div>
+
+                          {/* Detail row */}
+                          <div className="grid grid-cols-2 gap-4 pt-1">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                <div className="w-2 h-2 rounded-full bg-emerald-500/80 shadow-inner"></div>
+                                {t('Available Funds')}
+                              </div>
+                              <p className="text-base font-medium text-slate-200">
+                                {formatCurrency(available, curCode, currencies, settings?.language)}
+                              </p>
+                              <p className="text-[10px] text-slate-500 font-medium">
+                                {availablePct.toFixed(0)}% {t('of total')}
+                              </p>
+                            </div>
+
+                            <div className="space-y-1 border-l border-brand-600/20 pl-4">
+                              <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                <div className="w-2 h-2 rounded-full bg-gold-500/80 shadow-inner"></div>
+                                {t('Long-term Assets')}
+                              </div>
+                              <p className="text-base font-medium text-slate-200">
+                                {formatCurrency(longTerm, curCode, currencies, settings?.language)}
+                              </p>
+                              <p className="text-[10px] text-slate-500 font-medium">
+                                {longTermPct.toFixed(0)}% {t('of total')}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {accounts.map(acc => (
             <div key={acc.id} className="glass-card p-6 cursor-pointer hover:border-gold-500/30 hover:shadow-[0_0_20px_rgba(212,175,55,0.05)] transition-all group relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-gold-500/5 rounded-full blur-2xl -z-10 mix-blend-screen transition-all group-hover:bg-gold-500/10"></div>
               
@@ -281,6 +392,7 @@ export default function Accounts() {
             </div>
           ))}
         </div>
+      </div>
       )}
 
       {showModal && (
