@@ -14,6 +14,7 @@ const creditCardRoutes = require('./src/routes/creditCardRoutes');
 const loanRoutes = require('./src/routes/loanRoutes');
 const bankRoutes = require('./src/routes/bankRoutes');
 const accountTypeRoutes = require('./src/routes/accountTypeRoutes');
+const serviceConsumptionRoutes = require('./src/routes/serviceConsumptionRoutes');
 const { authenticateToken } = require('./src/middleware/auth');
 
 const app = express();
@@ -42,6 +43,7 @@ app.use('/api/credit-cards', authenticateToken, creditCardRoutes);
 app.use('/api/loans', authenticateToken, loanRoutes);
 app.use('/api/banks', authenticateToken, bankRoutes);
 app.use('/api/account-types', authenticateToken, accountTypeRoutes);
+app.use('/api/service-consumption', authenticateToken, serviceConsumptionRoutes);
 
 const pendingTransactionRoutes = require('./src/routes/pendingTransactionRoutes');
 app.use('/api/pending-transactions', authenticateToken, pendingTransactionRoutes);

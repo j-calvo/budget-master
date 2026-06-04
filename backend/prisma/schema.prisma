@@ -41,6 +41,7 @@ model Family {
   emailConfig  EmailServerConfig?
   parsingRules ParsingRule[]
   pendingTransactions PendingTransaction[]
+  serviceConsumptions ServiceConsumption[]
 }
 
 model FamilyMember {
@@ -308,4 +309,38 @@ model PendingTransaction {
   updatedAt           DateTime @updatedAt
   
   family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+}
+
+model ServiceConsumption {
+  id              String   @id @default(uuid())
+  familyId        String
+  serviceType     String   @default("electricity") // electricity, water, gas, internet
+  provider        String   @default("CNFL")        // e.g. CNFL, AyA
+  nise            String?                          // Service ID (e.g., 28053358)
+  meterNumber     String?                          // e.g., 1266824
+  invoiceNumber   String?                          // Bill/invoice ID (e.g., 116903557)
+  billingPeriod   String                           // e.g., "04-2026", "05-2026" (MM-YYYY)
+  readingDate     DateTime                         // Date of bill reading/issue (e.g. 24-MAY-2026)
+  dueDate         DateTime                         // Payment due date (e.g., 12-MAY-2026)
+  
+  // Consumption stats
+  previousReading Float?
+  currentReading  Float?
+  consumption     Float                            // Total consumption in unit (e.g., 416)
+  unit            String   @default("kWh")         // kWh, m3
+  
+  // Cost breakdown
+  amount          Float                            // Total bill cost (e.g. 37125)
+  currency        String   @default("CRC")
+  energyCost      Float?                           // Raw electricity cost
+  publicLighting  Float?                           // Alumbrado público
+  tax             Float?                           // VAT/IVG
+  otherCharges    Float?                           // Tributo bomberos + others
+  
+  // Status
+  isPaid          Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  family      Family       @relation(fields: [familyId], references: [id], onDelete: Cascade)
 }

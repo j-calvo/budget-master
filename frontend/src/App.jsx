@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
-import { Home, CreditCard as CardIcon, LayoutDashboard, PieChart, Settings, Wallet, Landmark, Activity, LogOut, Coins, Menu } from 'lucide-react';
+import { Home, CreditCard as CardIcon, LayoutDashboard, PieChart, Settings, Wallet, Landmark, Activity, LogOut, Coins, Menu, Zap } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -13,6 +13,7 @@ import CreditCards from './pages/CreditCards';
 import Loans from './pages/Loans';
 import Analytics from './pages/Analytics';
 import Tools from './pages/Tools';
+import Services from './pages/Services';
 import QuickAddTransaction from './components/QuickAddTransaction';
 import { useTranslation } from 'react-i18next';
 
@@ -23,6 +24,7 @@ const navItems = [
   { path: '/credit-cards', name: 'Cards', subtitle: 'Liabilities', icon: <CardIcon size={22} /> },
   { path: '/loans', name: 'Loans', subtitle: 'Obligations', icon: <Landmark size={22} /> },
   { path: '/transactions', name: 'Activity', subtitle: 'History', icon: <Activity size={22} /> },
+  { path: '/services', name: 'Services', subtitle: 'Utilities', icon: <Zap size={22} /> },
   { path: '/budgets', name: 'Budgets', subtitle: 'Planning', icon: <PieChart size={22} /> },
   { path: '/analytics', name: 'Analytics', subtitle: 'Insights', icon: <PieChart size={22} /> },
   { path: '/tools', name: 'Tools', subtitle: 'Calculators', icon: <Coins size={22} /> },
@@ -223,6 +225,7 @@ function App() {
                   <Route path="/credit-cards" element={<CreditCards />} />
                   <Route path="/loans" element={<Loans />} />
                   <Route path="/transactions" element={<Transactions />} />
+                  <Route path="/services" element={<Services />} />
                   <Route path="/budgets" element={<Budgets />} />
                   <Route path="/analytics" element={<Analytics />} />
                   <Route path="/tools" element={<Tools />} />
