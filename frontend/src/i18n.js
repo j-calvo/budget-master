@@ -430,7 +430,27 @@ const resources = {
       "Water": "Water",
       "Gas": "Gas",
       "Internet": "Internet",
-      "Toggle Paid": "Toggle Paid"
+      "Toggle Paid": "Toggle Paid",
+      // EV Charging
+      "EV Charging Sessions": "EV Charging Sessions",
+      "Add EV Session": "Add EV Session",
+      "Edit EV Session": "Edit EV Session",
+      "EV Share": "EV Share",
+      "Avg EV Share": "Avg EV Share",
+      "EV Estimated Cost": "EV Estimated Cost",
+      "House (non-EV)": "House (non-EV)",
+      "Session Date": "Session Date",
+      "Energy Charged (kWh)": "Energy Charged (kWh)",
+      "Note (optional)": "Note (optional)",
+      "of total electricity": "of total electricity",
+      "No EV charging sessions logged yet.": "No EV charging sessions logged yet.",
+      "Are you sure you want to delete this EV session?": "Are you sure you want to delete this EV session?",
+      "kWh charged": "kWh charged",
+      "Est. EV Cost": "Est. EV Cost",
+      "EV sessions": "EV sessions",
+      "EV Cost Trend": "EV Cost Trend",
+      "Upload a CNFL PDF invoice to autofill the form": "Upload a CNFL PDF invoice to autofill the form",
+      "CNFL Electricity Bills supported": "CNFL Electricity Bills supported"
     }
   },
   'es': {
@@ -861,7 +881,27 @@ const resources = {
       "Water": "Agua",
       "Gas": "Gas",
       "Internet": "Internet",
-      "Toggle Paid": "Marcar Pago/Pendiente"
+      "Toggle Paid": "Marcar Pago/Pendiente",
+      // EV Charging
+      "EV Charging Sessions": "Sesiones de Carga EV",
+      "Add EV Session": "Agregar Carga EV",
+      "Edit EV Session": "Editar Carga EV",
+      "EV Share": "Parte del VE",
+      "Avg EV Share": "Parte Promedio del VE",
+      "EV Estimated Cost": "Costo Estimado VE",
+      "House (non-EV)": "Hogar (sin VE)",
+      "Session Date": "Fecha de Carga",
+      "Energy Charged (kWh)": "Energía Cargada (kWh)",
+      "Note (optional)": "Nota (opcional)",
+      "of total electricity": "del total eléctrico",
+      "No EV charging sessions logged yet.": "No hay sesiones de carga EV registradas todavía.",
+      "Are you sure you want to delete this EV session?": "¿Estás seguro de que deseas eliminar esta sesión de carga?",
+      "kWh charged": "kWh cargados",
+      "Est. EV Cost": "Costo Est. VE",
+      "EV sessions": "sesiones EV",
+      "EV Cost Trend": "Tendencia Costo VE",
+      "Upload a CNFL PDF invoice to autofill the form": "Sube tu PDF de CNFL para completar el formulario",
+      "CNFL Electricity Bills supported": "Facturas CNFL soportadas"
     }
   }
 };

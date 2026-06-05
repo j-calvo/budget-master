@@ -42,6 +42,7 @@ model Family {
   parsingRules ParsingRule[]
   pendingTransactions PendingTransaction[]
   serviceConsumptions ServiceConsumption[]
+  evChargingLogs      EvChargingLog[]
 }
 
 model FamilyMember {
@@ -343,4 +344,17 @@ model ServiceConsumption {
   updatedAt       DateTime @updatedAt
 
   family      Family       @relation(fields: [familyId], references: [id], onDelete: Cascade)
+}
+
+model EvChargingLog {
+  id            String   @id @default(uuid())
+  familyId      String
+  date          DateTime                    // Date of the charging session
+  billingPeriod String                      // MM-YYYY — links to the ServiceConsumption record
+  kwh           Float                       // kWh added during this session
+  note          String?                     // Optional note (e.g., "trip to beach")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  family        Family   @relation(fields: [familyId], references: [id], onDelete: Cascade)
 }
