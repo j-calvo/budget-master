@@ -7,12 +7,14 @@ import {
 } from 'recharts';
 import FinancialTimeline from '../components/FinancialTimeline';
 import { formatCurrency } from '../lib/currencyUtils';
+import { Info } from 'lucide-react';
 
 export default function Dashboard() {
   const { settings, currencies, isLoading: settingsLoading } = useSettings();
   const { t } = useTranslation();
   
   const [loadingDb, setLoadingDb] = useState(true);
+  const [activeTooltip, setActiveTooltip] = useState(null); // 'cash' | 'networth' | null
   const [metrics, setMetrics] = useState({
     netWorth: 0,
     income: 0,
@@ -25,6 +27,12 @@ export default function Dashboard() {
   const [cards, setCards] = useState([]);
   const [loans, setLoans] = useState([]);
   const [budgets, setBudgets] = useState([]);
+
+  useEffect(() => {
+    const handleGlobalClick = () => setActiveTooltip(null);
+    window.addEventListener('click', handleGlobalClick);
+    return () => window.removeEventListener('click', handleGlobalClick);
+  }, []);
 
   useEffect(() => {
     async function loadData() {
@@ -203,14 +211,50 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
         {/* Total Cash */}
         <div className="glass-card p-4 md:p-6 transition-all hover:border-emerald-500/30 hover:shadow-emerald-500/10 group cursor-default">
-          <p className="text-[10px] md:text-xs font-medium text-slate-400 uppercase tracking-widest group-hover:text-emerald-400 transition-colors">{t('Total Cash')}</p>
+          <p className="text-[10px] md:text-xs font-medium text-slate-400 uppercase tracking-widest group-hover:text-emerald-400 transition-colors flex items-center gap-1.5">
+            <span>{t('Total Cash')}</span>
+            <span className="relative inline-flex items-center">
+              <Info 
+                className="w-3.5 h-3.5 text-slate-500 hover:text-emerald-400 transition-colors cursor-help inline"
+                onMouseEnter={() => setActiveTooltip('cash')}
+                onMouseLeave={() => setActiveTooltip(null)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActiveTooltip(activeTooltip === 'cash' ? null : 'cash');
+                }}
+              />
+              {activeTooltip === 'cash' && (
+                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-brand-950/95 border border-brand-600/40 text-slate-300 text-xs rounded-xl shadow-2xl z-50 pointer-events-none text-left leading-relaxed font-sans normal-case tracking-normal transition-opacity duration-200">
+                  {t('Total Cash Tooltip')}
+                </span>
+              )}
+            </span>
+          </p>
           <p className="text-xl md:text-3xl font-light font-serif text-white mt-2 md:mt-3 tracking-wide">
             {displayCurrency(metrics.totalAssets)}
           </p>
         </div>
         {/* Net Worth */}
         <div className="glass-card p-4 md:p-6 transition-all hover:border-gold-500/30 hover:shadow-gold-500/10 group cursor-default">
-          <p className="text-[10px] md:text-xs font-medium text-slate-400 uppercase tracking-widest group-hover:text-gold-400 transition-colors">{t('Net Worth')}</p>
+          <p className="text-[10px] md:text-xs font-medium text-slate-400 uppercase tracking-widest group-hover:text-gold-400 transition-colors flex items-center gap-1.5">
+            <span>{t('Net Worth')}</span>
+            <span className="relative inline-flex items-center">
+              <Info 
+                className="w-3.5 h-3.5 text-slate-500 hover:text-gold-400 transition-colors cursor-help inline"
+                onMouseEnter={() => setActiveTooltip('networth')}
+                onMouseLeave={() => setActiveTooltip(null)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActiveTooltip(activeTooltip === 'networth' ? null : 'networth');
+                }}
+              />
+              {activeTooltip === 'networth' && (
+                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-brand-950/95 border border-brand-600/40 text-slate-300 text-xs rounded-xl shadow-2xl z-50 pointer-events-none text-left leading-relaxed font-sans normal-case tracking-normal transition-opacity duration-200">
+                  {t('Net Worth Tooltip')}
+                </span>
+              )}
+            </span>
+          </p>
           <p className="text-xl md:text-3xl font-light font-serif mt-2 md:mt-3 tracking-wide text-white">
             {displayCurrency(metrics.netWorth)}
           </p>
