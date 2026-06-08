@@ -452,7 +452,13 @@ const resources = {
       "Upload a CNFL PDF invoice to autofill the form": "Upload a CNFL PDF invoice to autofill the form",
       "CNFL Electricity Bills supported": "CNFL Electricity Bills supported",
       "Total Cash Tooltip": "Sum of all liquid accounts (checking, savings, etc.) available for daily spending.",
-      "Net Worth Tooltip": "Total assets (all liquid and long-term accounts) minus total liabilities (credit card balances and loan debt)."
+      "Net Worth Tooltip": "Total assets (all liquid and long-term accounts) minus total liabilities (credit card balances and loan debt).",
+      "Unbudgeted Spending": "Unbudgeted Spending",
+      "Categories with expenses but no set budget": "Categories with expenses but no set budget",
+      "No unbudgeted spending in this period": "No unbudgeted spending in this period",
+      "All spending categories are budgeted!": "All spending categories are budgeted!",
+      "transaction_singular": "{{count}} transaction",
+      "transaction_plural": "{{count}} transactions"
     }
   },
   'es': {
@@ -905,7 +911,13 @@ const resources = {
       "Upload a CNFL PDF invoice to autofill the form": "Sube tu PDF de CNFL para completar el formulario",
       "CNFL Electricity Bills supported": "Facturas CNFL soportadas",
       "Total Cash Tooltip": "Suma de todas las cuentas líquidas (corrientes, ahorros, etc.) disponibles para gasto diario.",
-      "Net Worth Tooltip": "Activos totales (todas las cuentas líquidas y a largo plazo) menos pasivos totales (saldos de tarjetas de crédito y saldo pendiente de préstamos)."
+      "Net Worth Tooltip": "Activos totales (todas las cuentas líquidas y a largo plazo) menos pasivos totales (saldos de tarjetas de crédito y saldo pendiente de préstamos).",
+      "Unbudgeted Spending": "Gastos No Presupuestados",
+      "Categories with expenses but no set budget": "Categorías con gastos pero sin presupuesto definido",
+      "No unbudgeted spending in this period": "Sin gastos no presupuestados en este periodo",
+      "All spending categories are budgeted!": "¡Todas las categorías de gastos están presupuestadas!",
+      "transaction_singular": "{{count}} transacción",
+      "transaction_plural": "{{count}} transacciones"
     }
   }
 };

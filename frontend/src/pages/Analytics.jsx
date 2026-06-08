@@ -158,6 +158,35 @@ export default function Analytics() {
 
   const topExpenses = [...expenses].sort((a, b) => b.amount - a.amount).slice(0, 5);
 
+  const unbudgetedExpenses = useMemo(() => {
+    const budgetedCatIds = new Set(budgets.map(b => b.categoryId));
+    const unbudgetedMap = {};
+
+    filteredTx.forEach(tx => {
+      if (tx.type !== 'expense' || tx.category?.type === 'income') return;
+      const catId = tx.category?.id || 'uncategorized';
+      const catName = tx.category?.name || t('Uncategorized');
+
+      if (!budgetedCatIds.has(catId)) {
+        const txCurrency = tx.account?.currency || tx.creditCard?.currency || 'USD';
+        const amt = convert(tx.amount, txCurrency);
+
+        if (!unbudgetedMap[catId]) {
+          unbudgetedMap[catId] = {
+            id: catId,
+            name: catName,
+            amount: 0,
+            count: 0
+          };
+        }
+        unbudgetedMap[catId].amount += amt;
+        unbudgetedMap[catId].count += 1;
+      }
+    });
+
+    return Object.values(unbudgetedMap).sort((a, b) => b.amount - a.amount);
+  }, [filteredTx, budgets, ratesData, t]);
+
   // 3. Budgets vs Expenses
   const budgetData = budgets.map(b => {
     const catSpend = spendByCatId[b.categoryId] || 0;
@@ -387,46 +416,102 @@ export default function Analytics() {
         </div>
       </div>
 
-      {/* 4. Top Largest Expenses */}
-      <div className="glass-card p-6 mt-6 relative overflow-hidden group">
-        <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-rose-500/5 rounded-full blur-3xl group-hover:bg-rose-500/10 transition-colors pointer-events-none" />
-        <h2 className="text-xl font-serif text-white mb-4 relative z-10 flex items-center gap-2">
-          <div className="w-1 h-5 bg-rose-500 rounded-full" />
-          {t('Top Largest Expenses')}
-          {isMonthMode && <span className="text-xs text-rose-400/60 font-sans tracking-widest ml-2 capitalize">{monthLabel}</span>}
-        </h2>
+      {/* Grid container for Top Largest Expenses & Unbudgeted Spending */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+        
+        {/* Top Largest Expenses */}
+        <div className="glass-card p-6 relative overflow-hidden group">
+          <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-rose-500/5 rounded-full blur-3xl group-hover:bg-rose-500/10 transition-colors pointer-events-none" />
+          <h2 className="text-xl font-serif text-white mb-4 relative z-10 flex items-center gap-2">
+            <div className="w-1 h-5 bg-rose-500 rounded-full" />
+            {t('Top Largest Expenses')}
+            {isMonthMode && <span className="text-xs text-rose-400/60 font-sans tracking-widest ml-2 capitalize">{monthLabel}</span>}
+          </h2>
 
-        {topExpenses.length > 0 ? (
-          <div className="divide-y divide-brand-800/50 relative z-10">
-            {topExpenses.map((tx, idx) => (
-              <div key={tx.id} className="py-3 md:py-4 flex justify-between items-center hover:bg-brand-900/40 transition-colors px-3 md:px-4 -mx-3 md:-mx-4 rounded-xl group">
-                <div className="flex items-center gap-3 md:gap-4 min-w-0">
-                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-brand-900/60 border border-brand-600/50 text-gold-400 flex justify-center items-center font-serif font-bold text-lg md:text-xl shadow-inner shrink-0 group-hover:bg-gold-500/10 transition-colors">
-                    {idx + 1}
+          {topExpenses.length > 0 ? (
+            <div className="divide-y divide-brand-800/50 relative z-10">
+              {topExpenses.map((tx, idx) => (
+                <div key={tx.id} className="py-3 md:py-4 flex justify-between items-center hover:bg-brand-900/40 transition-colors px-3 md:px-4 -mx-3 md:-mx-4 rounded-xl group">
+                  <div className="flex items-center gap-3 md:gap-4 min-w-0">
+                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-brand-900/60 border border-brand-600/50 text-gold-400 flex justify-center items-center font-serif font-bold text-lg md:text-xl shadow-inner shrink-0 group-hover:bg-gold-500/10 transition-colors">
+                      {idx + 1}
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="font-bold text-slate-200 text-base md:text-lg tracking-wide truncate group-hover:text-white transition-colors">{tx.description}</h3>
+                      <p className="text-[10px] md:text-xs text-slate-400 uppercase tracking-widest mt-0.5 truncate">
+                        {tx.category?.name || 'Uncategorized'}
+                        <span className="text-brand-600 mx-1 opacity-50">•</span>
+                        {new Date(tx.date).toLocaleDateString(settings?.language || 'en-US')}
+                      </p>
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <h3 className="font-bold text-slate-200 text-base md:text-lg tracking-wide truncate group-hover:text-white transition-colors">{tx.description}</h3>
-                    <p className="text-[10px] md:text-xs text-slate-400 uppercase tracking-widest mt-0.5 truncate">
-                      {tx.category?.name || 'Uncategorized'}
-                      <span className="text-brand-600 mx-1 opacity-50">•</span>
-                      {new Date(tx.date).toLocaleDateString(settings?.language || 'en-US')}
+                  <div className="text-right shrink-0">
+                    <p className="text-xl md:text-2xl font-serif text-rose-400 drop-shadow-[0_0_8px_rgba(244,63,94,0.3)]">
+                      {formatCurrency(tx.amount)}
                     </p>
                   </div>
                 </div>
-                <div className="text-right shrink-0">
-                  <p className="text-xl md:text-2xl font-serif text-rose-400 drop-shadow-[0_0_8px_rgba(244,63,94,0.3)]">
-                    {formatCurrency(tx.amount)}
-                  </p>
+              ))}
+            </div>
+          ) : (
+            <div className="bg-brand-900/40 border border-brand-600/30 rounded-xl p-8 text-center mt-4">
+              <p className="text-slate-400 font-serif italic mb-2">{t('No expenses found for this time period.')}</p>
+              <p className="text-[10px] text-slate-500 uppercase tracking-widest">{t('Try selecting a different time range')}</p>
+            </div>
+          )}
+        </div>
+
+        {/* Unbudgeted Spending */}
+        <div className="glass-card p-6 relative overflow-hidden group">
+          <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-amber-500/5 rounded-full blur-3xl group-hover:bg-amber-500/10 transition-colors pointer-events-none" />
+          <h2 className="text-xl font-serif text-white mb-4 relative z-10 flex items-center gap-2">
+            <div className="w-1 h-5 bg-amber-500 rounded-full" />
+            {t('Unbudgeted Spending')}
+            {isMonthMode && <span className="text-xs text-amber-400/60 font-sans tracking-widest ml-2 capitalize">{monthLabel}</span>}
+          </h2>
+          <p className="text-slate-400 font-serif italic text-xs mb-6 relative z-10">
+            {t('Categories with expenses but no set budget')}
+          </p>
+
+          {unbudgetedExpenses.length > 0 ? (
+            <div className="divide-y divide-brand-800/50 relative z-10">
+              {unbudgetedExpenses.map((exp, idx) => (
+                <div key={exp.id} className="py-3 md:py-4 flex justify-between items-center hover:bg-brand-900/40 transition-colors px-3 md:px-4 -mx-3 md:-mx-4 rounded-xl group">
+                  <div className="flex items-center gap-3 md:gap-4 min-w-0">
+                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-brand-900/60 border border-brand-600/50 text-amber-400 flex justify-center items-center font-serif font-bold text-lg md:text-xl shadow-inner group-hover:bg-amber-500/10 transition-colors">
+                      {idx + 1}
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="font-bold text-slate-200 text-base md:text-lg tracking-wide truncate group-hover:text-white transition-colors">{exp.name}</h3>
+                      <p className="text-[10px] md:text-xs text-slate-400 uppercase tracking-widest mt-0.5 truncate">
+                        {exp.count === 1 
+                          ? t('transaction_singular', { count: exp.count }) 
+                          : t('transaction_plural', { count: exp.count })
+                        }
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-xl md:text-2xl font-serif text-amber-400 drop-shadow-[0_0_8px_rgba(245,158,11,0.3)]">
+                      {formatCurrency(exp.amount)}
+                    </p>
+                  </div>
                 </div>
+              ))}
+            </div>
+          ) : (
+            <div className="bg-brand-900/40 border border-brand-600/30 rounded-xl p-8 text-center mt-4 relative z-10 flex flex-col items-center justify-center min-h-[200px]">
+              <div className="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-3">
+                <svg className="w-6 h-6 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="bg-brand-900/40 border border-brand-600/30 rounded-xl p-8 text-center mt-4">
-            <p className="text-slate-400 font-serif italic mb-2">{t('No expenses found for this time period.')}</p>
-            <p className="text-[10px] text-slate-500 uppercase tracking-widest">{t('Try selecting a different time range')}</p>
-          </div>
-        )}
+              <p className="text-slate-300 font-serif italic mb-1 text-sm">{t('No unbudgeted spending in this period')}</p>
+              <p className="text-[10px] text-emerald-400 font-semibold uppercase tracking-wider">{t('All spending categories are budgeted!')}</p>
+            </div>
+          )}
+        </div>
+
       </div>
 
     </div>
