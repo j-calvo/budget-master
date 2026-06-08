@@ -15,6 +15,7 @@ export default function Analytics() {
   const [budgets, setBudgets] = useState([]);
   const [ratesData, setRatesData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [expandedUnbudgeted, setExpandedUnbudgeted] = useState({});
 
   // ── Time range state ──────────────────────────────────────────────────────
   const [timeRange, setTimeRange] = useState('6M');
@@ -178,16 +179,34 @@ export default function Analytics() {
             id: catId,
             name: catName,
             amount: 0,
-            count: 0
+            count: 0,
+            transactions: []
           };
         }
         unbudgetedMap[catId].amount += amt;
         unbudgetedMap[catId].count += 1;
+        unbudgetedMap[catId].transactions.push({
+          id: tx.id,
+          description: tx.description,
+          amount: amt,
+          originalAmount: tx.amount,
+          currency: txCurrency,
+          date: tx.date,
+          payee: tx.payee,
+          source: tx.account?.name || tx.creditCard?.name || ''
+        });
       }
+    });
+
+    // Sort transactions within each category by amount descending
+    Object.values(unbudgetedMap).forEach(cat => {
+      cat.transactions.sort((a, b) => b.amount - a.amount);
     });
 
     return Object.values(unbudgetedMap).sort((a, b) => b.amount - a.amount);
   }, [filteredTx, budgets, ratesData, t]);
+
+  const UNBUDGETED_COLORS = ['#f59e0b','#d97706','#b45309','#92400e','#78350f','#fbbf24','#fcd34d','#fde68a','#a16207','#ca8a04'];
 
   // 3. Budgets vs Expenses
   const budgetData = budgets.map(b => {
@@ -478,29 +497,123 @@ export default function Analytics() {
           {unbudgetedExpenses.length > 0 ? (
             <div className="relative z-10">
               <div className="divide-y divide-brand-800/50">
-                {unbudgetedExpenses.map((exp, idx) => (
-                  <div key={exp.id} className="py-3 md:py-4 flex justify-between items-center hover:bg-brand-900/40 transition-colors px-3 md:px-4 -mx-3 md:-mx-4 rounded-xl group">
-                    <div className="flex items-center gap-3 md:gap-4 min-w-0">
-                      <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-brand-900/60 border border-brand-600/50 text-amber-400 flex justify-center items-center font-serif font-bold text-lg md:text-xl shadow-inner group-hover:bg-amber-500/10 transition-colors">
-                        {idx + 1}
+                {unbudgetedExpenses.map((exp, idx) => {
+                  const isExpanded = expandedUnbudgeted[exp.id];
+                  const chartData = exp.transactions.map(tx => ({
+                    name: tx.description,
+                    value: tx.amount,
+                    pct: ((tx.amount / exp.amount) * 100).toFixed(1)
+                  }));
+
+                  return (
+                    <div key={exp.id}>
+                      {/* Category header row — clickable */}
+                      <div
+                        className="py-3 md:py-4 flex justify-between items-center hover:bg-brand-900/40 transition-colors px-3 md:px-4 -mx-3 md:-mx-4 rounded-xl cursor-pointer select-none group"
+                        onClick={() => setExpandedUnbudgeted(prev => ({ ...prev, [exp.id]: !prev[exp.id] }))}
+                      >
+                        <div className="flex items-center gap-3 md:gap-4 min-w-0">
+                          <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-brand-900/60 border border-brand-600/50 text-amber-400 flex justify-center items-center font-serif font-bold text-lg md:text-xl shadow-inner group-hover:bg-amber-500/10 transition-colors">
+                            {idx + 1}
+                          </div>
+                          <div className="min-w-0">
+                            <h3 className="font-bold text-slate-200 text-base md:text-lg tracking-wide truncate group-hover:text-white transition-colors">{exp.name}</h3>
+                            <p className="text-[10px] md:text-xs text-slate-400 uppercase tracking-widest mt-0.5 truncate">
+                              {exp.count === 1 
+                                ? t('transaction_singular', { count: exp.count }) 
+                                : t('transaction_plural', { count: exp.count })
+                              }
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <p className="text-xl md:text-2xl font-serif text-amber-400 drop-shadow-[0_0_8px_rgba(245,158,11,0.3)]">
+                            {formatCurrency(exp.amount)}
+                          </p>
+                          <svg
+                            className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}
+                            fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <h3 className="font-bold text-slate-200 text-base md:text-lg tracking-wide truncate group-hover:text-white transition-colors">{exp.name}</h3>
-                        <p className="text-[10px] md:text-xs text-slate-400 uppercase tracking-widest mt-0.5 truncate">
-                          {exp.count === 1 
-                            ? t('transaction_singular', { count: exp.count }) 
-                            : t('transaction_plural', { count: exp.count })
-                          }
-                        </p>
+
+                      {/* Expandable detail panel */}
+                      <div
+                        className="overflow-hidden transition-all duration-400 ease-in-out"
+                        style={{
+                          maxHeight: isExpanded ? `${Math.max(320, exp.transactions.length * 52 + 200)}px` : '0px',
+                          opacity: isExpanded ? 1 : 0,
+                        }}
+                      >
+                        <div className="pb-4 pt-2 px-2">
+                          {/* Donut chart + legend */}
+                          <div className="flex flex-col md:flex-row gap-4 items-center mb-4">
+                            <div className="w-[140px] h-[140px] shrink-0">
+                              <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                  <Pie
+                                    data={chartData}
+                                    cx="50%" cy="50%"
+                                    innerRadius={35} outerRadius={60}
+                                    dataKey="value"
+                                    strokeWidth={1}
+                                    stroke="rgba(15,23,42,0.8)"
+                                  >
+                                    {chartData.map((_, i) => (
+                                      <Cell key={i} fill={UNBUDGETED_COLORS[i % UNBUDGETED_COLORS.length]} />
+                                    ))}
+                                  </Pie>
+                                  <Tooltip
+                                    formatter={(v, name) => [formatCurrency(v), name]}
+                                    contentStyle={{ backgroundColor: 'rgba(15,23,42,0.95)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', fontSize: '11px' }}
+                                    itemStyle={{ color: '#e2e8f0', fontSize: '11px' }}
+                                  />
+                                </PieChart>
+                              </ResponsiveContainer>
+                            </div>
+                            {/* Legend (top 5) */}
+                            <div className="flex-1 min-w-0 space-y-1">
+                              {chartData.slice(0, 5).map((d, i) => (
+                                <div key={i} className="flex items-center gap-2 text-xs">
+                                  <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: UNBUDGETED_COLORS[i % UNBUDGETED_COLORS.length] }} />
+                                  <span className="text-slate-300 truncate flex-1">{d.name}</span>
+                                  <span className="text-slate-400 font-mono shrink-0">{d.pct}%</span>
+                                </div>
+                              ))}
+                              {chartData.length > 5 && (
+                                <p className="text-[10px] text-slate-500 italic pl-4">+{chartData.length - 5} {t('more')}</p>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Transaction list */}
+                          <div className="bg-brand-900/40 rounded-xl border border-brand-600/20 divide-y divide-brand-800/40 max-h-[220px] overflow-y-auto custom-scrollbar">
+                            {exp.transactions.map((tx, tIdx) => (
+                              <div key={tx.id} className="flex items-center justify-between px-3 py-2.5 hover:bg-brand-800/30 transition-colors">
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: UNBUDGETED_COLORS[tIdx % UNBUDGETED_COLORS.length] }} />
+                                  <div className="min-w-0">
+                                    <p className="text-sm text-slate-200 truncate">{tx.description}</p>
+                                    <p className="text-[10px] text-slate-500 uppercase tracking-widest truncate">
+                                      {new Date(tx.date).toLocaleDateString(settings?.language || 'en-US', { month: 'short', day: 'numeric' })}
+                                      {tx.source && <><span className="text-brand-600 mx-1">•</span>{tx.source}</>}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="text-right shrink-0 pl-3">
+                                  <p className="text-sm font-serif text-amber-400">{formatCurrency(tx.amount)}</p>
+                                  <p className="text-[10px] text-slate-500 font-mono">{((tx.amount / exp.amount) * 100).toFixed(1)}%</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
                       </div>
                     </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-xl md:text-2xl font-serif text-amber-400 drop-shadow-[0_0_8px_rgba(245,158,11,0.3)]">
-                        {formatCurrency(exp.amount)}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
               {/* Total row */}
               <div className="mt-4 pt-4 border-t border-amber-500/20 flex justify-between items-center px-3 md:px-4 -mx-3 md:-mx-4">

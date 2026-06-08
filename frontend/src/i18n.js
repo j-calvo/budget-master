@@ -458,7 +458,8 @@ const resources = {
       "No unbudgeted spending in this period": "No unbudgeted spending in this period",
       "All spending categories are budgeted!": "All spending categories are budgeted!",
       "transaction_singular": "{{count}} transaction",
-      "transaction_plural": "{{count}} transactions"
+      "transaction_plural": "{{count}} transactions",
+      "more": "more"
     }
   },
   'es': {
@@ -917,7 +918,8 @@ const resources = {
       "No unbudgeted spending in this period": "Sin gastos no presupuestados en este periodo",
       "All spending categories are budgeted!": "¡Todas las categorías de gastos están presupuestadas!",
       "transaction_singular": "{{count}} transacción",
-      "transaction_plural": "{{count}} transacciones"
+      "transaction_plural": "{{count}} transacciones",
+      "more": "más"
     }
   }
 };
