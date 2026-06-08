@@ -159,7 +159,9 @@ export default function Analytics() {
   const topExpenses = [...expenses].sort((a, b) => b.amount - a.amount).slice(0, 5);
 
   const unbudgetedExpenses = useMemo(() => {
-    const budgetedCatIds = new Set(budgets.map(b => b.categoryId));
+    // Filter out virtual budgets (amount === 0, isVirtual) — those are NOT real budgets
+    const realBudgets = budgets.filter(b => !b.isVirtual && b.amount > 0);
+    const budgetedCatIds = new Set(realBudgets.map(b => b.categoryId));
     const unbudgetedMap = {};
 
     filteredTx.forEach(tx => {
@@ -474,30 +476,58 @@ export default function Analytics() {
           </p>
 
           {unbudgetedExpenses.length > 0 ? (
-            <div className="divide-y divide-brand-800/50 relative z-10">
-              {unbudgetedExpenses.map((exp, idx) => (
-                <div key={exp.id} className="py-3 md:py-4 flex justify-between items-center hover:bg-brand-900/40 transition-colors px-3 md:px-4 -mx-3 md:-mx-4 rounded-xl group">
-                  <div className="flex items-center gap-3 md:gap-4 min-w-0">
-                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-brand-900/60 border border-brand-600/50 text-amber-400 flex justify-center items-center font-serif font-bold text-lg md:text-xl shadow-inner group-hover:bg-amber-500/10 transition-colors">
-                      {idx + 1}
+            <div className="relative z-10">
+              <div className="divide-y divide-brand-800/50">
+                {unbudgetedExpenses.map((exp, idx) => (
+                  <div key={exp.id} className="py-3 md:py-4 flex justify-between items-center hover:bg-brand-900/40 transition-colors px-3 md:px-4 -mx-3 md:-mx-4 rounded-xl group">
+                    <div className="flex items-center gap-3 md:gap-4 min-w-0">
+                      <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-brand-900/60 border border-brand-600/50 text-amber-400 flex justify-center items-center font-serif font-bold text-lg md:text-xl shadow-inner group-hover:bg-amber-500/10 transition-colors">
+                        {idx + 1}
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="font-bold text-slate-200 text-base md:text-lg tracking-wide truncate group-hover:text-white transition-colors">{exp.name}</h3>
+                        <p className="text-[10px] md:text-xs text-slate-400 uppercase tracking-widest mt-0.5 truncate">
+                          {exp.count === 1 
+                            ? t('transaction_singular', { count: exp.count }) 
+                            : t('transaction_plural', { count: exp.count })
+                          }
+                        </p>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <h3 className="font-bold text-slate-200 text-base md:text-lg tracking-wide truncate group-hover:text-white transition-colors">{exp.name}</h3>
-                      <p className="text-[10px] md:text-xs text-slate-400 uppercase tracking-widest mt-0.5 truncate">
-                        {exp.count === 1 
-                          ? t('transaction_singular', { count: exp.count }) 
-                          : t('transaction_plural', { count: exp.count })
-                        }
+                    <div className="text-right shrink-0">
+                      <p className="text-xl md:text-2xl font-serif text-amber-400 drop-shadow-[0_0_8px_rgba(245,158,11,0.3)]">
+                        {formatCurrency(exp.amount)}
                       </p>
                     </div>
                   </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-xl md:text-2xl font-serif text-amber-400 drop-shadow-[0_0_8px_rgba(245,158,11,0.3)]">
-                      {formatCurrency(exp.amount)}
+                ))}
+              </div>
+              {/* Total row */}
+              <div className="mt-4 pt-4 border-t border-amber-500/20 flex justify-between items-center px-3 md:px-4 -mx-3 md:-mx-4">
+                <div className="flex items-center gap-3 md:gap-4">
+                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 flex justify-center items-center shadow-inner">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-white text-base md:text-lg tracking-wide">{t('Total')}</h3>
+                    <p className="text-[10px] md:text-xs text-slate-400 uppercase tracking-widest mt-0.5">
+                      {(() => {
+                        const totalCount = unbudgetedExpenses.reduce((sum, e) => sum + e.count, 0);
+                        return totalCount === 1
+                          ? t('transaction_singular', { count: totalCount })
+                          : t('transaction_plural', { count: totalCount });
+                      })()}
                     </p>
                   </div>
                 </div>
-              ))}
+                <div className="text-right shrink-0">
+                  <p className="text-xl md:text-2xl font-serif font-bold text-amber-300 drop-shadow-[0_0_12px_rgba(245,158,11,0.4)]">
+                    {formatCurrency(unbudgetedExpenses.reduce((sum, e) => sum + e.amount, 0))}
+                  </p>
+                </div>
+              </div>
             </div>
           ) : (
             <div className="bg-brand-900/40 border border-brand-600/30 rounded-xl p-8 text-center mt-4 relative z-10 flex flex-col items-center justify-center min-h-[200px]">
