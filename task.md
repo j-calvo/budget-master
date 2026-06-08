@@ -125,3 +125,13 @@
 - [x] Configure environment variables
 - [x] Setup PM2 ecosystem file
 - [x] Write deployment setup documentation
+
+## 8. EV Charging Integration
+- [x] Add EV Charging logs fetch and state in `Services.jsx`
+- [x] Implement Tab Navigation (Utility Consumption vs. EV Charging) in `Services.jsx`
+- [x] Add EV Charging Logs table layout (Date, Period, kWh, Note, Actions)
+- [x] Implement Modal forms for adding/editing EV sessions
+- [x] Calculate & display metrics (Total EV Energy, Total EV Sessions, Avg EV Share, Total Est. EV Cost)
+- [x] Build charts: EV Cost Trend, and Stacked Energy Allocation (House vs EV)
+- [x] Integrate EV Share and Est. EV Cost estimates into the main Utility Consumption ledger rows for electricity bills
+- [x] Verify functionality (manual entries & calculations)

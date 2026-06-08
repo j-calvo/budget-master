@@ -45,10 +45,37 @@ The project will be created at `/Users/jonathan.calvo/.gemini/antigravity/scratc
    - Build CRUD APIs mimicking Accounts architecture.
    - Add UI Pages for Credit Cards and Loans, leveraging dynamic Multi-Currency fetching for new entries.
 7. **Phase 7: Refinement & Deployment**: Polish UI, prepare production build, provide MacOS deployment guides.
+8. **Phase 8: EV Charging Integration**:
+   - Integrate EV charging session logs into the frontend.
+   - Build a tabbed layout in `Services.jsx` for Utility Consumption vs. EV Charging.
+   - Calculate EV share (%) of electricity consumption and estimated EV cost dynamically using the linked billing periods.
+   - Add visual breakdowns: Electricity vs EV allocation chart and EV Cost Trend chart.
+   - Build CRUD modal interface for logging and editing charging sessions.
+
+## Proposed Changes
+
+### Frontend Component
+
+#### [MODIFY] [Services.jsx](file:///Users/jonathan.calvo/.gemini/antigravity/scratch/personal-finance-app/frontend/src/pages/Services.jsx)
+- Implement state for tabs (`activeTab = 'utilities' | 'ev'`).
+- Fetch EV logs from `/api/ev-charging` and compute metrics.
+- Build the EV Charging dashboard containing:
+  - Metrics cards: Total EV energy (kWh), Total EV Sessions, Avg EV Share, Total Est. EV Cost.
+  - Interactive charts using Recharts:
+    - Stacked Bar Chart: Energy Allocation (House vs. EV) per billing period.
+    - Line/Bar Chart: EV Cost Trend over billing periods.
+  - EV session ledger table (Date, Billing Period, kWh, Note, actions).
+  - Modal form for EV logging (date, billingPeriod, kwh, note).
+- Update the main Utility Consumption ledger:
+  - For `electricity` rows, display estimated EV cost and share percentage if matching EV logs exist.
 
 ## Verification Plan
 ### Automated Tests
-- We will test API endpoints using curl or basic automated scripts to verify REST behavior.
+- Verification of API endpoints via curl commands to ensure GET, POST, PUT, DELETE operations on `/api/ev-charging` respond correctly.
 
 ### Manual Verification
-- We will run the dev servers (`npm run dev` and `npm start`) and manually verify the dashboard, transaction entry, budget tracking flows in the browser.
+- Start the server and frontend web app.
+- Navigate to the **Services** view and check the tabbed layout.
+- Log an electricity consumption record with specific values (e.g. May 2026, 400 kWh, 50,000 CRC).
+- Switch to the **EV Charging** tab and log a few sessions for the same billing period (e.g. two sessions of 50 kWh each).
+- Check that the estimated EV cost (¢12,500) and EV Share (25.0%) update correctly on the metrics cards, charts, and utility ledger.
