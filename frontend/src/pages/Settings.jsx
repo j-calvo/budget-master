@@ -78,6 +78,87 @@ export default function Settings() {
                 <div className="w-1 h-5 bg-gold-500 rounded-full"></div>
                 {t('Localization Preferences')}
               </h2>
+
+              {/* Theme Selector */}
+              <div className="mb-8">
+                <label className="block text-xs font-medium text-slate-400 mb-4 uppercase tracking-wider">
+                  {t('Application Theme')}
+                </label>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Emerald Wealth Card */}
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, theme: 'emerald' })}
+                    className={`p-4 rounded-xl border text-left transition-all relative overflow-hidden flex flex-col justify-between h-28 cursor-pointer ${
+                      formData.theme === 'emerald' || !formData.theme
+                        ? 'border-gold-500 bg-brand-700/60 shadow-[0_4px_20px_rgba(212,175,55,0.15)] ring-1 ring-gold-500'
+                        : 'border-brand-600/30 bg-brand-900/30 hover:border-brand-600/60'
+                    }`}
+                  >
+                    <div className="flex justify-between items-start w-full">
+                      <span className="font-serif font-bold text-foreground text-sm">{t('Emerald Wealth')}</span>
+                      <div className="w-4 h-4 rounded-full border border-gold-500 flex items-center justify-center">
+                        {(formData.theme === 'emerald' || !formData.theme) && <div className="w-2.5 h-2.5 rounded-full bg-gold-500"></div>}
+                      </div>
+                    </div>
+                    <div className="flex gap-1.5 mt-2">
+                      <div className="w-5 h-5 rounded-full bg-[#050A07] border border-white/10" />
+                      <div className="w-5 h-5 rounded-full bg-[#0B130E] border border-white/10" />
+                      <div className="w-5 h-5 rounded-full bg-[#13221A] border border-white/10" />
+                      <div className="w-5 h-5 rounded-full bg-[#D4AF37] border border-white/10" />
+                    </div>
+                  </button>
+
+                  {/* Carbon High-Contrast Card */}
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, theme: 'carbon' })}
+                    className={`p-4 rounded-xl border text-left transition-all relative overflow-hidden flex flex-col justify-between h-28 cursor-pointer ${
+                      formData.theme === 'carbon'
+                        ? 'border-indigo-500 bg-brand-700/60 shadow-[0_4px_20px_rgba(99,102,241,0.15)] ring-1 ring-indigo-500'
+                        : 'border-brand-600/30 bg-brand-900/30 hover:border-brand-600/60'
+                    }`}
+                  >
+                    <div className="flex justify-between items-start w-full">
+                      <span className="font-sans font-bold text-foreground text-sm">{t('Carbon Dark')}</span>
+                      <div className="w-4 h-4 rounded-full border border-indigo-500 flex items-center justify-center">
+                        {formData.theme === 'carbon' && <div className="w-2.5 h-2.5 rounded-full bg-indigo-500"></div>}
+                      </div>
+                    </div>
+                    <div className="flex gap-1.5 mt-2">
+                      <div className="w-5 h-5 rounded-full bg-[#090D16] border border-white/10" />
+                      <div className="w-5 h-5 rounded-full bg-[#0F172A] border border-white/10" />
+                      <div className="w-5 h-5 rounded-full bg-[#1E293B] border border-white/10" />
+                      <div className="w-5 h-5 rounded-full bg-[#6366F1] border border-white/10" />
+                    </div>
+                  </button>
+
+                  {/* Alabaster Premium Card */}
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, theme: 'alabaster' })}
+                    className={`p-4 rounded-xl border text-left transition-all relative overflow-hidden flex flex-col justify-between h-28 cursor-pointer ${
+                      formData.theme === 'alabaster'
+                        ? 'border-[#854D0E] bg-brand-700/60 shadow-[0_4px_20px_rgba(133,77,14,0.15)] ring-1 ring-[#854D0E]'
+                        : 'border-brand-600/30 bg-brand-900/30 hover:border-brand-600/60'
+                    }`}
+                  >
+                    <div className="flex justify-between items-start w-full">
+                      <span className="font-sans font-bold text-foreground text-sm">{t('Alabaster Light')}</span>
+                      <div className="w-4 h-4 rounded-full border border-[#854D0E] flex items-center justify-center">
+                        {formData.theme === 'alabaster' && <div className="w-2.5 h-2.5 rounded-full bg-[#854D0E]"></div>}
+                      </div>
+                    </div>
+                    <div className="flex gap-1.5 mt-2">
+                      <div className="w-5 h-5 rounded-full bg-[#F4F3EF] border border-black/10" />
+                      <div className="w-5 h-5 rounded-full bg-[#FAF9F6] border border-black/10" />
+                      <div className="w-5 h-5 rounded-full bg-[#FFFFFF] border border-black/10" />
+                      <div className="w-5 h-5 rounded-full bg-[#854D0E] border border-black/10" />
+                    </div>
+                  </button>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
 
                 <div>

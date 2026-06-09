@@ -1,22 +1,139 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --color-brand-900: #060913; /* Deepest black/blue */
-  --color-brand-800: #0A0F1C; /* Main midnight bg */
-  --color-brand-700: #121A2F; /* Lighter midnight for cards */
-  --color-brand-600: #1C2641; /* Borders and hovers */
+  --color-brand-900: var(--brand-900);
+  --color-brand-800: var(--brand-800);
+  --color-brand-700: var(--brand-700);
+  --color-brand-600: var(--brand-600);
   
-  --color-gold-400: #F3E5AB; /* Light Champagne Gold */
-  --color-gold-500: #D4AF37; /* Primary Gold */
-  --color-gold-600: #AA8C2C; /* Dark Gold for active states */
+  --color-gold-400: var(--gold-400);
+  --color-gold-500: var(--gold-500);
+  --color-gold-600: var(--gold-600);
 
-  --font-sans: 'Outfit', sans-serif;
-  --font-serif: 'Playfair Display', serif;
+  --font-sans: var(--font-sans-family);
+  --font-serif: var(--font-serif-family);
+}
+
+:root, [data-theme="emerald"] {
+  --brand-900: #050A07;
+  --brand-800: #0B130E;
+  --brand-700: #13221A;
+  --brand-600: #1E3529;
+  
+  --gold-400: #F6E5A0;
+  --gold-500: #D4AF37;
+  --gold-600: #B8922A;
+
+  --font-sans-family: 'Plus Jakarta Sans', sans-serif;
+  --font-serif-family: 'Playfair Display', serif;
+
+  --background: var(--brand-800);
+  --foreground: #F1F5F9;
+  
+  --glass-card-bg: rgba(19, 34, 26, 0.65);
+  --glass-card-border: rgba(30, 53, 41, 0.5);
+  --glass-panel-bg: rgba(5, 10, 7, 0.85);
+  --glass-panel-border: rgba(30, 53, 41, 0.3);
+  
+  --bg-radial-1: rgba(30, 53, 41, 0.4);
+  --bg-radial-2: rgba(212, 175, 55, 0.03);
+
+  --selection-bg: rgba(212, 175, 55, 0.3);
+  --selection-text: #ffffff;
+  
+  --btn-gold-shadow: rgba(212, 175, 55, 0.2);
+  --btn-gold-shadow-hover: rgba(212, 175, 55, 0.4);
+  
+  --btn-glass-bg: rgba(30, 53, 41, 0.4);
+  --btn-glass-border: rgba(30, 53, 41, 0.5);
+  --btn-glass-hover: rgba(30, 53, 41, 0.6);
+  
+  --text-muted: #94A3B8;
+  --scroll-thumb: var(--brand-600);
+  --scroll-thumb-hover: var(--gold-600);
+}
+
+[data-theme="carbon"] {
+  --brand-900: #090D16;
+  --brand-800: #0F172A;
+  --brand-700: #1E293B;
+  --brand-600: #334155;
+  
+  --gold-400: #818CF8;
+  --gold-500: #6366F1;
+  --gold-600: #4F46E5;
+
+  --font-sans-family: 'Inter', sans-serif;
+  --font-serif-family: 'Plus Jakarta Sans', sans-serif;
+
+  --background: var(--brand-800);
+  --foreground: #FFFFFF;
+  
+  --glass-card-bg: rgba(30, 41, 59, 0.75);
+  --glass-card-border: rgba(51, 65, 85, 0.6);
+  --glass-panel-bg: rgba(9, 13, 22, 0.85);
+  --glass-panel-border: rgba(51, 65, 85, 0.4);
+  
+  --bg-radial-1: rgba(51, 65, 85, 0.4);
+  --bg-radial-2: rgba(99, 102, 241, 0.05);
+
+  --selection-bg: rgba(99, 102, 241, 0.3);
+  --selection-text: #ffffff;
+  
+  --btn-gold-shadow: rgba(99, 102, 241, 0.2);
+  --btn-gold-shadow-hover: rgba(99, 102, 241, 0.4);
+  
+  --btn-glass-bg: rgba(51, 65, 85, 0.4);
+  --btn-glass-border: rgba(51, 65, 85, 0.5);
+  --btn-glass-hover: rgba(51, 65, 85, 0.6);
+  
+  --text-muted: #94A3B8;
+  --scroll-thumb: var(--brand-600);
+  --scroll-thumb-hover: var(--gold-600);
+}
+
+[data-theme="alabaster"] {
+  --brand-900: #F4F3EF;
+  --brand-800: #FAF9F6;
+  --brand-700: #FFFFFF;
+  --brand-600: #EAE7E1;
+  
+  --gold-400: #854D0E; /* Darkened for accessibility on light bg (Bronze) */
+  --gold-500: #713F12; /* High-contrast gold/amber accent */
+  --gold-600: #451A03;
+  
+  --font-sans-family: 'Plus Jakarta Sans', sans-serif;
+  --font-serif-family: 'Outfit', sans-serif;
+
+  --background: var(--brand-800);
+  --foreground: #1C1917; /* Slate-900 equivalent for robust text contrast */
+  
+  --glass-card-bg: rgba(255, 255, 255, 0.98); /* Opaque cards to prevent readibility issues */
+  --glass-card-border: rgba(210, 205, 195, 0.5);
+  --glass-panel-bg: rgba(244, 243, 239, 0.98);
+  --glass-panel-border: rgba(210, 205, 195, 0.4);
+  
+  --bg-radial-1: rgba(234, 231, 225, 0.5);
+  --bg-radial-2: rgba(113, 63, 18, 0.05);
+
+  --selection-bg: rgba(113, 63, 18, 0.15);
+  --selection-text: #1C1917;
+  
+  --btn-gold-shadow: rgba(113, 63, 18, 0.1);
+  --btn-gold-shadow-hover: rgba(113, 63, 18, 0.2);
+  
+  --btn-glass-bg: rgba(234, 231, 225, 0.6);
+  --btn-glass-border: rgba(210, 205, 195, 0.8);
+  --btn-glass-hover: rgba(220, 215, 205, 0.8);
+  
+  --text-muted: #4B5563; /* High-contrast Slate-600 to satisfy WCAG AA */
+  --scroll-thumb: var(--brand-600);
+  --scroll-thumb-hover: var(--gold-500);
 }
 
 :root {
-  --background: var(--color-brand-800);
+  --background: var(--brand-800);
   --foreground: #F8FAFC;
 }
 
@@ -25,8 +142,8 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
-  background-image: radial-gradient(circle at top right, rgba(28, 38, 65, 0.4), transparent 400px),
-                    radial-gradient(circle at bottom left, rgba(212, 175, 55, 0.03), transparent 400px);
+  background-image: radial-gradient(circle at top right, var(--bg-radial-1), transparent 400px),
+                    radial-gradient(circle at bottom left, var(--bg-radial-2), transparent 400px);
   background-attachment: fixed;
   min-height: 100vh;
   overflow-x: hidden;
@@ -34,17 +151,17 @@ body {
 
 /* Glassmorphism & Luxury Utilities */
 @utility glass-card {
-  background-color: rgb(18 26 47 / 0.6);
+  background-color: var(--glass-card-bg);
   backdrop-filter: blur(16px);
-  border: 1px solid rgb(28 38 65 / 0.5);
-  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.4);
+  border: 1px solid var(--glass-card-border);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.05);
   border-radius: 1rem;
 }
 
 @utility glass-panel {
-  background-color: rgb(6 9 19 / 0.8);
+  background-color: var(--glass-panel-bg);
   backdrop-filter: blur(24px);
-  border-top: 1px solid rgb(28 38 65 / 0.3);
+  border-top: 1px solid var(--glass-panel-border);
 }
 
 @utility text-gradient-gold {
@@ -60,11 +177,11 @@ body {
   color: var(--color-brand-900);
   font-weight: 500;
   border-radius: 0.5rem;
-  box-shadow: 0 10px 15px -3px rgb(212 175 55 / 0.2);
+  box-shadow: 0 10px 15px -3px var(--btn-gold-shadow);
   transition: all 0.2s;
   
   &:hover {
-    box-shadow: 0 20px 25px -5px rgb(212 175 55 / 0.4);
+    box-shadow: 0 20px 25px -5px var(--btn-gold-shadow-hover);
   }
   
   &:active {
@@ -73,16 +190,16 @@ body {
 }
 
 @utility btn-glass {
-  background-color: rgb(28 38 65 / 0.4);
+  background-color: var(--btn-glass-bg);
   backdrop-filter: blur(12px);
-  border: 1px solid rgb(28 38 65 / 0.5);
-  color: white;
+  border: 1px solid var(--btn-glass-border);
+  color: var(--foreground);
   font-weight: 500;
   border-radius: 0.5rem;
   transition: all 0.2s;
   
   &:hover {
-    background-color: rgb(28 38 65 / 0.6);
+    background-color: var(--btn-glass-hover);
   }
   
   &:active {
@@ -90,7 +207,7 @@ body {
   }
 }
 
-/* Custom Scrollbar for Dark Theme */
+/* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -99,9 +216,83 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--color-brand-600);
+  background: var(--scroll-thumb);
   border-radius: 10px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-gold-600);
+  background: var(--scroll-thumb-hover);
+}
+
+/* ──────────────────────────────────────────────────────────
+   Alabaster Theme Accessibility Overrides
+   Ensures text-white/slate hardcoding in React page templates 
+   maps gracefully to dark readable tones in Alabaster Light theme.
+   ────────────────────────────────────────────────────────── */
+[data-theme="alabaster"] {
+  /* Force dark text for commonly used headers and text-white elements */
+  .text-white, 
+  h1.text-white, 
+  h2.text-white, 
+  h3.text-white, 
+  span.text-white, 
+  p.text-white, 
+  div.text-white, 
+  h1, 
+  h2, 
+  h3 {
+    color: #1C1917 !important;
+  }
+
+  /* Force accessible slate gray for muted descriptions */
+  .text-slate-400, 
+  .text-slate-300, 
+  .text-slate-200,
+  p.text-slate-400,
+  p.text-slate-300 {
+    color: #4B5563 !important;
+  }
+
+  /* Keep sidebar items accessible */
+  .glass-panel a.text-slate-400 {
+    color: #4B5563 !important;
+  }
+  .glass-panel a.text-slate-400:hover {
+    color: #1C1917 !important;
+    background-color: rgba(234, 231, 225, 0.5) !important;
+  }
+  .glass-panel a[href="/settings"] {
+    color: #4B5563 !important;
+  }
+
+  /* Sidebar Active State overrides */
+  .glass-panel a.bg-gradient-to-r {
+    background-image: linear-gradient(to right, rgba(234, 231, 225, 0.8), transparent) !important;
+    color: var(--gold-500) !important;
+    border-left-color: var(--gold-500) !important;
+    box-shadow: none !important;
+  }
+  .glass-panel a.bg-gradient-to-r span {
+    color: var(--gold-500) !important;
+  }
+
+  /* Button Overrides for Alabaster theme text color compatibility */
+  .btn-gold {
+    color: #FFFFFF !important; /* White text on dark bronze button */
+  }
+  .btn-glass {
+    color: #1C1917 !important;
+  }
+  
+  /* Text gradient gold override for clarity */
+  .text-gradient-gold {
+    background-image: linear-gradient(to right, var(--gold-500), var(--gold-600)) !important;
+  }
+
+  /* Fixes text color on settings tabs */
+  .flex.bg-brand-900\/60 button.text-slate-400 {
+    color: #4B5563 !important;
+  }
+  .flex.bg-brand-900\/60 button.bg-gold-500 {
+    color: #FFFFFF !important;
+  }
 }

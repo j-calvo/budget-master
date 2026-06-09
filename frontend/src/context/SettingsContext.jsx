@@ -37,6 +37,14 @@ export function SettingsProvider({ children }) {
   }, [settings.fontFamily]);
 
   useEffect(() => {
+    if (settings.theme) {
+      document.documentElement.setAttribute('data-theme', settings.theme);
+    } else {
+      document.documentElement.setAttribute('data-theme', 'emerald');
+    }
+  }, [settings.theme]);
+
+  useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
       fetchSettings();
