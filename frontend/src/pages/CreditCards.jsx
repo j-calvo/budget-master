@@ -21,7 +21,7 @@ export default function CreditCards() {
   });
   const [deleteData, setDeleteData] = useState({ id: null, name: null });
   const [formData, setFormData] = useState({ 
-    id: null, name: '', limit: '', balance: 0, dueDate: 1, statementDay: 1, apr: 0, currency: 'USD', last4Digits: '' 
+    id: null, name: '', limit: '', balance: 0, dueDate: 1, statementDay: 1, apr: 0, currency: 'USD', last4Digits: '', parentId: null 
   });
 
   useEffect(() => {
@@ -58,7 +58,7 @@ export default function CreditCards() {
         await api.post(API_URL, formData);
       }
       setShowModal(false);
-      setFormData({ id: null, name: '', limit: '', balance: 0, dueDate: 1, statementDay: 1, apr: 0, currency: currencies[0]?.code || 'USD', last4Digits: '' });
+      setFormData({ id: null, name: '', limit: '', balance: 0, dueDate: 1, statementDay: 1, apr: 0, currency: currencies[0]?.code || 'USD', last4Digits: '', parentId: null });
       fetchData();
     } catch (err) {
       console.error('Failed to save credit card', err);
@@ -128,7 +128,7 @@ export default function CreditCards() {
         </div>
         <button 
           onClick={() => {
-            setFormData({ id: null, name: '', limit: '', balance: 0, dueDate: 1, apr: 0, currency: currencies.length ? currencies[0].code : 'USD', last4Digits: '' });
+            setFormData({ id: null, name: '', limit: '', balance: 0, dueDate: 1, apr: 0, currency: currencies.length ? currencies[0].code : 'USD', last4Digits: '', parentId: null });
             setShowModal(true);
           }} 
           className="btn-gold px-5 py-2 text-sm shadow-md flex items-center gap-1"
@@ -149,7 +149,7 @@ export default function CreditCards() {
           <p className="text-slate-400 font-serif italic text-lg mb-6">{t('No credit cards added yet.')}</p>
           <button 
             onClick={() => {
-              setFormData({ id: null, name: '', limit: '', balance: 0, dueDate: 1, statementDay: 1, apr: 0, currency: currencies.length ? currencies[0].code : 'USD', last4Digits: '' });
+              setFormData({ id: null, name: '', limit: '', balance: 0, dueDate: 1, statementDay: 1, apr: 0, currency: currencies.length ? currencies[0].code : 'USD', last4Digits: '', parentId: null });
               setShowModal(true);
             }} 
             className="btn-glass px-6 py-2"
@@ -160,11 +160,13 @@ export default function CreditCards() {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
           {cards.map(card => {
-            const utilization = Math.min(100, Math.round((card.balance / card.limit) * 100)) || 0;
+            const spentAmount = card.parentId ? card.balance : card.aggregateBalance;
+            const utilization = Math.min(100, Math.round((spentAmount / card.limit) * 100)) || 0;
             const isHighUtil = utilization > 30;
+            const parentCard = card.parentId ? cards.find(c => c.id === card.parentId) : null;
             
             return (
-              <div key={card.id} className="glass-card p-6 relative group flex flex-col justify-between hover:border-gold-500/30 hover:shadow-[0_0_20px_rgba(212,175,55,0.05)] transition-all overflow-hidden">
+              <div key={card.id} className={`glass-card p-6 relative group flex flex-col justify-between hover:border-gold-500/30 hover:shadow-[0_0_20px_rgba(212,175,55,0.05)] transition-all overflow-hidden ${card.parentId ? 'border-brand-600/40 bg-brand-950/20' : ''}`}>
                 <div className="absolute top-0 right-0 w-32 h-32 bg-gold-500/5 rounded-full blur-2xl -z-10 mix-blend-screen transition-all group-hover:bg-gold-500/10"></div>
                 
                 <div className="absolute top-4 right-4 flex space-x-2 md:opacity-0 group-hover:opacity-100 transition-opacity">
@@ -177,8 +179,20 @@ export default function CreditCards() {
                 </div>
 
                 <div className="mb-6 pr-16">
-                  <h3 className="font-serif italic text-white text-xl tracking-wide line-clamp-1">{card.name}</h3>
+                  <div className="flex items-start gap-2 flex-wrap">
+                    <h3 className="font-serif italic text-white text-xl tracking-wide line-clamp-1">{card.name}</h3>
+                    {parentCard && (
+                      <span className="text-[9px] bg-brand-800 text-gold-400 border border-gold-500/20 px-2 py-0.5 rounded-full font-medium uppercase tracking-wider self-center">
+                        {t('Extension')}
+                      </span>
+                    )}
+                  </div>
                   {card.last4Digits && <p className="text-xs text-gold-400 font-mono tracking-widest mt-1 opacity-80">•••• {card.last4Digits}</p>}
+                  {parentCard && (
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      {t('Parent:')} <span className="text-slate-300 font-medium">{parentCard.name}</span>
+                    </p>
+                  )}
                   <div className="flex gap-3 text-xs font-medium uppercase tracking-widest mt-2">
                     <span className="text-slate-400">{t('Due:')} <span className="text-slate-300">{card.dueDate}</span></span>
                     <span className="text-brand-600">•</span>
@@ -189,11 +203,23 @@ export default function CreditCards() {
                 <div>
                   <div className="mb-5">
                     <p className="text-3xl font-light font-serif text-white mb-1 tracking-wide">
-                      {formatCurrency(card.balance, card.currency)}
+                      {formatCurrency(spentAmount, card.currency)}
                     </p>
                     <p className="text-xs text-slate-400 uppercase tracking-widest">
                       {t('of {{limit}} limit', { limit: formatCurrency(card.limit, card.currency) })}
                     </p>
+                    {!card.parentId && card.aggregateBalance !== card.balance && (
+                      <div className="text-[10px] text-slate-400 font-medium tracking-wide mt-2 space-y-0.5 bg-brand-950/40 p-2 rounded-lg border border-brand-600/25">
+                        <div className="flex justify-between">
+                          <span>{t('Main Card Balance:')}</span>
+                          <span className="text-slate-300">{formatCurrency(card.balance, card.currency)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>{t('Extensions Combined:')}</span>
+                          <span className="text-slate-300">{formatCurrency(card.aggregateBalance - card.balance, card.currency)}</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                   
                   <div className="w-full bg-brand-900/50 rounded-full h-1.5 mb-2 overflow-hidden border border-brand-600/30">
@@ -201,7 +227,7 @@ export default function CreditCards() {
                   </div>
                   <div className="flex justify-between items-baseline mb-4 text-xs font-medium uppercase tracking-wider">
                     <span className={isHighUtil ? 'text-rose-400' : 'text-gold-400'}>{t('{{utilization}}% Utilized', { utilization })}</span>
-                    <span className="text-slate-400">{t('{{available}} avl.', { available: formatCurrency(card.limit - card.balance, card.currency) })}</span>
+                    <span className="text-slate-400">{t('{{available}} avl.', { available: formatCurrency(card.limit - spentAmount, card.currency) })}</span>
                   </div>
                   
                   <button 
@@ -281,13 +307,30 @@ export default function CreditCards() {
                 <div>
                   <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Currency')}</label>
                   <select value={formData.currency} onChange={e => setFormData({...formData, currency: e.target.value})} className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all appearance-none cursor-pointer">
-                  {currencies.map(c => (
-                    <option key={c.id} value={c.code} className="bg-brand-800">{c.code} ({c.symbol})</option>
-                  ))}
-                  {currencies.length === 0 && <option value="USD" className="bg-brand-800">{t('USD ($)')}</option>}
+                    {currencies.map(c => (
+                      <option key={c.id} value={c.code} className="bg-brand-800">{c.code} ({c.symbol})</option>
+                    ))}
+                    {currencies.length === 0 && <option value="USD" className="bg-brand-800">{t('USD ($)')}</option>}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Parent Card (Optional)')}</label>
+                <select 
+                  value={formData.parentId || ''} 
+                  onChange={e => setFormData({...formData, parentId: e.target.value ? e.target.value : null})} 
+                  className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all appearance-none cursor-pointer"
+                >
+                  <option value="" className="bg-brand-800">{t('None (Main Card)')}</option>
+                  {cards
+                    .filter(c => !c.parentId && c.id !== formData.id)
+                    .map(c => (
+                      <option key={c.id} value={c.id} className="bg-brand-800">{c.name} (•••• {c.last4Digits || 'N/A'})</option>
+                    ))
+                  }
                 </select>
               </div>
-            </div>
 
               <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-brand-600/30">
                 <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 text-sm text-slate-400 hover:text-white transition-colors">{t('Cancel')}</button>

@@ -8,7 +8,18 @@ exports.getCreditCards = async (req, res) => {
       where: { familyId: req.user.familyId },
       orderBy: { createdAt: 'desc' },
     });
-    res.json(cards);
+    
+    // Compute aggregateBalance for each card (its own balance + balances of its children)
+    const processedCards = cards.map(card => {
+      const childCards = cards.filter(c => c.parentId === card.id);
+      const aggregateBalance = card.balance + childCards.reduce((sum, child) => sum + child.balance, 0);
+      return {
+        ...card,
+        aggregateBalance
+      };
+    });
+
+    res.json(processedCards);
   } catch (error) {
     console.error('getCreditCards error:', error);
     res.status(500).json({ error: 'Failed to fetch credit cards' });
@@ -18,7 +29,7 @@ exports.getCreditCards = async (req, res) => {
 // Create a new credit card
 exports.createCreditCard = async (req, res) => {
   try {
-    const { name, limit, balance, dueDate, statementDay, apr, currency, last4Digits } = req.body;
+    const { name, limit, balance, dueDate, statementDay, apr, currency, last4Digits, parentId } = req.body;
     
     if (!name || !limit) {
       return res.status(400).json({ error: 'Name and limit are required' });
@@ -35,6 +46,7 @@ exports.createCreditCard = async (req, res) => {
         apr: parseFloat(apr) || 0,
         currency: currency || 'USD',
         last4Digits: last4Digits ? String(last4Digits).slice(-4) : null,
+        parentId: parentId || null,
       },
     });
     
@@ -49,7 +61,7 @@ exports.createCreditCard = async (req, res) => {
 exports.updateCreditCard = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, limit, balance, dueDate, statementDay, apr, currency, last4Digits } = req.body;
+    const { name, limit, balance, dueDate, statementDay, apr, currency, last4Digits, parentId } = req.body;
     
     const card = await prisma.creditCard.update({
       where: { id, familyId: req.user.familyId },
@@ -62,6 +74,7 @@ exports.updateCreditCard = async (req, res) => {
         apr: parseFloat(apr),
         currency,
         last4Digits: last4Digits ? String(last4Digits).slice(-4) : null,
+        parentId: parentId || null,
       },
     });
     

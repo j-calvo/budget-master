@@ -90,6 +90,10 @@ model CreditCard {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   
+  parentId     String?
+  parent       CreditCard?  @relation("CardExtensions", fields: [parentId], references: [id], onDelete: SetNull)
+  extensions   CreditCard[] @relation("CardExtensions")
+
   family    Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
   transactions Transaction[]
 }
