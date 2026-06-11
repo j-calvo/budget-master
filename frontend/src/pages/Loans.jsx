@@ -47,6 +47,7 @@ export default function Loans() {
   const [loanForm, setLoanForm] = useState(emptyLoanForm());
   const [activeMainTab, setActiveMainTab] = useState('loans');
   const [extraPayment, setExtraPayment] = useState('200');
+  const [selectedSimLoans, setSelectedSimLoans] = useState({});
 
   // Detail panel
   const [selectedLoan, setSelectedLoan] = useState(null);
@@ -67,6 +68,20 @@ export default function Loans() {
   const [newApr, setNewApr] = useState('');
 
   useEffect(() => { fetchAll(); }, []);
+
+  useEffect(() => {
+    if (loans.length > 0) {
+      setSelectedSimLoans(prev => {
+        const next = { ...prev };
+        loans.forEach(l => {
+          if (next[l.id] === undefined) {
+            next[l.id] = true;
+          }
+        });
+        return next;
+      });
+    }
+  }, [loans]);
 
   const fetchAll = async () => {
     try {
@@ -321,7 +336,8 @@ export default function Loans() {
     };
   };
 
-  const simResult = runPaydownSimulation(loans, extraPayment);
+  const activeSimLoans = loans.filter(l => selectedSimLoans[l.id] !== false);
+  const simResult = runPaydownSimulation(activeSimLoans, extraPayment);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
@@ -738,146 +754,181 @@ export default function Loans() {
           ) : (
             <>
               {/* Controls */}
-              <div className="glass-card p-6 border border-brand-600/30">
-                <h3 className="text-lg font-serif italic text-white mb-4">{t('Simulator Settings')}</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-                  <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">
-                      {t('Extra Monthly Payment')}
-                    </label>
-                    <div className="flex gap-4 items-center">
-                      <div className="relative flex-1">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-serif">
-                          {currencies.find(c => c.code === (loans[0]?.currency || 'USD'))?.symbol || '$'}
-                        </span>
-                        <input
-                          type="number"
-                          value={extraPayment}
-                          onChange={e => setExtraPayment(e.target.value)}
-                          className="w-full pl-8 pr-3 py-3 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif"
-                        />
+              <div className="glass-card p-6 border border-brand-600/30 space-y-6">
+                <div>
+                  <h3 className="text-lg font-serif italic text-white mb-4">{t('Simulator Settings')}</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">
+                        {t('Extra Monthly Payment')}
+                      </label>
+                      <div className="flex gap-4 items-center">
+                        <div className="relative flex-1">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-serif">
+                            {currencies.find(c => c.code === (loans[0]?.currency || 'USD'))?.symbol || '$'}
+                          </span>
+                          <input
+                            type="number"
+                            value={extraPayment}
+                            onChange={e => setExtraPayment(e.target.value)}
+                            className="w-full pl-8 pr-3 py-3 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif"
+                          />
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">
-                      {t('Adjust Amount')}
-                    </label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="5000"
-                      step="50"
-                      value={extraPayment || 0}
-                      onChange={e => setExtraPayment(e.target.value)}
-                      className="w-full accent-gold-500 cursor-pointer"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Cards Comparison */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Baseline */}
-                <div className="glass-card p-6 border border-brand-600/30 relative overflow-hidden">
-                  <h4 className="text-sm font-bold uppercase tracking-widest text-slate-400 mb-2">{t('Baseline')}</h4>
-                  <p className="text-xs text-slate-500 mb-4">{t('Minimum payments only')}</p>
-                  <div className="space-y-4">
                     <div>
-                      <span className="text-xs text-slate-400 block">{t('Total Interest Paid')}</span>
-                      <span className="text-2xl font-serif text-white">{fmt(simResult.baseline.totalInterest, loans[0]?.currency)}</span>
-                    </div>
-                    <div>
-                      <span className="text-xs text-slate-400 block">{t('Time to Debt-Free')}</span>
-                      <span className="text-lg font-medium text-slate-300">
-                        {simResult.baseline.months} {t('months')} ({ (simResult.baseline.months / 12).toFixed(1) } {t('years')})
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Snowball */}
-                <div className="glass-card p-6 border border-brand-600/30 relative overflow-hidden">
-                  <h4 className="text-sm font-bold uppercase tracking-widest text-blue-400 mb-2">{t('Snowball Strategy')}</h4>
-                  <p className="text-xs text-slate-500 mb-4">{t('Smallest balance first (Psychological wins)')}</p>
-                  <div className="space-y-4">
-                    <div>
-                      <span className="text-xs text-slate-400 block">{t('Total Interest Paid')}</span>
-                      <span className="text-2xl font-serif text-white">{fmt(simResult.snowball.totalInterest, loans[0]?.currency)}</span>
-                    </div>
-                    <div>
-                      <span className="text-xs text-slate-400 block">{t('Time to Debt-Free')}</span>
-                      <span className="text-lg font-medium text-slate-300">
-                        {simResult.snowball.months} {t('months')} ({ (simResult.snowball.months / 12).toFixed(1) } {t('years')})
-                      </span>
-                    </div>
-                    <div className="text-[11px] text-blue-400 bg-blue-500/10 border border-blue-500/20 rounded-lg p-2.5">
-                      {t('Focuses on eliminating individual balances quickly to build momentum.')}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Avalanche */}
-                <div className="glass-card p-6 border border-gold-500/30 relative overflow-hidden ring-1 ring-gold-500/10">
-                  <div className="absolute top-0 right-0 w-24 h-24 bg-gold-500/5 rounded-full blur-xl -z-10 mix-blend-screen"></div>
-                  <h4 className="text-sm font-bold uppercase tracking-widest text-gold-400 mb-2 glow-text-gold">{t('Avalanche Strategy')}</h4>
-                  <p className="text-xs text-slate-500 mb-4">{t('Highest APR first (Mathematically optimal)')}</p>
-                  <div className="space-y-4">
-                    <div>
-                      <span className="text-xs text-slate-400 block">{t('Total Interest Paid')}</span>
-                      <span className="text-2xl font-serif text-white">{fmt(simResult.avalanche.totalInterest, loans[0]?.currency)}</span>
-                    </div>
-                    <div>
-                      <span className="text-xs text-slate-400 block">{t('Time to Debt-Free')}</span>
-                      <span className="text-lg font-medium text-slate-300">
-                        {simResult.avalanche.months} {t('months')} ({ (simResult.avalanche.months / 12).toFixed(1) } {t('years')})
-                      </span>
-                    </div>
-                    {simResult.baseline.totalInterest - simResult.avalanche.totalInterest > 0 && (
-                      <div className="text-[11px] text-gold-400 bg-gold-500/10 border border-gold-500/20 rounded-lg p-2.5">
-                        {t('Saves {{amount}} in interest compared to Baseline!', { amount: fmt(simResult.baseline.totalInterest - simResult.avalanche.totalInterest, loans[0]?.currency) })}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Chart */}
-              <div className="glass-card p-6 border border-brand-600/30">
-                <h3 className="text-lg font-serif italic text-white mb-6">{t('Total Balance Projection Over Time')}</h3>
-                <div className="h-80 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={simResult.chartData}>
-                      <defs>
-                        <linearGradient id="colorBaseline" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#ef4444" stopOpacity={0.2}/>
-                          <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
-                        </linearGradient>
-                        <linearGradient id="colorSnowball" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2}/>
-                          <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                        </linearGradient>
-                        <linearGradient id="colorAvalanche" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#d4af37" stopOpacity={0.2}/>
-                          <stop offset="95%" stopColor="#d4af37" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.05)" />
-                      <XAxis dataKey="month" stroke="#94a3b8" fontSize={11} tickLine={false} />
-                      <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} tickFormatter={val => fmt(val, loans[0]?.currency)} />
-                      <Tooltip
-                        contentStyle={{ backgroundColor: '#0f172a', borderColor: 'rgba(255, 255, 255, 0.1)', borderRadius: '8px' }}
-                        labelStyle={{ color: '#94a3b8', fontWeight: 'bold' }}
-                        formatter={(value) => [fmt(value, loans[0]?.currency)]}
+                      <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">
+                        {t('Adjust Amount')}
+                      </label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="5000"
+                        step="50"
+                        value={extraPayment || 0}
+                        onChange={e => setExtraPayment(e.target.value)}
+                        className="w-full accent-gold-500 cursor-pointer"
                       />
-                      <Legend wrapperStyle={{ fontSize: 11, paddingTop: 10 }} />
-                      <Area type="monotone" dataKey={t('Baseline')} stroke="#ef4444" fillOpacity={1} fill="url(#colorBaseline)" strokeWidth={2} />
-                      <Area type="monotone" dataKey={t('Snowball')} stroke="#3b82f6" fillOpacity={1} fill="url(#colorSnowball)" strokeWidth={2} />
-                      <Area type="monotone" dataKey={t('Avalanche')} stroke="#d4af37" fillOpacity={1} fill="url(#colorAvalanche)" strokeWidth={2} />
-                    </AreaChart>
-                  </ResponsiveContainer>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t border-brand-600/20 pt-6">
+                  <label className="block text-xs font-medium text-slate-400 mb-3 uppercase tracking-wider">
+                    {t('Select Loans to Include')}
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                    {loans.map(loan => {
+                      const isChecked = selectedSimLoans[loan.id] !== false;
+                      return (
+                        <label key={loan.id} className={`flex items-center gap-3 p-3.5 rounded-xl border transition-all cursor-pointer ${isChecked ? 'bg-gold-500/10 border-gold-500/30 text-white shadow-[0_0_15px_rgba(212,175,55,0.05)]' : 'bg-brand-900/40 border-brand-600/20 text-slate-400 hover:border-brand-600/45'}`}>
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => setSelectedSimLoans(prev => ({ ...prev, [loan.id]: !isChecked }))}
+                            className="w-4 h-4 rounded border-brand-600/50 bg-brand-900/50 text-gold-500 focus:ring-gold-500/50 accent-gold-500 cursor-pointer"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <p className="font-serif italic font-medium text-sm truncate">{loan.name}</p>
+                            <p className="text-[10px] text-slate-400 mt-0.5">{fmt(loan.balance, loan.currency)} ({loan.interestRate}%)</p>
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
+
+              {activeSimLoans.length === 0 ? (
+                <div className="glass-card p-16 text-center border border-dashed border-brand-600">
+                  <p className="text-slate-400 font-serif italic text-lg">{t('Please select at least one loan above to run the simulation.')}</p>
+                </div>
+              ) : (
+                <>
+                  {/* Cards Comparison */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {/* Baseline */}
+                    <div className="glass-card p-6 border border-brand-600/30 relative overflow-hidden">
+                      <h4 className="text-sm font-bold uppercase tracking-widest text-slate-400 mb-2">{t('Baseline')}</h4>
+                      <p className="text-xs text-slate-500 mb-4">{t('Minimum payments only')}</p>
+                      <div className="space-y-4">
+                        <div>
+                          <span className="text-xs text-slate-400 block">{t('Total Interest Paid')}</span>
+                          <span className="text-2xl font-serif text-white">{fmt(simResult.baseline.totalInterest, activeSimLoans[0]?.currency)}</span>
+                        </div>
+                        <div>
+                          <span className="text-xs text-slate-400 block">{t('Time to Debt-Free')}</span>
+                          <span className="text-lg font-medium text-slate-300">
+                            {simResult.baseline.months} {t('months')} ({ (simResult.baseline.months / 12).toFixed(1) } {t('years')})
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Snowball */}
+                    <div className="glass-card p-6 border border-brand-600/30 relative overflow-hidden">
+                      <h4 className="text-sm font-bold uppercase tracking-widest text-blue-400 mb-2">{t('Snowball Strategy')}</h4>
+                      <p className="text-xs text-slate-500 mb-4">{t('Smallest balance first (Psychological wins)')}</p>
+                      <div className="space-y-4">
+                        <div>
+                          <span className="text-xs text-slate-400 block">{t('Total Interest Paid')}</span>
+                          <span className="text-2xl font-serif text-white">{fmt(simResult.snowball.totalInterest, activeSimLoans[0]?.currency)}</span>
+                        </div>
+                        <div>
+                          <span className="text-xs text-slate-400 block">{t('Time to Debt-Free')}</span>
+                          <span className="text-lg font-medium text-slate-300">
+                            {simResult.snowball.months} {t('months')} ({ (simResult.snowball.months / 12).toFixed(1) } {t('years')})
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-blue-400 bg-blue-500/10 border border-blue-500/20 rounded-lg p-2.5">
+                          {t('Focuses on eliminating individual balances quickly to build momentum.')}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Avalanche */}
+                    <div className="glass-card p-6 border border-gold-500/30 relative overflow-hidden ring-1 ring-gold-500/10">
+                      <div className="absolute top-0 right-0 w-24 h-24 bg-gold-500/5 rounded-full blur-xl -z-10 mix-blend-screen"></div>
+                      <h4 className="text-sm font-bold uppercase tracking-widest text-gold-400 mb-2 glow-text-gold">{t('Avalanche Strategy')}</h4>
+                      <p className="text-xs text-slate-500 mb-4">{t('Highest APR first (Mathematically optimal)')}</p>
+                      <div className="space-y-4">
+                        <div>
+                          <span className="text-xs text-slate-400 block">{t('Total Interest Paid')}</span>
+                          <span className="text-2xl font-serif text-white">{fmt(simResult.avalanche.totalInterest, activeSimLoans[0]?.currency)}</span>
+                        </div>
+                        <div>
+                          <span className="text-xs text-slate-400 block">{t('Time to Debt-Free')}</span>
+                          <span className="text-lg font-medium text-slate-300">
+                            {simResult.avalanche.months} {t('months')} ({ (simResult.avalanche.months / 12).toFixed(1) } {t('years')})
+                          </span>
+                        </div>
+                        {simResult.baseline.totalInterest - simResult.avalanche.totalInterest > 0 && (
+                          <div className="text-[11px] text-gold-400 bg-gold-500/10 border border-gold-500/20 rounded-lg p-2.5">
+                            {t('Saves {{amount}} in interest compared to Baseline!', { amount: fmt(simResult.baseline.totalInterest - simResult.avalanche.totalInterest, activeSimLoans[0]?.currency) })}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Chart */}
+                  <div className="glass-card p-6 border border-brand-600/30">
+                    <h3 className="text-lg font-serif italic text-white mb-6">{t('Total Balance Projection Over Time')}</h3>
+                    <div className="h-80 w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={simResult.chartData}>
+                          <defs>
+                            <linearGradient id="colorBaseline" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#ef4444" stopOpacity={0.2}/>
+                              <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+                            </linearGradient>
+                            <linearGradient id="colorSnowball" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2}/>
+                              <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                            </linearGradient>
+                            <linearGradient id="colorAvalanche" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#d4af37" stopOpacity={0.2}/>
+                              <stop offset="95%" stopColor="#d4af37" stopOpacity={0}/>
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.05)" />
+                          <XAxis dataKey="month" stroke="#94a3b8" fontSize={11} tickLine={false} />
+                          <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} tickFormatter={val => fmt(val, activeSimLoans[0]?.currency)} />
+                          <Tooltip
+                            contentStyle={{ backgroundColor: '#0f172a', borderColor: 'rgba(255, 255, 255, 0.1)', borderRadius: '8px' }}
+                            labelStyle={{ color: '#94a3b8', fontWeight: 'bold' }}
+                            formatter={(value) => [fmt(value, activeSimLoans[0]?.currency)]}
+                          />
+                          <Legend wrapperStyle={{ fontSize: 11, paddingTop: 10 }} />
+                          <Area type="monotone" dataKey={t('Baseline')} stroke="#ef4444" fillOpacity={1} fill="url(#colorBaseline)" strokeWidth={2} />
+                          <Area type="monotone" dataKey={t('Snowball')} stroke="#3b82f6" fillOpacity={1} fill="url(#colorSnowball)" strokeWidth={2} />
+                          <Area type="monotone" dataKey={t('Avalanche')} stroke="#d4af37" fillOpacity={1} fill="url(#colorAvalanche)" strokeWidth={2} />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                </>
+              )}
             </>
           )}
         </div>
