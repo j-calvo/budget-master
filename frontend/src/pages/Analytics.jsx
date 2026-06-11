@@ -4,7 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { useSettings } from '../context/SettingsContext';
 import { formatCurrency as formatC } from '../lib/currencyUtils';
 import {
-  PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
+  PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+  AreaChart, Area, LineChart, Line, ReferenceLine
 } from 'recharts';
 
 export default function Analytics() {
@@ -14,6 +15,8 @@ export default function Analytics() {
   const [, setCategories] = useState([]);
   const [budgets, setBudgets] = useState([]);
   const [ratesData, setRatesData] = useState(null);
+  const [accounts, setAccounts] = useState([]);
+  const [adjustments, setAdjustments] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [expandedUnbudgeted, setExpandedUnbudgeted] = useState({});
 
@@ -44,16 +47,20 @@ export default function Analytics() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const [txRes, catRes, budgRes, rateRes] = await Promise.all([
+        const [txRes, catRes, budgRes, rateRes, accRes, adjRes] = await Promise.all([
           api.get('/transactions'),
           api.get('/categories'),
           api.get('/budgets'),
-          api.get('/currencies/rates')
+          api.get('/currencies/rates'),
+          api.get('/accounts'),
+          api.get('/accounts/adjustments/all')
         ]);
         setTransactions(txRes.data);
         setCategories(catRes.data);
         setBudgets(budgRes.data);
         setRatesData(rateRes.data);
+        setAccounts(accRes.data);
+        setAdjustments(adjRes.data);
       } catch (err) {
         console.error('Failed to load analytics data', err);
       } finally {
@@ -156,6 +163,106 @@ export default function Analytics() {
     return Object.values(flows);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filteredTx, timeRange, isMonthMode, viewMonth, viewYear, settings?.language]);
+
+  // MoM Savings Rate & Liquid Cash Trend Data
+  const trendData = useMemo(() => {
+    if (isMonthMode) return [];
+    
+    // 1. Determine the months list (in chronological order)
+    const months = [];
+    const count = timeRange === '1M' ? 1 : timeRange === '3M' ? 3 : timeRange === '6M' ? 6 : 12;
+    for (let i = count - 1; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.push({
+        date: d,
+        key: d.toLocaleString(settings?.language || 'en-US', { month: 'short', year: '2-digit' }),
+        endOfMonthDate: new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999)
+      });
+    }
+
+    // Calculate savings rate and project liquid cash for each month in months list
+    return months.map(m => {
+      // Calculate Income vs Expenses for this month specifically from all transactions
+      let income = 0;
+      let expenses = 0;
+
+      transactions.forEach(tx => {
+        const txDate = new Date(tx.date);
+        const startOfMonth = new Date(m.date.getFullYear(), m.date.getMonth(), 1);
+        const endOfMonth = m.endOfMonthDate;
+
+        if (txDate >= startOfMonth && txDate <= endOfMonth) {
+          const txCurrency = tx.account?.currency || tx.creditCard?.currency || 'USD';
+          const amt = convert(tx.amount, txCurrency);
+          if (tx.type === 'income') {
+            if (tx.category?.type === 'income' || !tx.category) income += amt;
+            else expenses -= amt;
+          } else if (tx.type === 'expense') {
+            if (tx.category?.type === 'income') income -= amt;
+            else expenses += amt;
+          }
+        }
+      });
+
+      // Calculate Savings Rate %: (Income - Expenses) / Income * 100
+      let savingsRate = 0;
+      const absoluteSavings = income - expenses;
+      if (income > 0) {
+        savingsRate = Math.max(-100, Math.min(100, (absoluteSavings / income) * 100));
+      } else {
+        // Treat as 0% when income is 0, as per user specification
+        savingsRate = 0;
+      }
+
+      // Calculate Projected Cash available at end of this month
+      // Start from the current balance of liquid accounts, roll back transactions/adjustments after this month
+      let totalLiquidCash = 0;
+      
+      accounts.forEach(acc => {
+        if (acc.isLiquid === false) return; // Only process liquid accounts
+        
+        let projectedBalance = parseFloat(acc.balance) || 0;
+        const currentCurrency = acc.currency || 'USD';
+
+        // 1. Roll back transactions that happened AFTER the end of this month
+        transactions.forEach(tx => {
+          if (tx.accountId !== acc.id) return;
+          const txDate = new Date(tx.date);
+          if (txDate > m.endOfMonthDate) {
+            // Revert transaction effect on balance
+            if (tx.type === 'expense') {
+              projectedBalance += tx.amount; // Add back expenses
+            } else if (tx.type === 'income') {
+              projectedBalance -= tx.amount; // Subtract incomes
+            }
+          }
+        });
+
+        // 2. Roll back adjustments that happened AFTER the end of this month
+        adjustments.forEach(adj => {
+          if (adj.accountId !== acc.id) return;
+          const adjDate = new Date(adj.date);
+          if (adjDate > m.endOfMonthDate) {
+            // Revert adjustment: adjustments are saved with signs (positive = added, negative = subtracted)
+            projectedBalance -= adj.amount;
+          }
+        });
+
+        // Convert the balance of this account to Default/Base Currency
+        totalLiquidCash += convert(projectedBalance, currentCurrency);
+      });
+
+      return {
+        name: m.key,
+        savingsRate: parseFloat(savingsRate.toFixed(1)),
+        absoluteSavings,
+        income,
+        expenses,
+        liquidCash: parseFloat(totalLiquidCash.toFixed(2))
+      };
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [transactions, accounts, adjustments, timeRange, isMonthMode, viewMonth, viewYear, settings?.language, ratesData]);
 
   const topExpenses = [...expenses].sort((a, b) => b.amount - a.amount).slice(0, 5);
 
@@ -435,6 +542,97 @@ export default function Analytics() {
             )}
           </div>
         </div>
+
+        {/* 4. Savings per Month Chart */}
+        {!isMonthMode && (
+          <div className="glass-card p-6 flex flex-col h-[450px] relative overflow-hidden group">
+            <div className="absolute -top-24 -right-24 w-48 h-48 bg-emerald-500/5 rounded-full blur-3xl group-hover:bg-emerald-500/10 transition-colors pointer-events-none" />
+            <h2 className="text-xl font-serif text-white mb-6 relative z-10 flex items-center gap-2">
+              <div className="w-1 h-5 bg-emerald-500 rounded-full" />
+              {t('Savings Rate')}
+              <span className="text-sm text-slate-400 font-sans tracking-widest ml-2">
+                ({t('MoM Savings %')})
+              </span>
+            </h2>
+            <div className="flex-1 min-h-0 relative z-10">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={trendData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                  <defs>
+                    <linearGradient id="savG" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.4} />
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(148,163,184,0.1)" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 10 }} tickFormatter={v => `${v}%`} domain={[-100, 100]} />
+                  <Tooltip
+                    contentStyle={{ backgroundColor: 'rgba(15,23,42,0.9)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.5)' }}
+                    itemStyle={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}
+                    labelStyle={{ color: '#94a3b8', marginBottom: '8px', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.1em' }}
+                    content={({ active, payload, label }) => {
+                      if (active && payload && payload.length) {
+                        const data = payload[0].payload;
+                        return (
+                          <div className="p-3 bg-slate-900/90 backdrop-blur-md border border-white/10 rounded-xl space-y-2">
+                            <p className="text-[10px] text-slate-400 uppercase tracking-widest font-mono font-bold">{label}</p>
+                            <p className="text-sm text-emerald-400 font-bold">{t('Savings Rate')}: {data.savingsRate}%</p>
+                            <div className="text-xs text-slate-300 space-y-1 border-t border-white/5 pt-1">
+                              <p>{t('Income')}: {formatCurrency(data.income)}</p>
+                              <p>{t('Expenses')}: {formatCurrency(data.expenses)}</p>
+                              <p className={`font-semibold ${data.absoluteSavings >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                {t('Net Savings')}: {formatCurrency(data.absoluteSavings)}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <ReferenceLine y={0} stroke="rgba(244,63,94,0.4)" strokeDasharray="3 3" />
+                  <Area name={t('Savings Rate')} dataKey="savingsRate" stroke="#10b981" strokeWidth={2} fill="url(#savG)" type="monotone" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        )}
+
+        {/* 5. Total Cash at End of Month Chart */}
+        {!isMonthMode && (
+          <div className="glass-card p-6 flex flex-col h-[450px] relative overflow-hidden group">
+            <div className="absolute -top-24 -right-24 w-48 h-48 bg-gold-500/5 rounded-full blur-3xl group-hover:bg-gold-500/10 transition-colors pointer-events-none" />
+            <h2 className="text-xl font-serif text-white mb-6 relative z-10 flex items-center gap-2">
+              <div className="w-1 h-5 bg-gold-500 rounded-full" />
+              {t('Liquid Cash Balance')}
+              <span className="text-sm text-slate-400 font-sans tracking-widest ml-2">
+                ({t('End of Month')})
+              </span>
+            </h2>
+            <div className="flex-1 min-h-0 relative z-10">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={trendData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                  <defs>
+                    <linearGradient id="cshG" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#d4af37" stopOpacity={0.4} />
+                      <stop offset="95%" stopColor="#d4af37" stopOpacity={0.0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(148,163,184,0.1)" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 10 }} tickFormatter={v => v >= 1000 ? `${v/1000}k` : v} />
+                  <Tooltip
+                    contentStyle={{ backgroundColor: 'rgba(15,23,42,0.9)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.5)' }}
+                    itemStyle={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}
+                    labelStyle={{ color: '#94a3b8', marginBottom: '8px', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.1em' }}
+                    formatter={v => <span className="font-serif text-slate-100">{formatCurrency(v)}</span>}
+                  />
+                  <Area name={t('Liquid Cash')} dataKey="liquidCash" stroke="#d4af37" strokeWidth={2} fill="url(#cshG)" type="monotone" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Grid container for Top Largest Expenses & Unbudgeted Spending */}

@@ -4,6 +4,7 @@ const accountController = require('../controllers/accountController');
 
 router.get('/', accountController.getAccounts);
 router.post('/', accountController.createAccount);
+router.get('/adjustments/all', accountController.getAllAdjustments);
 router.get('/:id', accountController.getAccountById);
 router.put('/:id', accountController.updateAccount);
 router.delete('/:id', accountController.deleteAccount);

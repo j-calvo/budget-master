@@ -146,3 +146,16 @@ exports.getAdjustments = async (req, res) => {
   }
 };
 
+exports.getAllAdjustments = async (req, res) => {
+  try {
+    const adjustments = await prisma.accountAdjustment.findMany({
+      where: { familyId: req.user.familyId },
+      orderBy: { date: 'desc' }
+    });
+    res.json(adjustments);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch all adjustments' });
+  }
+};
+
+
