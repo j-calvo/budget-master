@@ -7,6 +7,11 @@ All notable changes and features added to the Personal Finance App are documente
 ## [Recent Updates] - June 2026
 
 ### Added
+- **Debt Paydown Simulator (Snowball vs. Avalanche)**:
+  - Interactive debt paydown comparison dashboard added to the Loans page.
+  - Implemented client-side simulation engine projecting payoff curves for Baseline, Snowball, and Avalanche strategies.
+  - Added range slider and numeric inputs to dynamically adjust extra monthly payments.
+  - Embedded Recharts AreaChart comparing combined debt balance projection curves over time.
 - **Credit Card Extensions**: 
   - Added support for adding child/partner extension credit cards linked to a "main" card.
   - Automatically aggregates the total spent balance across all extension cards and displays it on the main card's dashboard entry.
