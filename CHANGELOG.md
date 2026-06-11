@@ -7,6 +7,15 @@ All notable changes and features added to the Personal Finance App are documente
 ## [Recent Updates] - June 2026
 
 ### Added
+- **Income vs. Expense Monthly Trends Toggle**:
+  - Added a `[Bar | Trend]` toggle on the "Income vs Expenses" card in the Analytics page.
+  - Users can switch between a side-by-side bar chart comparison and a smooth area trend projection.
+- **Budget Spending Alerts**:
+  - Implemented budget spending warning alerts for variable categories exceeding 85% utilization.
+  - Added critical alerts for all categories (fixed and variable) exceeding 100% utilization.
+  - Added overdue payment alerts for fixed expenses that remain unpaid past their designated due date.
+  - Integrated a dedicated "Budget Alerts" panel in the Dashboard sidebar.
+  - Added glowing card overlays, status badges, and styled table rows on the Budgets page to visually call out near-limit or exceeded budgets.
 - **Debt Paydown Simulator (Snowball vs. Avalanche)**:
   - Interactive debt paydown comparison dashboard added to the Loans page.
   - Implemented client-side simulation engine projecting payoff curves for Baseline, Snowball, and Avalanche strategies.

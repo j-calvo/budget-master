@@ -19,6 +19,7 @@ export default function Analytics() {
   const [adjustments, setAdjustments] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [expandedUnbudgeted, setExpandedUnbudgeted] = useState({});
+  const [flowChartView, setFlowChartView] = useState('bar');
 
   // ── Time range state ──────────────────────────────────────────────────────
   const [timeRange, setTimeRange] = useState('6M');
@@ -468,34 +469,82 @@ export default function Analytics() {
         {/* 2. Income vs Expenses */}
         <div className="glass-card p-6 flex flex-col h-[450px] relative overflow-hidden group">
           <div className="absolute -top-24 -right-24 w-48 h-48 bg-emerald-500/5 rounded-full blur-3xl group-hover:bg-emerald-500/10 transition-colors pointer-events-none" />
-          <h2 className="text-xl font-serif text-white mb-6 relative z-10 flex items-center gap-2">
-            <div className="w-1 h-5 bg-emerald-500 rounded-full" />
-            {t('Income vs Expenses')}
-            {isMonthMode && <span className="text-xs text-emerald-400/70 font-sans tracking-widest ml-2 capitalize">{monthLabel}</span>}
-          </h2>
+          <div className="flex justify-between items-center mb-6 relative z-10">
+            <h2 className="text-xl font-serif text-white flex items-center gap-2">
+              <div className="w-1 h-5 bg-emerald-500 rounded-full" />
+              {t('Income vs Expenses')}
+              {isMonthMode && <span className="text-xs text-emerald-400/70 font-sans tracking-widest ml-2 capitalize">{monthLabel}</span>}
+            </h2>
+            <div className="glass-card p-0.5 rounded-lg flex gap-0.5 border-white/5 bg-brand-900/30">
+              <button
+                onClick={() => setFlowChartView('bar')}
+                className={`px-3 py-1 text-[9px] font-bold uppercase tracking-wider rounded-md transition-all ${
+                  flowChartView === 'bar'
+                    ? 'bg-emerald-500 text-brand-900 shadow-[0_0_8px_rgba(16,185,129,0.3)]'
+                    : 'text-slate-400 hover:text-white hover:bg-brand-850'
+                }`}
+              >
+                {t('Bar')}
+              </button>
+              <button
+                onClick={() => setFlowChartView('trend')}
+                className={`px-3 py-1 text-[9px] font-bold uppercase tracking-wider rounded-md transition-all ${
+                  flowChartView === 'trend'
+                    ? 'bg-emerald-500 text-brand-900 shadow-[0_0_8px_rgba(16,185,129,0.3)]'
+                    : 'text-slate-400 hover:text-white hover:bg-brand-850'
+                }`}
+              >
+                {t('Trend')}
+              </button>
+            </div>
+          </div>
           <div className="flex-1 min-h-0 relative z-10">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={barData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                <defs>
-                  <linearGradient id="incG" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%"  stopColor="#10b981" stopOpacity={1}  />
-                    <stop offset="95%" stopColor="#059669" stopOpacity={0.8}/>
-                  </linearGradient>
-                  <linearGradient id="expG" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%"  stopColor="#f43f5e" stopOpacity={1}  />
-                    <stop offset="95%" stopColor="#e11d48" stopOpacity={0.8}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(148,163,184,0.1)" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 10 }} tickFormatter={v => v >= 1000 ? `${v/1000}k` : v} />
-                <Tooltip cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-                  formatter={v => <span className="font-serif text-slate-100">{formatCurrency(v)}</span>}
-                  {...tooltipStyle} />
-                <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#94a3b8' }} />
-                <Bar name={t('Income')}   dataKey="income"   fill="url(#incG)" radius={[4,4,0,0]} barSize={isMonthMode ? 40 : 16} />
-                <Bar name={t('Expenses')} dataKey="expenses" fill="url(#expG)" radius={[4,4,0,0]} barSize={isMonthMode ? 40 : 16} />
-              </BarChart>
+              {flowChartView === 'bar' ? (
+                <BarChart data={barData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                  <defs>
+                    <linearGradient id="incG" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%"  stopColor="#10b981" stopOpacity={1}  />
+                      <stop offset="95%" stopColor="#059669" stopOpacity={0.8}/>
+                    </linearGradient>
+                    <linearGradient id="expG" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%"  stopColor="#f43f5e" stopOpacity={1}  />
+                      <stop offset="95%" stopColor="#e11d48" stopOpacity={0.8}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(148,163,184,0.1)" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 10 }} tickFormatter={v => v >= 1000 ? `${v/1000}k` : v} />
+                  <Tooltip cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                    formatter={v => <span className="font-serif text-slate-100">{formatCurrency(v)}</span>}
+                    {...tooltipStyle} />
+                  <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#94a3b8' }} />
+                  <Bar name={t('Income')}   dataKey="income"   fill="url(#incG)" radius={[4,4,0,0]} barSize={isMonthMode ? 40 : 16} />
+                  <Bar name={t('Expenses')} dataKey="expenses" fill="url(#expG)" radius={[4,4,0,0]} barSize={isMonthMode ? 40 : 16} />
+                </BarChart>
+              ) : (
+                <AreaChart data={barData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                  <defs>
+                    <linearGradient id="incTrendG" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%"  stopColor="#10b981" stopOpacity={0.3}  />
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="expTrendG" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%"  stopColor="#f43f5e" stopOpacity={0.2}  />
+                      <stop offset="95%" stopColor="#f43f5e" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(148,163,184,0.1)" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 10 }} tickFormatter={v => v >= 1000 ? `${v/1000}k` : v} />
+                  <Tooltip cursor={{ stroke: '#10b981', strokeWidth: 1, strokeDasharray: '4 4' }}
+                    formatter={v => <span className="font-serif text-slate-100">{formatCurrency(v)}</span>}
+                    {...tooltipStyle} />
+                  <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#94a3b8' }} />
+                  <Area type="monotone" name={t('Income')}   dataKey="income"   stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#incTrendG)" activeDot={{ r: 6 }} />
+                  <Area type="monotone" name={t('Expenses')} dataKey="expenses" stroke="#f43f5e" strokeWidth={2} fillOpacity={1} fill="url(#expTrendG)" activeDot={{ r: 5 }} />
+                </AreaChart>
+              )}
             </ResponsiveContainer>
           </div>
         </div>

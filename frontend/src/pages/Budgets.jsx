@@ -138,6 +138,9 @@ export default function Budgets() {
     const spent = parseFloat(budget.spent) || 0;
     const amount = parseFloat(budget.amount) || 0;
     const isFixed = budget.category?.type === 'fixed_expense';
+
+    if (spent > amount && amount > 0) return 'CRITICAL';
+    if (!isFixed && amount > 0 && (spent / amount) * 100 >= 85 && spent < amount) return 'NEAR_LIMIT';
     
     if ((spent >= amount && amount > 0) || (isFixed && spent > 0)) return 'PAID';
     
@@ -164,10 +167,12 @@ export default function Budgets() {
 
   const statusBadge = (status) => {
     const config = {
-      PAID:    { label: t('Paid'),    classes: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25' },
-      PARTIAL: { label: t('Partial'), classes: 'bg-amber-500/15 text-amber-400 border-amber-500/25' },
-      OVERDUE: { label: t('Overdue'), classes: 'bg-rose-500/15 text-rose-400 border-rose-500/25' },
-      PENDING: { label: t('Pending'), classes: 'bg-slate-500/15 text-slate-400 border-slate-500/25' },
+      PAID:       { label: t('Paid'),        classes: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25' },
+      PARTIAL:    { label: t('Partial'),     classes: 'bg-amber-500/15 text-amber-400 border-amber-500/25' },
+      OVERDUE:    { label: t('Overdue'),     classes: 'bg-rose-500/15 text-rose-400 border-rose-500/25 animate-pulse' },
+      PENDING:    { label: t('Pending'),     classes: 'bg-slate-500/15 text-slate-400 border-slate-500/25' },
+      CRITICAL:   { label: t('Over Budget'), classes: 'bg-rose-500/20 text-rose-400 border-rose-500/30 font-bold shadow-[0_0_10px_rgba(244,63,94,0.2)]' },
+      NEAR_LIMIT: { label: t('Near Limit'),  classes: 'bg-amber-500/20 text-amber-400 border-amber-500/30 font-bold shadow-[0_0_10px_rgba(245,158,11,0.2)] animate-pulse' },
     }[status] || { label: status, classes: 'bg-slate-500/15 text-slate-400 border-slate-500/25' };
     return (
       <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-[0.12em] border ${config.classes}`}>
@@ -238,11 +243,16 @@ export default function Budgets() {
               const barGlow = isOver 
                 ? 'shadow-[0_0_12px_rgba(244,63,94,0.5)]' 
                 : pct > 75 ? 'shadow-[0_0_12px_rgba(245,158,11,0.5)]' : 'shadow-[0_0_12px_rgba(212,175,55,0.4)]';
+              const cardBorder = status === 'CRITICAL'
+                ? 'border-rose-500/40 shadow-[0_0_15px_rgba(244,63,94,0.08)] ring-1 ring-rose-500/20'
+                : status === 'NEAR_LIMIT'
+                  ? 'border-amber-500/40 shadow-[0_0_15px_rgba(245,158,11,0.08)] ring-1 ring-amber-500/15'
+                  : 'border-brand-600/30';
               
               return (
                 <div 
                   key={budget.id} 
-                  className="glass-card p-0 overflow-hidden border-brand-600/30 relative group"
+                  className={`glass-card p-0 overflow-hidden relative group transition-all ${cardBorder}`}
                   style={{ animationDelay: `${idx * 80}ms` }}
                 >
                   {/* Category color accent */}
@@ -379,8 +389,14 @@ export default function Budgets() {
                     const valueColor = isOver ? 'text-rose-300' : 'text-white';
                     const remaining = budget.amount - budget.spent;
 
+                    const rowBg = status === 'CRITICAL'
+                      ? 'bg-rose-500/[0.02] hover:bg-rose-500/[0.04]'
+                      : status === 'NEAR_LIMIT'
+                        ? 'bg-amber-500/[0.01] hover:bg-amber-500/[0.03]'
+                        : 'hover:bg-white/[0.02]';
+
                     return (
-                      <tr key={budget.id} className="hover:bg-white/[0.02] transition-colors group relative">
+                      <tr key={budget.id} className={`transition-colors group relative ${rowBg}`}>
                         <td className="p-5 pl-8">
                           <div className="flex items-center gap-3">
                             <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: budget.category?.color || '#d4af37' }} />

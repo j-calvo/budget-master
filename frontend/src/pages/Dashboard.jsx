@@ -27,6 +27,7 @@ export default function Dashboard() {
   const [cards, setCards] = useState([]);
   const [loans, setLoans] = useState([]);
   const [budgets, setBudgets] = useState([]);
+  const [alerts, setAlerts] = useState([]);
 
   useEffect(() => {
     const handleGlobalClick = () => setActiveTooltip(null);
@@ -157,6 +158,70 @@ export default function Dashboard() {
         setCards(cards);
         setLoans(loans);
         setBudgets(budgetsData);
+
+        // 7. Calculate Budget Alerts
+        const computedAlerts = [];
+        const today = new Date();
+        const currentDay = today.getDate();
+        
+        budgetsData.forEach(budget => {
+          const spent = parseFloat(budget.spent) || 0;
+          const amount = parseFloat(budget.amount) || 0;
+          if (amount <= 0) return;
+
+          const isFixed = budget.category?.type === 'fixed_expense';
+          const pct = (spent / amount) * 100;
+
+          if (isFixed) {
+            if (spent > amount) {
+              computedAlerts.push({
+                id: budget.id,
+                categoryName: budget.category?.name || 'Fixed Expense',
+                spent,
+                amount,
+                pct,
+                type: 'critical',
+                message: t('Over budget by {{amount}}', { amount: displayCurrency(spent - amount, budget.currency) })
+              });
+            } else if (budget.payDay && currentDay > budget.payDay && spent === 0) {
+              computedAlerts.push({
+                id: budget.id,
+                categoryName: budget.category?.name || 'Fixed Expense',
+                spent,
+                amount,
+                pct,
+                type: 'warning',
+                message: t('Payment overdue (due Day {{day}})', { day: budget.payDay })
+              });
+            }
+          } else {
+            if (spent > amount) {
+              computedAlerts.push({
+                id: budget.id,
+                categoryName: budget.category?.name || 'Variable Expense',
+                spent,
+                amount,
+                pct,
+                type: 'critical',
+                message: t('Over budget by {{amount}}', { amount: displayCurrency(spent - amount, budget.currency) })
+              });
+            } else if (pct >= 85) {
+              computedAlerts.push({
+                id: budget.id,
+                categoryName: budget.category?.name || 'Variable Expense',
+                spent,
+                amount,
+                pct,
+                type: 'warning',
+                message: t('{{pct}}% spent ({{remaining}} remaining)', { 
+                  pct: Math.round(pct),
+                  remaining: displayCurrency(amount - spent, budget.currency)
+                })
+              });
+            }
+          }
+        });
+        setAlerts(computedAlerts);
 
       } catch (err) {
         console.error('Failed to load dashboard data', err);
@@ -337,6 +402,35 @@ export default function Dashboard() {
         
         {/* Sidebar: Upcoming Obligations + Recent Activity */}
         <div className="flex flex-col gap-5">
+
+          {/* ── Budget Alerts Panel ── */}
+          {alerts.length > 0 && (
+            <div className="glass-card p-5 border border-rose-500/20 shadow-[0_0_20px_rgba(244,63,94,0.05)] relative overflow-hidden animate-in slide-in-from-top-4 duration-300">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500/5 rounded-full blur-2xl -z-10 mix-blend-screen" />
+              <h2 className="text-base font-serif italic text-white mb-4 tracking-wide border-b border-brand-600/40 pb-3 flex items-center gap-2">
+                <svg className="w-4 h-4 text-rose-400 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                {t('Budget Alerts')}
+              </h2>
+              <div className="space-y-3">
+                {alerts.map(alert => (
+                  <div key={alert.id} className="flex flex-col gap-1 p-2.5 rounded-lg bg-rose-500/5 border border-rose-500/10 hover:bg-rose-500/10 transition-colors">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-bold text-slate-200 uppercase tracking-wider">{alert.categoryName}</span>
+                      <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded ${alert.type === 'critical' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'}`}>
+                        {alert.type === 'critical' ? t('Exceeded') : alert.message.includes('overdue') ? t('Overdue') : t('Warning')}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-400 leading-normal">{alert.message}</p>
+                    <div className="w-full bg-brand-900/60 rounded-full h-1 overflow-hidden border border-brand-600/20 mt-1">
+                      <div className={`h-full rounded-full ${alert.type === 'critical' ? 'bg-rose-500' : 'bg-amber-500'}`} style={{ width: `${Math.min(alert.pct, 100)}%` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* ── Upcoming Obligations Radar ── */}
           {(() => {
