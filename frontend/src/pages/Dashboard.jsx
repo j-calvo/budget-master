@@ -14,8 +14,10 @@ export default function Dashboard() {
   const { t } = useTranslation();
   
   const [loadingDb, setLoadingDb] = useState(true);
-  const [activeTooltip, setActiveTooltip] = useState(null); // 'cash' | 'networth' | null
+  const [activeTooltip, setActiveTooltip] = useState(null); // 'cash' | 'networth' | 'available' | null
   const [metrics, setMetrics] = useState({
+    totalAssets: 0,
+    totalAvailableFunds: 0,
     netWorth: 0,
     income: 0,
     expenses: 0,
@@ -146,7 +148,8 @@ export default function Dashboard() {
           }
         });
 
-        setMetrics({ totalAssets, netWorth, income: mIncome, expenses: mExpenses, savingsRate });
+        const totalAvailableFunds = totalAssets - cardDebt;
+        setMetrics({ totalAssets, totalAvailableFunds, netWorth, income: mIncome, expenses: mExpenses, savingsRate });
         setChartData(cycles);
         
         // 5. Recent 5 Transactions
@@ -273,7 +276,7 @@ export default function Dashboard() {
       />
 
       {/* KPI Grid - Row 1: Balance Sheet */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
         {/* Total Cash */}
         <div className="glass-card p-4 md:p-6 transition-all hover:border-emerald-500/30 hover:shadow-emerald-500/10 group cursor-default">
           <p className="text-[10px] md:text-xs font-medium text-slate-400 uppercase tracking-widest group-hover:text-emerald-400 transition-colors flex items-center gap-1.5">
@@ -297,6 +300,31 @@ export default function Dashboard() {
           </p>
           <p className="text-xl md:text-3xl font-light font-serif text-white mt-2 md:mt-3 tracking-wide">
             {displayCurrency(metrics.totalAssets)}
+          </p>
+        </div>
+        {/* Total Available Funds */}
+        <div className="glass-card p-4 md:p-6 transition-all hover:border-blue-500/30 hover:shadow-blue-500/10 group cursor-default">
+          <p className="text-[10px] md:text-xs font-medium text-slate-400 uppercase tracking-widest group-hover:text-blue-400 transition-colors flex items-center gap-1.5">
+            <span>{t('Total Available Funds')}</span>
+            <span className="relative inline-flex items-center">
+              <Info 
+                className="w-3.5 h-3.5 text-slate-500 hover:text-blue-400 transition-colors cursor-help inline"
+                onMouseEnter={() => setActiveTooltip('available')}
+                onMouseLeave={() => setActiveTooltip(null)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActiveTooltip(activeTooltip === 'available' ? null : 'available');
+                }}
+              />
+              {activeTooltip === 'available' && (
+                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-brand-950/95 border border-brand-600/40 text-slate-300 text-xs rounded-xl shadow-2xl z-50 pointer-events-none text-left leading-relaxed font-sans normal-case tracking-normal transition-opacity duration-200">
+                  {t('Total Available Funds Tooltip')}
+                </span>
+              )}
+            </span>
+          </p>
+          <p className="text-xl md:text-3xl font-light font-serif text-white mt-2 md:mt-3 tracking-wide">
+            {displayCurrency(metrics.totalAvailableFunds)}
           </p>
         </div>
         {/* Net Worth */}
