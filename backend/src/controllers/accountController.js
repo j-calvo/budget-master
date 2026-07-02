@@ -158,4 +158,75 @@ exports.getAllAdjustments = async (req, res) => {
   }
 };
 
+exports.getAccountHistory = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const account = await prisma.account.findUnique({
+      where: { id, familyId: req.user.familyId }
+    });
+    if (!account) return res.status(404).json({ error: 'Account not found' });
+
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(endDate.getDate() - 180);
+
+    const [transactions, adjustments] = await Promise.all([
+      prisma.transaction.findMany({
+        where: {
+          accountId: id,
+          date: { gte: startDate }
+        },
+        orderBy: { date: 'desc' }
+      }),
+      prisma.accountAdjustment.findMany({
+        where: {
+          accountId: id,
+          date: { gte: startDate }
+        },
+        orderBy: { date: 'desc' }
+      })
+    ]);
+
+    const changesByDate = {};
+
+    transactions.forEach(tx => {
+      const dateStr = new Date(tx.date).toISOString().split('T')[0];
+      if (!changesByDate[dateStr]) changesByDate[dateStr] = 0;
+      const change = (tx.type === 'expense' || tx.type === 'transfer') 
+        ? -Math.abs(tx.amount) 
+        : Math.abs(tx.amount);
+      changesByDate[dateStr] += change;
+    });
+
+    adjustments.forEach(adj => {
+      const dateStr = new Date(adj.date).toISOString().split('T')[0];
+      if (!changesByDate[dateStr]) changesByDate[dateStr] = 0;
+      changesByDate[dateStr] += adj.amount;
+    });
+
+    let currentBalance = account.balance;
+    const history = [];
+
+    for (let i = 0; i <= 180; i++) {
+      const date = new Date(endDate);
+      date.setDate(endDate.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+
+      history.push({
+        date: dateStr,
+        balance: parseFloat(currentBalance.toFixed(2))
+      });
+
+      const change = changesByDate[dateStr] || 0;
+      currentBalance -= change;
+    }
+
+    res.json(history.reverse());
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to fetch account history' });
+  }
+};
+
+
 

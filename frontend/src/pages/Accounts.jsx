@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { useSettings } from '../context/SettingsContext';
 import AmountInput from '../components/AmountInput';
 import { formatCurrency } from '../lib/currencyUtils';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+
 
 const API_URL = '/accounts';
 const BANKS_URL = '/banks';
@@ -29,6 +31,8 @@ export default function Accounts() {
   const [adjustDate, setAdjustDate] = useState(new Date().toISOString().split('T')[0]);
   const [accountHistory, setAccountHistory] = useState({}); // { accountId: [adjustments] }
   const [expandedHistory, setExpandedHistory] = useState({}); // { accountId: boolean }
+  const [historyCharts, setHistoryCharts] = useState({}); // { accountId: [{ date, balance }] }
+
 
   useEffect(() => {
     fetchAccounts();
@@ -132,9 +136,19 @@ export default function Accounts() {
     }
   };
 
+  const fetchHistoryChart = async (id) => {
+    try {
+      const res = await api.get(`${API_URL}/${id}/history`);
+      setHistoryCharts(prev => ({ ...prev, [id]: res.data }));
+    } catch (err) {
+      console.error('Failed to fetch account history chart', err);
+    }
+  };
+
   const toggleHistory = (id) => {
     if (!expandedHistory[id]) {
       fetchAdjustments(id);
+      fetchHistoryChart(id);
     }
     setExpandedHistory(prev => ({ ...prev, [id]: !prev[id] }));
   };
@@ -155,11 +169,13 @@ export default function Accounts() {
       fetchAccounts();
       if (expandedHistory[adjustingAccount.id]) {
         fetchAdjustments(adjustingAccount.id);
+        fetchHistoryChart(adjustingAccount.id);
       }
     } catch (err) {
       console.error('Failed to adjust balance', err);
     }
   };
+
 
   const openAdjustModal = (acc) => {
     setAdjustingAccount(acc);
@@ -365,7 +381,79 @@ export default function Accounts() {
               {/* Collapsible History Section */}
               {expandedHistory[acc.id] && (
                 <div className="mt-6 pt-6 border-t border-brand-600/30 animate-in slide-in-from-top-2 duration-300">
+                  <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-3">{t('Balance Trend (Last 6 Months)')}</h4>
+                  
+                  {/* Chart Section */}
+                  <div className="h-40 w-full mb-6 bg-brand-950/40 p-2 rounded-lg border border-brand-600/20">
+                    {historyCharts[acc.id] ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={historyCharts[acc.id]} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                          <defs>
+                            <linearGradient id={`colorBalance-${acc.id}`} x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#d4af37" stopOpacity={0.25}/>
+                              <stop offset="95%" stopColor="#d4af37" stopOpacity={0}/>
+                            </linearGradient>
+                          </defs>
+                          <XAxis 
+                            dataKey="date" 
+                            stroke="#475569" 
+                            fontSize={9}
+                            tickLine={false}
+                            axisLine={false}
+                            tickFormatter={(str) => {
+                              try {
+                                const d = new Date(str);
+                                return d.toLocaleDateString(settings?.language || 'en-US', { month: 'short', day: 'numeric' });
+                              } catch {
+                                return str;
+                              }
+                            }}
+                          />
+                          <YAxis 
+                            stroke="#475569" 
+                            fontSize={9}
+                            tickLine={false}
+                            axisLine={false}
+                            domain={['auto', 'auto']}
+                          />
+                          <Tooltip
+                            contentStyle={{
+                              background: 'rgba(15, 23, 42, 0.95)',
+                              border: '1px solid rgba(212, 175, 55, 0.3)',
+                              borderRadius: '8px',
+                              fontFamily: 'serif',
+                              fontSize: '11px',
+                            }}
+                            itemStyle={{ color: '#ffffff' }}
+                            labelStyle={{ color: '#94a3b8', fontSize: '9px' }}
+                            formatter={(value) => [formatCurrency(value, acc.currency, currencies, settings?.language), t('Balance')]}
+                            labelFormatter={(label) => {
+                              try {
+                                return new Date(label).toLocaleDateString(settings?.language || 'en-US', { dateStyle: 'medium' });
+                              } catch {
+                                return label;
+                              }
+                            }}
+                          />
+                          <Area 
+                            type="monotone" 
+                            dataKey="balance" 
+                            stroke="#d4af37" 
+                            strokeWidth={1.5}
+                            fillOpacity={1} 
+                            fill={`url(#colorBalance-${acc.id})`} 
+                          />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="flex justify-center items-center h-full">
+                        <div className="w-5 h-5 rounded-full border-t-2 border-gold-500 animate-spin"></div>
+                      </div>
+                    )}
+                  </div>
+
                   <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-3">{t('Recent Adjustments')}</h4>
+
                   <div className="space-y-3">
                     {accountHistory[acc.id]?.length > 0 ? (
                       accountHistory[acc.id].slice(0, 5).map(adj => (

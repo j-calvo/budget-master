@@ -10,5 +10,7 @@ router.put('/:id', accountController.updateAccount);
 router.delete('/:id', accountController.deleteAccount);
 router.post('/:id/adjust', accountController.adjustBalance);
 router.get('/:id/adjustments', accountController.getAdjustments);
+router.get('/:id/history', accountController.getAccountHistory);
+
 
 module.exports = router;
