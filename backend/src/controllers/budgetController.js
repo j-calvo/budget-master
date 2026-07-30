@@ -122,7 +122,7 @@ exports.getBudgets = async (req, res) => {
     const allTransactions = await prisma.transaction.findMany({
       where: {
         date: { gte: startDate, lte: endDate },
-        type: 'expense',
+        type: { in: ['expense', 'income'] },
         OR: [
           { account: { familyId: req.user.familyId } },
           { creditCard: { familyId: req.user.familyId } }
@@ -135,7 +135,7 @@ exports.getBudgets = async (req, res) => {
       }
     });
 
-    // 2. Map spending by category and currency
+    // 2. Map spending by category and currency (expenses increase spent, income offsets/reduces spent)
     const spendingMap = {}; // key: categoryId-currency
     allTransactions.forEach(tx => {
       const currency = tx.account?.currency || tx.creditCard?.currency || 'USD';
@@ -143,8 +143,11 @@ exports.getBudgets = async (req, res) => {
       if (!spendingMap[key]) {
         spendingMap[key] = { spent: 0, category: tx.category, currency };
       }
-      // Since we filtered by type: 'expense' in the DB query, we just add the amount
-      spendingMap[key].spent += tx.amount;
+      if (tx.type === 'income') {
+        spendingMap[key].spent -= tx.amount;
+      } else {
+        spendingMap[key].spent += tx.amount;
+      }
     });
 
     // 3. Match with existing budgets and calculate spent
