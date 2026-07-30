@@ -22,6 +22,9 @@ export default function Services() {
   // Tab navigation
   const [activeTab, setActiveTab] = useState('utilities');
   
+  // Year filter state
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
+  
   // Utilities state
   const [logs, setLogs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -348,26 +351,81 @@ export default function Services() {
     }
   };
 
+  // ── Year Filtering Logic ──
+  const availableYears = useMemo(() => {
+    const years = new Set();
+    logs.forEach(l => {
+      if (l.billingPeriod) {
+        const parts = l.billingPeriod.split('-');
+        const yr = parts.length > 1 ? parts[1] : parts[0];
+        if (yr && yr.length === 4) years.add(yr);
+      } else if (l.readingDate) {
+        years.add(new Date(l.readingDate).getFullYear().toString());
+      }
+    });
+    evLogs.forEach(l => {
+      if (l.billingPeriod) {
+        const parts = l.billingPeriod.split('-');
+        const yr = parts.length > 1 ? parts[1] : parts[0];
+        if (yr && yr.length === 4) years.add(yr);
+      } else if (l.date) {
+        years.add(new Date(l.date).getFullYear().toString());
+      }
+    });
+    years.add(new Date().getFullYear().toString());
+    return Array.from(years).sort((a, b) => b.localeCompare(a));
+  }, [logs, evLogs]);
+
+  const filteredLogs = useMemo(() => {
+    if (selectedYear === 'ALL') return logs;
+    return logs.filter(l => {
+      if (l.billingPeriod) {
+        const parts = l.billingPeriod.split('-');
+        const yr = parts.length > 1 ? parts[1] : parts[0];
+        return yr === selectedYear;
+      }
+      if (l.readingDate) {
+        return new Date(l.readingDate).getFullYear().toString() === selectedYear;
+      }
+      return true;
+    });
+  }, [logs, selectedYear]);
+
+  const filteredEvLogs = useMemo(() => {
+    if (selectedYear === 'ALL') return evLogs;
+    return evLogs.filter(l => {
+      if (l.billingPeriod) {
+        const parts = l.billingPeriod.split('-');
+        const yr = parts.length > 1 ? parts[1] : parts[0];
+        return yr === selectedYear;
+      }
+      if (l.date) {
+        return new Date(l.date).getFullYear().toString() === selectedYear;
+      }
+      return true;
+    });
+  }, [evLogs, selectedYear]);
+
   // ── Metrics Calculation ──
   const stats = useMemo(() => {
-    if (logs.length === 0) return { totalSpend: 0, totalKwh: 0, avgKwh: 0, avgRate: 0 };
+    if (filteredLogs.length === 0) return { totalSpend: 0, totalKwh: 0, avgKwh: 0, avgRate: 0 };
     
     let totalSpend = 0;
     let totalKwh = 0;
-    logs.forEach(log => {
+    filteredLogs.forEach(log => {
       totalSpend += log.amount || 0;
       totalKwh += log.consumption || 0;
     });
 
-    const avgKwh = totalKwh / logs.length;
+    const avgKwh = totalKwh / filteredLogs.length;
     const avgRate = totalKwh > 0 ? totalSpend / totalKwh : 0;
 
     return { totalSpend, totalKwh, avgKwh, avgRate };
-  }, [logs]);
+  }, [filteredLogs]);
 
   // ── Charts Data Preparation ──
   const chartData = useMemo(() => {
-    return [...logs]
+    return [...filteredLogs]
       .reverse() // Display chronological order (oldest to newest)
       .map(log => ({
         period: log.billingPeriod,
@@ -375,18 +433,18 @@ export default function Services() {
         amount: log.amount,
         rate: log.consumption > 0 ? parseFloat((log.amount / log.consumption).toFixed(2)) : 0
       }));
-  }, [logs]);
+  }, [filteredLogs]);
 
   // Pie chart average breakdown of cost details
   const averageBreakdownData = useMemo(() => {
-    if (logs.length === 0) return [];
+    if (filteredLogs.length === 0) return [];
     let count = 0;
     let totalEnergy = 0;
     let totalLighting = 0;
     let totalTax = 0;
     let totalOther = 0;
 
-    logs.forEach(log => {
+    filteredLogs.forEach(log => {
       if (log.energyCost || log.publicLighting || log.tax || log.otherCharges) {
         count++;
         totalEnergy += log.energyCost || 0;
@@ -404,12 +462,12 @@ export default function Services() {
       { name: t('VAT (IVA)'), value: Math.round(totalTax / count) },
       { name: t('Firefighters Tax'), value: Math.round(totalOther / count) }
     ].filter(item => item.value > 0);
-  }, [logs, t]);
+  }, [filteredLogs, t]);
 
   // ── EV Calculations ──
   const evSummaryByPeriod = useMemo(() => {
     const summary = {};
-    evLogs.forEach(log => {
+    filteredEvLogs.forEach(log => {
       const period = log.billingPeriod;
       if (!summary[period]) {
         summary[period] = { kwh: 0, sessions: 0 };
@@ -418,16 +476,16 @@ export default function Services() {
       summary[period].sessions += 1;
     });
     return summary;
-  }, [evLogs]);
+  }, [filteredEvLogs]);
 
   const evStats = useMemo(() => {
     let totalEvKwh = 0;
-    let totalEvSessions = evLogs.length;
+    let totalEvSessions = filteredEvLogs.length;
     let totalEstCost = 0;
     let shareSum = 0;
     let shareCount = 0;
 
-    evLogs.forEach(log => {
+    filteredEvLogs.forEach(log => {
       totalEvKwh += log.kwh || 0;
     });
 
@@ -436,7 +494,7 @@ export default function Services() {
     periods.forEach(period => {
       const evKwh = evSummaryByPeriod[period].kwh;
       // Find electricity bill for this period
-      const elecBill = logs.find(l => l.serviceType === 'electricity' && l.billingPeriod === period);
+      const elecBill = filteredLogs.find(l => l.serviceType === 'electricity' && l.billingPeriod === period);
       if (elecBill && elecBill.consumption > 0) {
         const rate = elecBill.amount / elecBill.consumption;
         totalEstCost += evKwh * rate;
@@ -448,10 +506,10 @@ export default function Services() {
     const avgEvShare = shareCount > 0 ? shareSum / shareCount : 0;
 
     return { totalEvKwh, totalEvSessions, avgEvShare, totalEstCost };
-  }, [evLogs, logs, evSummaryByPeriod]);
+  }, [filteredEvLogs, filteredLogs, evSummaryByPeriod]);
 
   const evAllocationChartData = useMemo(() => {
-    const electricityBills = logs.filter(l => l.serviceType === 'electricity');
+    const electricityBills = filteredLogs.filter(l => l.serviceType === 'electricity');
     return [...electricityBills]
       .reverse()
       .map(bill => {
@@ -466,10 +524,10 @@ export default function Services() {
           House: houseKwh,
         };
       });
-  }, [logs, evSummaryByPeriod]);
+  }, [filteredLogs, evSummaryByPeriod]);
 
   const evCostChartData = useMemo(() => {
-    const electricityBills = logs.filter(l => l.serviceType === 'electricity');
+    const electricityBills = filteredLogs.filter(l => l.serviceType === 'electricity');
     return [...electricityBills]
       .reverse()
       .map(bill => {
@@ -486,7 +544,7 @@ export default function Services() {
           totalBill,
         };
       });
-  }, [logs, evSummaryByPeriod]);
+  }, [filteredLogs, evSummaryByPeriod]);
 
   const PIE_COLORS = ['#d4af37', '#0ea5e9', '#f43f5e', '#a855f7'];
 
@@ -518,7 +576,23 @@ export default function Services() {
               : t('Monitor your electric vehicle charging sessions and costs')}
           </p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Year Filter Dropdown */}
+          <div className="flex items-center gap-2 bg-brand-900/60 px-3 py-2 rounded-xl border border-brand-600/30">
+            <Calendar className="w-3.5 h-3.5 text-gold-400 shrink-0" />
+            <span className="text-xs text-slate-400 font-medium hidden sm:inline">{t('Year')}:</span>
+            <select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(e.target.value)}
+              className="bg-transparent text-xs font-bold text-white outline-none cursor-pointer"
+            >
+              <option value="ALL" className="bg-brand-900 text-white">{t('All Time')}</option>
+              {availableYears.map(yr => (
+                <option key={yr} value={yr} className="bg-brand-900 text-white">{yr}</option>
+              ))}
+            </select>
+          </div>
+
           {activeTab === 'utilities' ? (
             <>
               <button 
@@ -801,7 +875,7 @@ export default function Services() {
                 <div className="p-6 border-b border-brand-600/30 flex justify-between items-center bg-brand-900/10">
                   <h3 className="font-serif italic text-white text-lg tracking-wide">{t('History Ledger')}</h3>
                   <span className="px-2.5 py-1 bg-brand-900/50 border border-brand-600/40 text-gold-400 rounded-full text-xs font-mono">
-                    {logs.length} {t('records')}
+                    {filteredLogs.length} {t('records')}
                   </span>
                 </div>
                 
@@ -819,7 +893,7 @@ export default function Services() {
                        </tr>
                      </thead>
                      <tbody className="divide-y divide-brand-850/30">
-                       {logs.map(log => {
+                       {filteredLogs.map(log => {
                          const evInfo = log.serviceType === 'electricity' ? evSummaryByPeriod[log.billingPeriod] : null;
                          const evKwh = evInfo ? evInfo.kwh : 0;
                          const rate = log.consumption > 0 ? log.amount / log.consumption : 0;
@@ -1031,7 +1105,7 @@ export default function Services() {
                 <div className="p-6 border-b border-brand-600/30 flex justify-between items-center bg-brand-900/10">
                   <h3 className="font-serif italic text-white text-lg tracking-wide">{t('History Ledger')}</h3>
                   <span className="px-2.5 py-1 bg-brand-900/50 border border-brand-600/40 text-gold-400 rounded-full text-xs font-mono">
-                    {evLogs.length} {t('records')}
+                    {filteredEvLogs.length} {t('records')}
                   </span>
                 </div>
 
@@ -1048,7 +1122,7 @@ export default function Services() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-brand-850/30">
-                      {evLogs.map(evLog => {
+                      {filteredEvLogs.map(evLog => {
                         const elecBill = logs.find(log => log.serviceType === 'electricity' && log.billingPeriod === evLog.billingPeriod);
                         const rate = elecBill && elecBill.consumption > 0 ? elecBill.amount / elecBill.consumption : 0;
                         const estCost = evLog.kwh * rate;
