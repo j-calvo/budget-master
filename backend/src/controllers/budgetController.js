@@ -118,11 +118,14 @@ exports.getBudgets = async (req, res) => {
       endDate = new Date(Date.UTC(currentYear, currentMonth - 1, budgetStartDay - 1, 23, 59, 59, 999));
     }
 
-    // 1. Fetch all transactions for the period to calculate spent amounts accurately by currency
+    // 1. Fetch all transactions for the period to calculate spent amounts accurately by currency (excluding income categories)
     const allTransactions = await prisma.transaction.findMany({
       where: {
         date: { gte: startDate, lte: endDate },
         type: { in: ['expense', 'income'] },
+        category: {
+          type: { not: 'income' }
+        },
         OR: [
           { account: { familyId: req.user.familyId } },
           { creditCard: { familyId: req.user.familyId } }
@@ -135,10 +138,11 @@ exports.getBudgets = async (req, res) => {
       }
     });
 
-    // 2. Map spending by category and currency (expenses increase spent, income offsets/reduces spent)
+    // 2. Map spending by category and currency (expenses increase spent, income/refunds offset spent)
+    const defaultCurrency = settings?.defaultCurrency || 'CRC';
     const spendingMap = {}; // key: categoryId-currency
     allTransactions.forEach(tx => {
-      const currency = tx.account?.currency || tx.creditCard?.currency || 'USD';
+      const currency = tx.account?.currency || tx.creditCard?.currency || defaultCurrency;
       const key = `${tx.categoryId}-${currency}`;
       if (!spendingMap[key]) {
         spendingMap[key] = { spent: 0, category: tx.category, currency };

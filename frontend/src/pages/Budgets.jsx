@@ -502,17 +502,17 @@ export default function Budgets() {
                   </div>
 
                   {/* Progress Bar with Unbudgeted Segment */}
-                  <div className="w-full bg-brand-900/60 rounded-full h-2 overflow-hidden border border-brand-600/30 mb-6 relative">
+                  <div className="w-full flex bg-brand-900/60 rounded-full h-2 overflow-hidden border border-brand-600/30 mb-6 relative">
                     {/* Budgeted Portion */}
                     <div 
-                      className={`h-full rounded-l-full transition-all duration-1000 ${isOver ? 'bg-rose-500/60' : 'bg-gold-500/80 shadow-[0_0_8px_rgba(212,175,55,0.3)]'}`}
-                      style={{ width: `${Math.min(100, (data.onBudgetPool / Math.max(totalSpent, data.budgeted)) * 100)}%` }}
+                      className={`h-full transition-all duration-1000 ${isOver ? 'bg-rose-500/60' : 'bg-gold-500/80 shadow-[0_0_8px_rgba(212,175,55,0.3)]'}`}
+                      style={{ width: `${Math.min(100, (Math.max(0, data.onBudgetPool) / Math.max(totalSpent, data.budgeted, 1)) * 100)}%` }}
                     />
                     {/* Unbudgeted Portion */}
                     {data.unbudgetedPool > 0 && (
                       <div 
                         className="h-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.4)] transition-all duration-1000"
-                        style={{ width: `${Math.min(100, (data.unbudgetedPool / Math.max(totalSpent, data.budgeted)) * 100)}%` }}
+                        style={{ width: `${Math.min(100, (data.unbudgetedPool / Math.max(totalSpent, data.budgeted, 1)) * 100)}%` }}
                       />
                     )}
                   </div>
