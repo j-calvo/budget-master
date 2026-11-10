@@ -168,6 +168,14 @@ const resources = {
       "Filter by Settlement": "Filter by Settlement",
       "Transaction settled successfully!": "Transaction settled successfully!",
       "Enter the final billed amount as shown on your bank statement.": "Enter the final billed amount as shown on your bank statement.",
+      "Statement / Posting Date": "Statement / Posting Date",
+      "You have {{count}} foreign purchase(s) pending statement settlement.": "You have {{count}} foreign purchase(s) pending statement settlement.",
+      "When your credit card statement arrives, reconcile the final dollar charge.": "When your credit card statement arrives, reconcile the final dollar charge.",
+      "Review Pending": "Review Pending",
+      "Show All": "Show All",
+      "Est.": "Est.",
+      "Please enter a valid amount": "Please enter a valid amount",
+      "Failed to settle transaction": "Failed to settle transaction",
 
       // Credit Cards
       "Add Credit Card": "Add Credit Card",
@@ -652,6 +660,14 @@ const resources = {
       "Filter by Settlement": "Filtrar por Liquidación",
       "Transaction settled successfully!": "¡Transacción liquidada con éxito!",
       "Enter the final billed amount as shown on your bank statement.": "Ingresa el monto final facturado tal como aparece en tu estado de cuenta bancario.",
+      "Statement / Posting Date": "Fecha de Estado de Cuenta / Cargo",
+      "You have {{count}} foreign purchase(s) pending statement settlement.": "Tienes {{count}} compra(s) en moneda extranjera pendiente(s) de liquidar.",
+      "When your credit card statement arrives, reconcile the final dollar charge.": "Cuando llegue tu estado de cuenta de la tarjeta, concilia el cargo final en dólares.",
+      "Review Pending": "Revisar Pendientes",
+      "Show All": "Mostrar Todos",
+      "Est.": "Est.",
+      "Please enter a valid amount": "Por favor ingresa un monto válido",
+      "Failed to settle transaction": "Error al liquidar la transacción",
 
       // Credit Cards
       "Add Credit Card": "Añadir Tarjeta",

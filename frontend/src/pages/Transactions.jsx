@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import api from '../api';
 import { useSettings } from '../context/SettingsContext';
 import { useTranslation } from 'react-i18next';
-import { Download, Upload, Search, SlidersHorizontal, ArrowUpDown, X, ChevronDown } from 'lucide-react';
+import { Download, Upload, Search, SlidersHorizontal, ArrowUpDown, X, ChevronDown, CheckCircle2, Clock, Globe } from 'lucide-react';
 import AmountInput from '../components/AmountInput';
 import InboxQueue from '../components/InboxQueue';
 import { formatCurrency } from '../lib/currencyUtils';
@@ -33,6 +33,7 @@ export default function Transactions() {
   const [budgets, setBudgets] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [editingTx, setEditingTx] = useState(null);
+  const [settlingTx, setSettlingTx] = useState(null);
   const [newTx, setNewTx] = useState({ 
     amount: '', 
     date: new Date().toISOString().split('T')[0], 
@@ -47,6 +48,7 @@ export default function Transactions() {
   const [filterSource, setFilterSource] = useState('all');
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterType, setFilterType] = useState('all');
+  const [filterSettlement, setFilterSettlement] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortField, setSortField] = useState('date');
   const [sortDirection, setSortDirection] = useState('desc');
@@ -154,6 +156,10 @@ export default function Transactions() {
       baseFiltered = baseFiltered.filter(tx => tx.type === filterType);
     }
 
+    if (filterSettlement !== 'all') {
+      baseFiltered = baseFiltered.filter(tx => (tx.settlementStatus || 'SETTLED') === filterSettlement);
+    }
+
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       baseFiltered = baseFiltered.filter(tx =>
@@ -174,7 +180,7 @@ export default function Transactions() {
 
     counts['all'] = baseFiltered.length;
     return counts;
-  }, [transactions, filterSource, filterCategory, filterType, searchQuery]);
+  }, [transactions, filterSource, filterCategory, filterType, filterSettlement, searchQuery]);
 
   // Build source options for filter dropdown
   const sourceOptions = useMemo(() => {
@@ -232,6 +238,11 @@ export default function Transactions() {
       filtered = filtered.filter(tx => tx.type === filterType);
     }
 
+    // Settlement filter
+    if (filterSettlement !== 'all') {
+      filtered = filtered.filter(tx => (tx.settlementStatus || 'SETTLED') === filterSettlement);
+    }
+
     // Search
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
@@ -264,21 +275,27 @@ export default function Transactions() {
     });
 
     return filtered;
-  }, [transactions, filterSource, filterCategory, filterType, searchQuery, sortField, sortDirection, selectedMonth]);
+  }, [transactions, filterSource, filterCategory, filterType, filterSettlement, searchQuery, sortField, sortDirection, selectedMonth]);
+
+  const pendingSettlementCount = useMemo(() => {
+    return transactions.filter(tx => tx.settlementStatus === 'PENDING_SETTLEMENT').length;
+  }, [transactions]);
 
   const activeFilterCount = useMemo(() => {
     let count = 0;
     if (filterSource !== 'all') count++;
     if (filterCategory !== 'all') count++;
     if (filterType !== 'all') count++;
+    if (filterSettlement !== 'all') count++;
     if (searchQuery.trim()) count++;
     return count;
-  }, [filterSource, filterCategory, filterType, searchQuery]);
+  }, [filterSource, filterCategory, filterType, filterSettlement, searchQuery]);
 
   const clearFilters = () => {
     setFilterSource('all');
     setFilterCategory('all');
     setFilterType('all');
+    setFilterSettlement('all');
     setSearchQuery('');
     setSortField('date');
     setSortDirection('desc');
@@ -481,6 +498,39 @@ export default function Transactions() {
         creditCards={creditCards} 
       />
 
+      {/* ── Pending Settlement Alert Banner ── */}
+      {pendingSettlementCount > 0 && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl animate-in fade-in duration-200">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-amber-500/20 text-amber-300 flex items-center justify-center shrink-0 border border-amber-500/30 shadow-inner">
+              <Clock size={18} />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-white">
+                {t('You have {{count}} foreign purchase(s) pending statement settlement.', { count: pendingSettlementCount })}
+              </p>
+              <p className="text-xs text-amber-200/70 mt-0.5">
+                {t('When your credit card statement arrives, reconcile the final dollar charge.')}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              setFilterSettlement(prev => prev === 'PENDING_SETTLEMENT' ? 'all' : 'PENDING_SETTLEMENT');
+              if (selectedMonth !== 'all') setSelectedMonth('all');
+            }}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all shadow-sm shrink-0 flex items-center justify-center gap-1.5 ${
+              filterSettlement === 'PENDING_SETTLEMENT'
+                ? 'bg-amber-500 text-brand-950 font-extrabold hover:bg-amber-400'
+                : 'bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30'
+            }`}
+          >
+            <Clock size={13} />
+            {filterSettlement === 'PENDING_SETTLEMENT' ? t('Show All') : t('Review Pending')}
+          </button>
+        </div>
+      )}
+
       {/* ── Filter & Sort Bar ── */}
       <div className="glass-card overflow-hidden border-brand-600/30">
         {/* Toggle row */}
@@ -530,7 +580,7 @@ export default function Transactions() {
 
         {/* Expandable filter panel */}
         <div
-          className={`overflow-hidden transition-all duration-300 ease-in-out ${showFilters ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'}`}
+          className={`overflow-hidden transition-all duration-300 ease-in-out ${showFilters ? 'max-h-64 opacity-100' : 'max-h-0 opacity-0'}`}
         >
           <div className="px-5 pb-4 pt-1 flex flex-wrap items-end gap-4 border-t border-brand-600/30">
             {/* Source filter */}
@@ -572,6 +622,20 @@ export default function Transactions() {
                 <option value="all" className="bg-brand-800">{t('All Types')}</option>
                 <option value="expense" className="bg-brand-800">{t('Expense')}</option>
                 <option value="income" className="bg-brand-800">{t('Income')}</option>
+              </select>
+            </div>
+
+            {/* Settlement filter */}
+            <div className="flex flex-col gap-1.5 min-w-[150px]">
+              <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">{t('Filter by Settlement')}</label>
+              <select
+                value={filterSettlement}
+                onChange={e => setFilterSettlement(e.target.value)}
+                className="px-3 py-2 bg-brand-900/50 border border-brand-600/50 rounded-lg text-sm text-white focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none transition-all appearance-none cursor-pointer"
+              >
+                <option value="all" className="bg-brand-800">{t('All Settlement States')}</option>
+                <option value="PENDING_SETTLEMENT" className="bg-brand-800">{t('Pending Settlement')}</option>
+                <option value="SETTLED" className="bg-brand-800">{t('Settled')}</option>
               </select>
             </div>
 
@@ -736,7 +800,19 @@ export default function Transactions() {
                         </div>
                         <div>
                           <p className="font-medium text-slate-200 line-clamp-1">{tx.description}</p>
-                          <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-0.5">{tx.account?.name || tx.creditCard?.name}</p>
+                          <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                            <span className="text-[10px] text-slate-500 uppercase tracking-widest">{tx.account?.name || tx.creditCard?.name}</span>
+                            {tx.settlementStatus === 'PENDING_SETTLEMENT' && (
+                              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-1">
+                                <Clock size={10} /> {t('Est.')} {tx.originalCurrency} {tx.originalAmount}
+                              </span>
+                            )}
+                            {tx.settlementStatus === 'SETTLED' && tx.originalCurrency && (
+                              <span className="text-[9px] text-slate-500 font-mono">
+                                ({tx.originalCurrency} {tx.originalAmount})
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                       <div className="text-right">
@@ -756,7 +832,17 @@ export default function Transactions() {
                         {tx.category?.name || 'Uncategorized'}
                       </span>
                       
-                      <div className="flex gap-4">
+                      <div className="flex items-center gap-3">
+                        {tx.settlementStatus === 'PENDING_SETTLEMENT' && (
+                          <button
+                            onClick={() => setSettlingTx(tx)}
+                            className="flex items-center gap-1 px-2.5 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded text-xs font-semibold hover:bg-amber-500/30 active:scale-95 transition-all shadow-sm"
+                            title={t('Settle Transaction')}
+                          >
+                            <CheckCircle2 size={13} />
+                            <span>{t('Settle')}</span>
+                          </button>
+                        )}
                         <button onClick={() => handleEditClick(tx)} className="text-slate-400 hover:text-gold-400 p-1.5 transition-colors active:scale-90">
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                         </button>
@@ -774,8 +860,22 @@ export default function Transactions() {
                       {tx.description.charAt(0).toUpperCase()}
                     </div>
                     <div className="min-w-0">
-                      <p className="font-medium text-slate-200 truncate">{tx.description}</p>
-                      <p className="text-xs text-slate-400">{tx.account?.name || tx.creditCard?.name}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-slate-200 truncate">{tx.description}</p>
+                        {tx.settlementStatus === 'PENDING_SETTLEMENT' && (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/40 shrink-0 flex items-center gap-1">
+                            <Clock size={10} /> {t('Pending Settlement')}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
+                        <span>{tx.account?.name || tx.creditCard?.name}</span>
+                        {tx.originalCurrency && (
+                          <span className="text-[11px] text-slate-400 font-mono">
+                            • {tx.originalCurrency} {tx.originalAmount} {tx.exchangeRate ? `(@ ${tx.exchangeRate.toFixed(4)})` : ''}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -795,13 +895,25 @@ export default function Transactions() {
                     {formatCurrency(tx.amount, tx.account?.currency || tx.creditCard?.currency || settings?.defaultCurrency || 'USD', currencies, settings?.language)}
                   </div>
 
-                  <div className="hidden md:flex justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => handleEditClick(tx)} className="text-slate-400 hover:text-gold-400 p-1 transition-colors">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                    </button>
-                    <button onClick={() => handleDelete(tx.id)} className="text-slate-400 hover:text-rose-400 p-1 transition-colors">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                    </button>
+                  <div className="hidden md:flex justify-end items-center gap-2">
+                    {tx.settlementStatus === 'PENDING_SETTLEMENT' && (
+                      <button
+                        onClick={() => setSettlingTx(tx)}
+                        className="flex items-center gap-1 px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 rounded text-xs font-semibold transition-all shadow-sm"
+                        title={t('Settle Transaction')}
+                      >
+                        <CheckCircle2 size={13} />
+                        <span>{t('Settle')}</span>
+                      </button>
+                    )}
+                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => handleEditClick(tx)} className="text-slate-400 hover:text-gold-400 p-1 transition-colors">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                      </button>
+                      <button onClick={() => handleDelete(tx.id)} className="text-slate-400 hover:text-rose-400 p-1 transition-colors">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -903,6 +1015,193 @@ export default function Transactions() {
           </div>
         </div>
       )}
+
+      {/* ── Settle Transaction Modal ── */}
+      {settlingTx && (
+        <SettleModal
+          tx={settlingTx}
+          onClose={() => setSettlingTx(null)}
+          onSettled={fetchData}
+          currencies={currencies}
+          language={settings?.language}
+        />
+      )}
+    </div>
+  );
+}
+
+function SettleModal({ tx, onClose, onSettled, currencies, language }) {
+  const { t } = useTranslation();
+  const [settledAmount, setSettledAmount] = useState(tx.amount?.toString() || '');
+  const [settledDate, setSettledDate] = useState(
+    tx.date ? tx.date.split('T')[0] : new Date().toISOString().split('T')[0]
+  );
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const targetCurrency = tx.account?.currency || tx.creditCard?.currency || 'USD';
+  const originalCurrency = tx.originalCurrency || 'EUR';
+  const originalAmount = tx.originalAmount || tx.amount;
+
+  const numericSettled = parseFloat(settledAmount) || 0;
+  const delta = numericSettled - tx.amount;
+  const effectiveRate = originalAmount > 0 && numericSettled > 0 ? (numericSettled / originalAmount) : null;
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (numericSettled <= 0) {
+      setError(t('Please enter a valid amount'));
+      return;
+    }
+    setLoading(true);
+    setError('');
+    try {
+      await api.post(`/transactions/${tx.id}/settle`, {
+        settledAmount: numericSettled,
+        settledDate
+      });
+      onSettled();
+      onClose();
+    } catch (err) {
+      console.error(err);
+      setError(err.response?.data?.error || t('Failed to settle transaction'));
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-brand-900/80 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+      <div className="glass-card p-6 sm:p-8 w-full max-w-lg shadow-2xl border-white/10 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl -z-10 mix-blend-screen"></div>
+
+        <div className="flex justify-between items-start mb-6">
+          <div>
+            <h2 className="text-2xl font-serif text-white tracking-wide flex items-center gap-2">
+              <CheckCircle2 size={22} className="text-amber-400" />
+              {t('Settle Transaction')}
+            </h2>
+            <p className="text-xs text-slate-400 mt-1">
+              {t('Enter the final billed amount as shown on your bank statement.')}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-slate-400 hover:text-white p-1 transition-colors rounded-lg hover:bg-brand-600/30"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {error && (
+          <div className="mb-4 p-3 bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs rounded-lg">
+            {error}
+          </div>
+        )}
+
+        {/* Voucher and card details summary */}
+        <div className="mb-6 p-4 bg-brand-950/60 border border-brand-600/30 rounded-xl space-y-2.5 text-xs">
+          <div className="flex justify-between items-center">
+            <span className="text-slate-400">{t('Description')}:</span>
+            <span className="text-white font-medium truncate max-w-[240px]">{tx.description}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-slate-400">{t('Account')}:</span>
+            <span className="text-gold-400 font-medium">
+              {tx.account?.name || tx.creditCard?.name} ({targetCurrency})
+            </span>
+          </div>
+          <div className="flex justify-between items-center pt-2 border-t border-brand-600/30">
+            <span className="text-slate-400">{t('Original Purchase')}:</span>
+            <span className="font-serif text-white font-bold text-sm">
+              {originalCurrency} {originalAmount.toFixed(2)}
+            </span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-slate-400">{t('Estimated Amount')}:</span>
+            <span className="font-serif text-amber-300 font-semibold">
+              {formatCurrency(tx.amount, targetCurrency, currencies, language)}
+            </span>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+              {t('Final Statement Amount')} ({targetCurrency})
+            </label>
+            <div className="relative">
+              <input
+                type="number"
+                step="0.01"
+                required
+                value={settledAmount}
+                onChange={e => setSettledAmount(e.target.value)}
+                className="input-glass w-full text-lg font-mono font-bold text-white pr-16"
+                placeholder="0.00"
+                autoFocus
+              />
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-gold-400/80">
+                {targetCurrency}
+              </span>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+              {t('Statement / Posting Date')}
+            </label>
+            <input
+              type="date"
+              value={settledDate}
+              onChange={e => setSettledDate(e.target.value)}
+              className="input-glass w-full text-xs text-white"
+            />
+          </div>
+
+          {/* Dynamic adjustment calculation */}
+          <div className="p-3 bg-brand-900/40 border border-brand-600/40 rounded-xl space-y-1.5 text-xs">
+            <div className="flex justify-between items-center">
+              <span className="text-slate-400">{t('Difference / Balance Adjustment')}:</span>
+              <span className={`font-mono font-bold ${delta > 0 ? 'text-amber-400' : delta < 0 ? 'text-emerald-400' : 'text-slate-300'}`}>
+                {delta >= 0 ? `+${delta.toFixed(2)}` : delta.toFixed(2)} {targetCurrency}
+              </span>
+            </div>
+            {effectiveRate && (
+              <div className="flex justify-between items-center pt-1 border-t border-brand-600/20 text-[11px]">
+                <span className="text-slate-500">{t('Effective Rate')}:</span>
+                <span className="font-mono text-slate-300">
+                  1 {originalCurrency} = {effectiveRate.toFixed(4)} {targetCurrency}
+                </span>
+              </div>
+            )}
+          </div>
+
+          <div className="flex justify-end gap-3 pt-3 border-t border-brand-600/30">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={loading}
+              className="btn-glass px-4 py-2 text-xs font-semibold uppercase tracking-wider text-slate-300"
+            >
+              {t('Cancel')}
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn-gold px-5 py-2 text-xs font-bold uppercase tracking-wider shadow-md flex items-center gap-1.5"
+            >
+              {loading ? (
+                <span>{t('Settling...')}</span>
+              ) : (
+                <>
+                  <CheckCircle2 size={15} />
+                  <span>{t('Settle & Reconcile')}</span>
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
