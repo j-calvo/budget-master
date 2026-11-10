@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api';
 import { useTranslation } from 'react-i18next';
+import { Globe } from 'lucide-react';
 
 export default function InboxQueue({ onActionComplete, categories, accounts, creditCards }) {
   const { t } = useTranslation();
   const [pending, setPending] = useState([]);
+  const [ratesData, setRatesData] = useState(null);
 
   const fetchPending = async () => {
     try {
@@ -15,8 +17,18 @@ export default function InboxQueue({ onActionComplete, categories, accounts, cre
     }
   };
 
+  const fetchRates = async () => {
+    try {
+      const res = await api.get('/currencies/rates');
+      setRatesData(res.data);
+    } catch (e) {
+      console.error('Failed to fetch exchange rates for inbox:', e);
+    }
+  };
+
   useEffect(() => {
     fetchPending();
+    fetchRates();
   }, []);
 
   const handleApprove = async (txId, payload) => {
@@ -56,6 +68,7 @@ export default function InboxQueue({ onActionComplete, categories, accounts, cre
             categories={categories} 
             accounts={accounts} 
             creditCards={creditCards}
+            ratesData={ratesData}
             onApprove={handleApprove}
             onDiscard={handleDiscard}
           />
@@ -65,12 +78,13 @@ export default function InboxQueue({ onActionComplete, categories, accounts, cre
   );
 }
 
-function PendingCard({ tx, categories, accounts, creditCards, onApprove, onDiscard }) {
+function PendingCard({ tx, categories, accounts, creditCards, ratesData, onApprove, onDiscard }) {
   const { t } = useTranslation();
   const [categoryId, setCategoryId] = useState('');
   const [sourceId, setSourceId] = useState('');
   const [type, setType] = useState(tx.type || 'expense');
   const [description, setDescription] = useState(tx.merchantDescription);
+  const [convertedAmount, setConvertedAmount] = useState('');
 
   // Try to set default source based on first available
   useEffect(() => {
@@ -112,26 +126,75 @@ function PendingCard({ tx, categories, accounts, creditCards, onApprove, onDisca
     }
   }, [accounts, creditCards, categories, sourceId, categoryId, tx.cardLast4, tx.currency]);
 
+  // Determine target currency
+  const isAcc = sourceId.startsWith('account_');
+  const realSourceId = sourceId.replace(/^(account_|card_)/, '');
+  const selectedSource = isAcc
+    ? accounts.find(a => a.id === realSourceId)
+    : creditCards.find(c => c.id === realSourceId);
+
+  const targetCurrency = selectedSource?.currency || 'USD';
+  const txCurrency = tx.currency || 'USD';
+  const isForeign = txCurrency.toUpperCase() !== targetCurrency.toUpperCase();
+
+  // Calculate estimated converted amount when foreign
+  useEffect(() => {
+    if (!isForeign) {
+      setConvertedAmount('');
+      return;
+    }
+
+    if (ratesData?.rates) {
+      const base = ratesData.base || 'USD';
+      const rates = ratesData.rates;
+      const amount = parseFloat(tx.amount) || 0;
+      let est = amount;
+
+      if (txCurrency === base && rates[targetCurrency]) {
+        est = amount * rates[targetCurrency];
+      } else if (targetCurrency === base && rates[txCurrency]) {
+        est = amount / rates[txCurrency];
+      } else if (rates[txCurrency] && rates[targetCurrency]) {
+        est = (amount / rates[txCurrency]) * rates[targetCurrency];
+      }
+      setConvertedAmount(est.toFixed(2));
+    } else {
+      // Fallback: default 1:1 if rates not yet loaded
+      setConvertedAmount(parseFloat(tx.amount || 0).toFixed(2));
+    }
+  }, [isForeign, tx.amount, txCurrency, targetCurrency, ratesData]);
+
   const approve = () => {
     if (!categoryId || !sourceId) {
       alert(t('Please select a category and source.'));
       return;
     }
-    const isAcc = sourceId.startsWith('account_');
-    const realSourceId = sourceId.replace(/^(account_|card_)/, '');
 
-    onApprove(tx.id, {
+    const payload = {
       categoryId,
       accountId: isAcc ? realSourceId : null,
       creditCardId: !isAcc ? realSourceId : null,
       type,
       description
-    });
+    };
+
+    if (isForeign) {
+      const parsedConverted = parseFloat(convertedAmount) || tx.amount;
+      payload.convertedAmount = parsedConverted;
+      payload.originalAmount = tx.amount;
+      payload.originalCurrency = txCurrency;
+      payload.exchangeRate = tx.amount > 0 ? (parsedConverted / tx.amount) : 1;
+      payload.settlementStatus = 'PENDING_SETTLEMENT';
+    } else {
+      payload.settlementStatus = 'SETTLED';
+    }
+
+    onApprove(tx.id, payload);
   };
 
   return (
     <div className="glass-card p-4 border border-brand-600/30 flex flex-col gap-3 relative overflow-hidden">
-      <div className="absolute top-0 left-0 w-1 h-full bg-gold-500/80"></div>
+      <div className={`absolute top-0 left-0 w-1 h-full ${isForeign ? 'bg-amber-500' : 'bg-gold-500/80'}`}></div>
       <div className="flex justify-between items-start">
         <div className="flex-1 min-w-0 pr-2">
           <input 
@@ -157,8 +220,8 @@ function PendingCard({ tx, categories, accounts, creditCards, onApprove, onDisca
           <option value="income" className="bg-brand-800">{t('Income')}</option>
         </select>
         <select value={sourceId} onChange={e => setSourceId(e.target.value)} className="w-2/3 p-1.5 text-xs bg-brand-900/50 border border-brand-600/50 rounded text-white appearance-none cursor-pointer">
-           {accounts.length > 0 && <optgroup label={t("Accounts")} className="bg-brand-900 text-gold-400">{accounts.map(a => <option value={`account_${a.id}`} key={`acc_${a.id}`} className="bg-brand-800 text-white">{a.name}</option>)}</optgroup>}
-           {creditCards.length > 0 && <optgroup label={t("Credit Cards")} className="bg-brand-900 text-gold-400">{creditCards.map(c => <option value={`card_${c.id}`} key={`cc_${c.id}`} className="bg-brand-800 text-white">{c.name}</option>)}</optgroup>}
+           {accounts.length > 0 && <optgroup label={t("Accounts")} className="bg-brand-900 text-gold-400">{accounts.map(a => <option value={`account_${a.id}`} key={`acc_${a.id}`} className="bg-brand-800 text-white">{a.name} ({a.currency})</option>)}</optgroup>}
+           {creditCards.length > 0 && <optgroup label={t("Credit Cards")} className="bg-brand-900 text-gold-400">{creditCards.map(c => <option value={`card_${c.id}`} key={`cc_${c.id}`} className="bg-brand-800 text-white">{c.name} ({c.currency})</option>)}</optgroup>}
         </select>
       </div>
 
@@ -166,6 +229,37 @@ function PendingCard({ tx, categories, accounts, creditCards, onApprove, onDisca
         <option value="" disabled className="bg-brand-800">{t('Select Category')}</option>
         {categories.map(c => <option value={c.id} key={c.id} className="bg-brand-800">{c.name}</option>)}
       </select>
+
+      {/* Foreign currency preview & conversion helper */}
+      {isForeign && (
+        <div className="p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-lg text-xs space-y-1.5 animate-in fade-in duration-200">
+          <div className="flex justify-between items-center text-amber-300 font-medium">
+            <span className="flex items-center gap-1 text-[11px]">
+              <Globe size={13} className="shrink-0" />
+              {t('Foreign Currency')}
+            </span>
+            <span className="font-mono text-[11px]">{txCurrency} &rarr; {targetCurrency}</span>
+          </div>
+
+          <div className="flex items-center justify-between gap-2 pt-1 border-t border-amber-500/20">
+            <span className="text-[11px] text-slate-300">{t('Est. Card Charge')}:</span>
+            <div className="flex items-center gap-1 font-mono">
+              <span className="text-amber-400 font-bold">{targetCurrency}</span>
+              <input
+                type="number"
+                step="0.01"
+                value={convertedAmount}
+                onChange={e => setConvertedAmount(e.target.value)}
+                className="w-24 px-2 py-1 bg-brand-950/80 border border-amber-500/40 rounded text-right text-white text-xs font-bold focus:outline-none focus:border-amber-400"
+                placeholder="0.00"
+              />
+            </div>
+          </div>
+          <p className="text-[10px] text-amber-200/70 italic leading-snug">
+            {t('Will be saved as Pending Settlement until your statement arrives.')}
+          </p>
+        </div>
+      )}
 
       <div className="flex justify-between items-center mt-2 border-t border-brand-600/30 pt-3">
         <button onClick={() => onDiscard(tx.id)} className="text-xs text-rose-400 uppercase font-bold hover:text-rose-300 transition-colors">{t('Discard')}</button>
