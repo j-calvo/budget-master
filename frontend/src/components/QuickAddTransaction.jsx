@@ -16,6 +16,7 @@ export default function QuickAddTransaction() {
   const [categories, setCategories] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [extraIva, setExtraIva] = useState(false);
   const [formData, setFormData] = useState({
     amount: '',
     date: new Date().toISOString().split('T')[0],
@@ -60,12 +61,14 @@ export default function QuickAddTransaction() {
   const handleOpen = () => {
     setIsOpen(true);
     setSuccess(false);
+    setExtraIva(false);
     fetchFormData();
   };
 
   const handleClose = () => {
     setIsOpen(false);
     setSuccess(false);
+    setExtraIva(false);
     setFormData(prev => ({ ...prev, amount: '', description: '', type: 'expense' }));
   };
 
@@ -83,12 +86,15 @@ export default function QuickAddTransaction() {
         type: formData.type,
         categoryId: formData.categoryId,
         accountId: isAccount ? realSourceId : null,
-        creditCardId: !isAccount ? realSourceId : null
+        creditCardId: !isAccount ? realSourceId : null,
+        extraIva: formData.type === 'expense' ? extraIva : false,
+        ivaRate: 13
       });
 
       setSuccess(true);
       // Reset form for next entry
       setFormData(prev => ({ ...prev, amount: '', description: '' }));
+      setExtraIva(false);
       
       // Auto-close after brief success feedback
       setTimeout(() => {
@@ -284,6 +290,35 @@ export default function QuickAddTransaction() {
                     className="w-full px-4 py-2.5 bg-brand-900/50 border border-brand-600/50 rounded-xl focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all text-sm"
                   />
                 </div>
+
+                {/* Extra IVA (13%) option for expenses */}
+                {formData.type === 'expense' && (
+                  <div className="pt-1 border-t border-brand-600/20">
+                    <label className="flex items-center justify-between cursor-pointer group select-none">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={extraIva}
+                          onChange={e => setExtraIva(e.target.checked)}
+                          className="w-4 h-4 rounded border-brand-500 bg-brand-900 text-gold-500 focus:ring-0 cursor-pointer accent-gold-500"
+                        />
+                        <span className="text-xs text-slate-300 group-hover:text-white transition-colors font-medium">
+                          {t('Extra IVA (13%)')}
+                        </span>
+                      </div>
+                      {extraIva && formData.amount && !isNaN(parseFloat(formData.amount)) && (
+                        <span className="text-xs font-serif text-gold-400 font-bold">
+                          +{(parseFloat(formData.amount) * 0.13).toFixed(2)}
+                        </span>
+                      )}
+                    </label>
+                    {extraIva && (
+                      <p className="text-[11px] text-slate-400 mt-1 pl-6">
+                        {t('Will save 2 transactions: purchase and 13% IVA.')}
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 {/* Actions */}
                 <div className="flex gap-3 pt-2">

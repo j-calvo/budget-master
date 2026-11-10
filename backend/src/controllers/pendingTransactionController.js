@@ -28,7 +28,14 @@ exports.approveTransaction = async (req, res) => {
       originalAmount,
       originalCurrency,
       exchangeRate,
-      settlementStatus
+      settlementStatus,
+      extraIva,
+      ivaRate = 13,
+      ivaAmount,
+      ivaConvertedAmount,
+      ivaOriginalAmount,
+      ivaCategoryId,
+      ivaDescription
     } = req.body;
     const familyId = req.user.familyId;
 
@@ -85,10 +92,50 @@ exports.approveTransaction = async (req, res) => {
       finalStatus = 'SETTLED';
     }
 
+    // Calculate Extra IVA if requested
+    let finalIvaAmount = 0;
+    let finalIvaOriginalAmount = null;
+    let finalIvaOriginalCurrency = null;
+    let finalIvaRate = null;
+    let finalIvaStatus = 'SETTLED';
+    const ratePercent = parseFloat(ivaRate) > 0 ? parseFloat(ivaRate) : 13;
+    const rateFactor = ratePercent / 100;
+
+    if (extraIva) {
+      if (isForeign) {
+        if (ivaConvertedAmount && !isNaN(parseFloat(ivaConvertedAmount)) && parseFloat(ivaConvertedAmount) > 0) {
+          finalIvaAmount = parseFloat(ivaConvertedAmount);
+        } else {
+          finalIvaAmount = parseFloat((finalAmount * rateFactor).toFixed(2));
+        }
+
+        if (ivaOriginalAmount && !isNaN(parseFloat(ivaOriginalAmount)) && parseFloat(ivaOriginalAmount) > 0) {
+          finalIvaOriginalAmount = parseFloat(ivaOriginalAmount);
+        } else if (finalOriginalAmount) {
+          finalIvaOriginalAmount = parseFloat((finalOriginalAmount * rateFactor).toFixed(2));
+        }
+
+        finalIvaOriginalCurrency = finalOriginalCurrency;
+        finalIvaRate = finalRate;
+        finalIvaStatus = finalStatus;
+      } else {
+        if (ivaAmount && !isNaN(parseFloat(ivaAmount)) && parseFloat(ivaAmount) > 0) {
+          finalIvaAmount = parseFloat(ivaAmount);
+        } else {
+          finalIvaAmount = parseFloat((finalAmount * rateFactor).toFixed(2));
+        }
+        finalIvaOriginalAmount = null;
+        finalIvaOriginalCurrency = null;
+        finalIvaRate = 1.0;
+        finalIvaStatus = 'SETTLED';
+      }
+    }
+
     // Wrap in transaction for atomicity
     let createdTx;
+    let createdIvaTx = null;
     await prisma.$transaction(async (tx) => {
-      // Create actual transaction
+      // Create main transaction
       createdTx = await tx.transaction.create({
         data: {
           accountId: accountId || null,
@@ -106,27 +153,57 @@ exports.approveTransaction = async (req, res) => {
         }
       });
 
-      // Update balances using finalAmount in native card/account currency
+      // Create extra IVA transaction if requested
+      if (extraIva && finalIvaAmount > 0) {
+        const txDesc = description || pending.merchantDescription;
+        const defaultIvaDesc = `IVA (${ratePercent}%) - ${txDesc}`;
+        createdIvaTx = await tx.transaction.create({
+          data: {
+            accountId: accountId || null,
+            creditCardId: creditCardId || null,
+            categoryId: ivaCategoryId || categoryId,
+            amount: finalIvaAmount,
+            originalAmount: finalIvaOriginalAmount,
+            originalCurrency: finalIvaOriginalCurrency,
+            exchangeRate: finalIvaRate ? parseFloat(finalIvaRate.toFixed(6)) : null,
+            settlementStatus: finalIvaStatus,
+            settledAt: finalIvaStatus === 'SETTLED' ? new Date() : null,
+            date: pending.date,
+            description: ivaDescription || defaultIvaDesc,
+            type: 'expense'
+          }
+        });
+      }
+
+      // Update balances using finalAmount and finalIvaAmount in native card/account currency
+      const totalExpenseAmount = finalAmount + (extraIva ? finalIvaAmount : 0);
+
       if (accountId) {
         const account = await tx.account.findUnique({ where: { id: accountId } });
         if (account) {
-          const newBalance = type === 'expense' || type === 'transfer'
-            ? account.balance - finalAmount
-            : account.balance + finalAmount;
+          let balanceDelta;
+          if (type === 'expense' || type === 'transfer') {
+            balanceDelta = -totalExpenseAmount;
+          } else {
+            balanceDelta = finalAmount - (extraIva ? finalIvaAmount : 0);
+          }
           await tx.account.update({
             where: { id: accountId },
-            data: { balance: newBalance }
+            data: { balance: account.balance + balanceDelta }
           });
         }
       } else if (creditCardId) {
         const cc = await tx.creditCard.findUnique({ where: { id: creditCardId } });
         if (cc) {
-          const newBalance = type === 'expense'
-            ? cc.balance + finalAmount
-            : cc.balance - finalAmount;
+          let balanceDelta;
+          if (type === 'expense') {
+            balanceDelta = totalExpenseAmount;
+          } else {
+            balanceDelta = -finalAmount + (extraIva ? finalIvaAmount : 0);
+          }
           await tx.creditCard.update({
             where: { id: creditCardId },
-            data: { balance: newBalance }
+            data: { balance: cc.balance + balanceDelta }
           });
         }
       }
@@ -138,7 +215,11 @@ exports.approveTransaction = async (req, res) => {
       });
     });
 
-    res.json({ message: 'Transaction approved successfully', transaction: createdTx });
+    res.json({
+      message: 'Transaction approved successfully',
+      transaction: createdTx,
+      ivaTransaction: createdIvaTx
+    });
   } catch (error) {
     console.error('approveTransaction error:', error);
     res.status(500).json({ error: 'Failed to approve transaction' });

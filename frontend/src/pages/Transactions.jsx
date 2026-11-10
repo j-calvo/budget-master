@@ -34,6 +34,7 @@ export default function Transactions() {
   const [showModal, setShowModal] = useState(false);
   const [editingTx, setEditingTx] = useState(null);
   const [settlingTx, setSettlingTx] = useState(null);
+  const [extraIvaModal, setExtraIvaModal] = useState(false);
   const [newTx, setNewTx] = useState({ 
     amount: '', 
     date: new Date().toISOString().split('T')[0], 
@@ -329,7 +330,9 @@ export default function Transactions() {
         type: newTx.type,
         categoryId: newTx.categoryId,
         accountId: isAccount ? realSourceId : null,
-        creditCardId: !isAccount ? realSourceId : null
+        creditCardId: !isAccount ? realSourceId : null,
+        extraIva: !editingTx && newTx.type === 'expense' ? extraIvaModal : false,
+        ivaRate: 13
       };
       
       if (editingTx) {
@@ -340,6 +343,7 @@ export default function Transactions() {
 
       setShowModal(false);
       setEditingTx(null);
+      setExtraIvaModal(false);
       setNewTx(prev => ({ ...prev, amount: '', description: '', type: 'expense' }));
       fetchData();
     } catch (err) {
@@ -349,6 +353,7 @@ export default function Transactions() {
 
   const handleEditClick = (tx) => {
     setEditingTx(tx);
+    setExtraIvaModal(false);
     setNewTx({
       amount: tx.amount,
       date: tx.date ? tx.date.split('T')[0] : new Date().toISOString().split('T')[0],
@@ -481,6 +486,7 @@ export default function Transactions() {
                 categoryId: outOfBudgetCat?.id || '', 
                 type: 'expense' 
               });
+              setExtraIvaModal(false);
               setShowModal(true);
             }} className="btn-gold px-5 py-2 text-sm shadow-md ml-2 flex items-center gap-1">
               <span className="text-lg leading-none">+</span> {t('New')}
@@ -1006,6 +1012,35 @@ export default function Transactions() {
                   </select>
                 </div>
               </div>
+
+              {/* Extra IVA 13% option for new expenses */}
+              {!editingTx && newTx.type === 'expense' && (
+                <div className="pt-2 border-t border-brand-600/20">
+                  <label className="flex items-center justify-between cursor-pointer group select-none">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={extraIvaModal}
+                        onChange={e => setExtraIvaModal(e.target.checked)}
+                        className="w-4 h-4 rounded border-brand-500 bg-brand-900 text-gold-500 focus:ring-0 cursor-pointer accent-gold-500"
+                      />
+                      <span className="text-xs text-slate-300 group-hover:text-white transition-colors font-medium">
+                        {t('Extra IVA (13%)')}
+                      </span>
+                    </div>
+                    {extraIvaModal && newTx.amount && !isNaN(parseFloat(newTx.amount)) && (
+                      <span className="text-xs font-serif text-gold-400 font-bold">
+                        +{(parseFloat(newTx.amount) * 0.13).toFixed(2)}
+                      </span>
+                    )}
+                  </label>
+                  {extraIvaModal && (
+                    <p className="text-[11px] text-slate-400 mt-1 pl-6">
+                      {t('Will save 2 transactions: purchase and 13% IVA.')}
+                    </p>
+                  )}
+                </div>
+              )}
 
               <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-brand-600/30">
                 <button type="button" onClick={() => { setShowModal(false); setEditingTx(null); }} className="px-4 py-2 text-sm text-slate-400 hover:text-white transition-colors">{t('Cancel')}</button>
