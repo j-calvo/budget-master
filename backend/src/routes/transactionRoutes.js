@@ -12,6 +12,7 @@ router.post('/import', upload.single('file'), transactionController.importTransa
 
 router.get('/:id', transactionController.getTransactionById);
 router.put('/:id', transactionController.updateTransaction);
+router.post('/:id/settle', transactionController.settleTransaction);
 router.delete('/:id', transactionController.deleteTransaction);
 
 module.exports = router;

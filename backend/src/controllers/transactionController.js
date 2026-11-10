@@ -53,7 +53,21 @@ exports.getTransactionById = async (req, res) => {
 
 exports.createTransaction = async (req, res) => {
   try {
-    const { accountId, creditCardId, categoryId, amount, date, description, payee, type } = req.body;
+    const {
+      accountId,
+      creditCardId,
+      categoryId,
+      amount,
+      date,
+      description,
+      payee,
+      type,
+      originalAmount,
+      originalCurrency,
+      exchangeRate,
+      settlementStatus,
+      settledAt
+    } = req.body;
     
     // Verify account or credit card belongs to user
     let account = null;
@@ -80,6 +94,11 @@ exports.createTransaction = async (req, res) => {
         creditCardId,
         categoryId,
         amount: parsedAmount,
+        originalAmount: originalAmount !== undefined && originalAmount !== null ? parseFloat(originalAmount) : null,
+        originalCurrency: originalCurrency || null,
+        exchangeRate: exchangeRate !== undefined && exchangeRate !== null ? parseFloat(exchangeRate) : null,
+        settlementStatus: settlementStatus || 'SETTLED',
+        settledAt: settledAt ? new Date(settledAt) : (settlementStatus === 'SETTLED' ? new Date() : null),
         date: date ? new Date(date) : undefined,
         description,
         payee,
@@ -126,7 +145,21 @@ exports.createTransaction = async (req, res) => {
 exports.updateTransaction = async (req, res) => {
   try {
     const { id } = req.params;
-    const { amount, date, description, payee, categoryId, type, accountId, creditCardId } = req.body;
+    const {
+      amount,
+      date,
+      description,
+      payee,
+      categoryId,
+      type,
+      accountId,
+      creditCardId,
+      originalAmount,
+      originalCurrency,
+      exchangeRate,
+      settlementStatus,
+      settledAt
+    } = req.body;
     
     // Fetch old to reverse balance impact
     const oldTx = await prisma.transaction.findUnique({
@@ -183,18 +216,36 @@ exports.updateTransaction = async (req, res) => {
     }
 
     const parsedAmount = parseFloat(amount);
+    const updateData = {
+      amount: parsedAmount,
+      date: date ? new Date(date) : undefined,
+      description,
+      payee,
+      categoryId,
+      type,
+      accountId: accountId || null,
+      creditCardId: creditCardId || null
+    };
+
+    if (originalAmount !== undefined) {
+      updateData.originalAmount = originalAmount !== null ? parseFloat(originalAmount) : null;
+    }
+    if (originalCurrency !== undefined) {
+      updateData.originalCurrency = originalCurrency || null;
+    }
+    if (exchangeRate !== undefined) {
+      updateData.exchangeRate = exchangeRate !== null ? parseFloat(exchangeRate) : null;
+    }
+    if (settlementStatus !== undefined) {
+      updateData.settlementStatus = settlementStatus;
+    }
+    if (settledAt !== undefined) {
+      updateData.settledAt = settledAt ? new Date(settledAt) : null;
+    }
+
     const transaction = await prisma.transaction.update({
       where: { id },
-      data: {
-        amount: parsedAmount,
-        date: date ? new Date(date) : undefined,
-        description,
-        payee,
-        categoryId,
-        type,
-        accountId: accountId || null,
-        creditCardId: creditCardId || null
-      },
+      data: updateData,
       include: { category: true }
     });
 
@@ -403,5 +454,71 @@ exports.importTransactions = async (req, res) => {
     console.error('Import error:', error);
     if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
     res.status(500).json({ error: 'Failed to process CSV file.' });
+  }
+};
+
+exports.settleTransaction = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { settledAmount, settledDate } = req.body;
+
+    if (settledAmount === undefined || settledAmount === null || isNaN(parseFloat(settledAmount)) || parseFloat(settledAmount) <= 0) {
+      return res.status(400).json({ error: 'Valid settledAmount is required' });
+    }
+
+    const newAmount = parseFloat(settledAmount);
+
+    const oldTx = await prisma.transaction.findUnique({
+      where: { id },
+      include: { account: true, creditCard: true, category: true }
+    });
+
+    if (!oldTx) return res.status(404).json({ error: 'Transaction not found' });
+    const familyId = oldTx.accountId ? oldTx.account?.familyId : oldTx.creditCard?.familyId;
+    if (familyId !== req.user.familyId) return res.status(403).json({ error: 'Unauthorized' });
+
+    // Delta between new settled amount and previously recorded amount
+    const delta = newAmount - oldTx.amount;
+    const originalAmt = oldTx.originalAmount || oldTx.amount;
+    const effectiveRate = originalAmt > 0 ? (newAmount / originalAmt) : null;
+
+    let updatedTx;
+    await prisma.$transaction(async (tx) => {
+      // 1. Update the transaction
+      updatedTx = await tx.transaction.update({
+        where: { id },
+        data: {
+          amount: newAmount,
+          exchangeRate: effectiveRate ? parseFloat(effectiveRate.toFixed(6)) : null,
+          settlementStatus: 'SETTLED',
+          settledAt: settledDate ? new Date(settledDate) : new Date()
+        },
+        include: { category: true, account: true, creditCard: true }
+      });
+
+      // 2. Adjust balance by delta
+      if (Math.abs(delta) > 0.000001) {
+        if (oldTx.creditCardId) {
+          // For credit card expense: positive delta means card balance increases
+          const balanceChange = oldTx.type === 'expense' ? delta : -delta;
+          await tx.creditCard.update({
+            where: { id: oldTx.creditCardId },
+            data: { balance: { increment: balanceChange } }
+          });
+        } else if (oldTx.accountId) {
+          // For bank account expense: positive delta means bank balance decreases
+          const balanceChange = oldTx.type === 'expense' ? -delta : delta;
+          await tx.account.update({
+            where: { id: oldTx.accountId },
+            data: { balance: { increment: balanceChange } }
+          });
+        }
+      }
+    });
+
+    res.json({ message: 'Transaction settled successfully', transaction: updatedTx });
+  } catch (error) {
+    console.error('settleTransaction error:', error);
+    res.status(500).json({ error: 'Failed to settle transaction' });
   }
 };
