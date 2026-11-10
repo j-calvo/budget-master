@@ -21,6 +21,6 @@
   },
   "homepage": "https://github.com/j-calvo/budget-master#readme",
   "devDependencies": {
-    "concurrently": "^9.2.1"
+    "concurrently": "^9.2.5"
   }
 }
