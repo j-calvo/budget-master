@@ -66,7 +66,12 @@ exports.createTransaction = async (req, res) => {
       originalCurrency,
       exchangeRate,
       settlementStatus,
-      settledAt
+      settledAt,
+      extraIva,
+      ivaRate = 13,
+      ivaAmount,
+      ivaCategoryId,
+      ivaDescription
     } = req.body;
     
     // Verify account or credit card belongs to user
@@ -88,54 +93,109 @@ exports.createTransaction = async (req, res) => {
     }
 
     const parsedAmount = parseFloat(amount);
-    const transaction = await prisma.transaction.create({
-      data: {
-        accountId,
-        creditCardId,
-        categoryId,
-        amount: parsedAmount,
-        originalAmount: originalAmount !== undefined && originalAmount !== null ? parseFloat(originalAmount) : null,
-        originalCurrency: originalCurrency || null,
-        exchangeRate: exchangeRate !== undefined && exchangeRate !== null ? parseFloat(exchangeRate) : null,
-        settlementStatus: settlementStatus || 'SETTLED',
-        settledAt: settledAt ? new Date(settledAt) : (settlementStatus === 'SETTLED' ? new Date() : null),
-        date: date ? new Date(date) : undefined,
-        description,
-        payee,
-        type
-      },
-      include: { category: true }
-    });
-    
-    // Update balance
-    if (type === 'transfer' && accountId && creditCardId) {
-      // Direct transfer (Credit Card Payment)
-      await prisma.account.update({
-        where: { id: accountId },
-        data: { balance: { decrement: parsedAmount } }
-      });
-      await prisma.creditCard.update({
-        where: { id: creditCardId },
-        data: { balance: { decrement: parsedAmount } }
-      });
-    } else {
-      if (accountId) {
-        const balanceChange = type === 'expense' ? -Math.abs(parsedAmount) : Math.abs(parsedAmount);
-        await prisma.account.update({
-          where: { id: accountId },
-          data: { balance: { increment: balanceChange } }
-        });
-      } else if (creditCardId) {
-        // CC expense increases balance
-        const balanceChange = type === 'expense' ? Math.abs(parsedAmount) : -Math.abs(parsedAmount);
-        await prisma.creditCard.update({
-          where: { id: creditCardId },
-          data: { balance: { increment: balanceChange } }
-        });
+    const ratePercent = parseFloat(ivaRate) > 0 ? parseFloat(ivaRate) : 13;
+    const rateFactor = ratePercent / 100;
+
+    let finalIvaAmount = 0;
+    let finalIvaOriginalAmount = null;
+
+    if (extraIva) {
+      if (ivaAmount && !isNaN(parseFloat(ivaAmount)) && parseFloat(ivaAmount) > 0) {
+        finalIvaAmount = parseFloat(ivaAmount);
+      } else {
+        finalIvaAmount = parseFloat((parsedAmount * rateFactor).toFixed(2));
+      }
+      if (originalAmount !== undefined && originalAmount !== null && !isNaN(parseFloat(originalAmount))) {
+        finalIvaOriginalAmount = parseFloat((parseFloat(originalAmount) * rateFactor).toFixed(2));
       }
     }
 
-    res.status(201).json(transaction);
+    let transaction;
+    let ivaTransaction = null;
+
+    await prisma.$transaction(async (tx) => {
+      transaction = await tx.transaction.create({
+        data: {
+          accountId,
+          creditCardId,
+          categoryId,
+          amount: parsedAmount,
+          originalAmount: originalAmount !== undefined && originalAmount !== null ? parseFloat(originalAmount) : null,
+          originalCurrency: originalCurrency || null,
+          exchangeRate: exchangeRate !== undefined && exchangeRate !== null ? parseFloat(exchangeRate) : null,
+          settlementStatus: settlementStatus || 'SETTLED',
+          settledAt: settledAt ? new Date(settledAt) : (settlementStatus === 'SETTLED' ? new Date() : null),
+          date: date ? new Date(date) : undefined,
+          description,
+          payee,
+          type
+        },
+        include: { category: true }
+      });
+
+      if (extraIva && finalIvaAmount > 0) {
+        const defaultIvaDesc = `IVA (${ratePercent}%) - ${description}`;
+        ivaTransaction = await tx.transaction.create({
+          data: {
+            accountId,
+            creditCardId,
+            categoryId: ivaCategoryId || categoryId,
+            amount: finalIvaAmount,
+            originalAmount: finalIvaOriginalAmount,
+            originalCurrency: originalCurrency || null,
+            exchangeRate: exchangeRate !== undefined && exchangeRate !== null ? parseFloat(exchangeRate) : null,
+            settlementStatus: settlementStatus || 'SETTLED',
+            settledAt: settledAt ? new Date(settledAt) : (settlementStatus === 'SETTLED' ? new Date() : null),
+            date: date ? new Date(date) : undefined,
+            description: ivaDescription || defaultIvaDesc,
+            payee,
+            type: 'expense'
+          },
+          include: { category: true }
+        });
+      }
+
+      // Update balance
+      if (type === 'transfer' && accountId && creditCardId) {
+        // Direct transfer (Credit Card Payment)
+        await tx.account.update({
+          where: { id: accountId },
+          data: { balance: { decrement: parsedAmount } }
+        });
+        await tx.creditCard.update({
+          where: { id: creditCardId },
+          data: { balance: { decrement: parsedAmount } }
+        });
+      } else {
+        const totalExpenseAmount = parsedAmount + (extraIva ? finalIvaAmount : 0);
+
+        if (accountId) {
+          let balanceChange;
+          if (type === 'expense') {
+            balanceChange = -totalExpenseAmount;
+          } else {
+            balanceChange = Math.abs(parsedAmount) - (extraIva ? finalIvaAmount : 0);
+          }
+          await tx.account.update({
+            where: { id: accountId },
+            data: { balance: { increment: balanceChange } }
+          });
+        } else if (creditCardId) {
+          let balanceChange;
+          if (type === 'expense') {
+            balanceChange = totalExpenseAmount;
+          } else {
+            balanceChange = -Math.abs(parsedAmount) + (extraIva ? finalIvaAmount : 0);
+          }
+          await tx.creditCard.update({
+            where: { id: creditCardId },
+            data: { balance: { increment: balanceChange } }
+          });
+        }
+      }
+    });
+
+    res.status(201).json({ ...transaction, ivaTransaction });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Failed to create transaction' });
