@@ -67,6 +67,8 @@ fi
 if [ -d ".git" ] && [ "$SKIP_GIT" = false ]; then
   echo ""
   echo "📥 Updating source code..."
+  # Clean up auto-generated local lockfile diffs from server-side npm install runs
+  git checkout -- package-lock.json backend/package-lock.json frontend/package-lock.json 2>/dev/null || true
   git pull origin main || echo "   ⚠️  Git pull failed, continuing with local code."
 else
   echo ""
