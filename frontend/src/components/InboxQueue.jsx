@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api';
 import { useTranslation } from 'react-i18next';
-import { Globe, ArrowLeftRight } from 'lucide-react';
+import { Globe, ArrowLeftRight, Percent } from 'lucide-react';
 import { getDefaultExchangeRate, convertWithRate, computeEffectiveRate } from '../lib/currencyUtils';
+
+const DIGITAL_SERVICES_REGEX = /(steam|valve|playstation|psn|sony\s*inter|xbox|microsoft\*xbox|nintendo|netflix|spotify|disney|hbo|max\.com|apple\.com|itunes|google\s*\*(play|storage|services)|uber|airbnb|prime\s*video|amazon\s*digital|patreon|openai|chatgpt|dropbox|canva|crunchyroll)/i;
 
 export default function InboxQueue({ onActionComplete, categories, accounts, creditCards }) {
   const { t } = useTranslation();
@@ -90,6 +92,11 @@ function PendingCard({ tx, categories, accounts, creditCards, ratesData, onAppro
   const [transferAmount, setTransferAmount] = useState(String(tx.amount || ''));
   const [transferDestAmount, setTransferDestAmount] = useState('');
   const [transferRate, setTransferRate] = useState('');
+
+  // Extra IVA state (auto-checked if matched as a known digital service)
+  const isDigitalService = DIGITAL_SERVICES_REGEX.test(tx.merchantDescription || '') || DIGITAL_SERVICES_REGEX.test(tx.rawBody || '');
+  const [extraIva, setExtraIva] = useState(isDigitalService);
+  const [ivaCategoryId, setIvaCategoryId] = useState('');
 
   // Try to set default source based on first available
   useEffect(() => {
@@ -234,6 +241,12 @@ function PendingCard({ tx, categories, accounts, creditCards, ratesData, onAppro
     }
   }, [isForeign, tx.amount, txCurrency, targetCurrency, ratesData]);
 
+  const baseAmount = parseFloat(tx.amount) || 0;
+  const calculatedIvaAmount = parseFloat((baseAmount * 0.13).toFixed(2));
+  const totalAmount = parseFloat((baseAmount + calculatedIvaAmount).toFixed(2));
+  const convertedIvaAmount = isForeign && convertedAmount ? parseFloat((parseFloat(convertedAmount) * 0.13).toFixed(2)) : 0;
+  const totalConvertedAmount = isForeign && convertedAmount ? parseFloat((parseFloat(convertedAmount) + convertedIvaAmount).toFixed(2)) : 0;
+
   const approve = () => {
     if (isTransfer) {
       if (!isAcc || !destinationId) {
@@ -278,6 +291,12 @@ function PendingCard({ tx, categories, accounts, creditCards, ratesData, onAppro
       description
     };
 
+    if (extraIva) {
+      payload.extraIva = true;
+      payload.ivaRate = 13;
+      payload.ivaCategoryId = ivaCategoryId || categoryId;
+    }
+
     if (isForeign) {
       const parsedConverted = parseFloat(convertedAmount) || tx.amount;
       payload.convertedAmount = parsedConverted;
@@ -285,8 +304,15 @@ function PendingCard({ tx, categories, accounts, creditCards, ratesData, onAppro
       payload.originalCurrency = txCurrency;
       payload.exchangeRate = tx.amount > 0 ? (parsedConverted / tx.amount) : 1;
       payload.settlementStatus = 'PENDING_SETTLEMENT';
+      if (extraIva) {
+        payload.ivaConvertedAmount = convertedIvaAmount;
+        payload.ivaOriginalAmount = calculatedIvaAmount;
+      }
     } else {
       payload.settlementStatus = 'SETTLED';
+      if (extraIva) {
+        payload.ivaAmount = calculatedIvaAmount;
+      }
     }
 
     onApprove(tx.id, payload);
@@ -478,6 +504,84 @@ function PendingCard({ tx, categories, accounts, creditCards, ratesData, onAppro
             {t('Will be saved as Pending Settlement until your statement arrives.')}
           </p>
         </div>
+      )}
+
+      {/* Extra IVA (13%) section */}
+      {!isTransfer && (
+      <div className="pt-1.5 border-t border-brand-600/30 space-y-2">
+        <label className="flex items-center justify-between cursor-pointer group select-none">
+          <div className="flex items-center gap-2">
+            <input 
+              type="checkbox" 
+              checked={extraIva} 
+              onChange={e => setExtraIva(e.target.checked)} 
+              className="w-3.5 h-3.5 rounded border-brand-500 bg-brand-900 text-gold-500 focus:ring-0 focus:ring-offset-0 cursor-pointer accent-gold-500"
+            />
+            <span className="text-xs text-slate-300 group-hover:text-white transition-colors flex items-center gap-1.5 font-medium">
+              {t('Extra IVA (13%)')}
+              {isDigitalService && (
+                <span className="px-1.5 py-0.5 text-[9px] bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 rounded font-normal" title={t('Digital service detected (13% IVA usually applies)')}>
+                  {t('Digital Service')}
+                </span>
+              )}
+            </span>
+          </div>
+          {extraIva && (
+            <span className="text-xs font-serif text-gold-400 font-bold">
+              +{tx.currency} {calculatedIvaAmount.toFixed(2)}
+            </span>
+          )}
+        </label>
+
+        {extraIva && (
+          <div className="p-2.5 bg-violet-500/10 border border-violet-500/30 rounded-lg text-xs space-y-1.5 animate-in fade-in duration-200">
+            <div className="flex justify-between items-center text-violet-300 font-medium text-[11px]">
+              <span className="flex items-center gap-1">
+                <Percent size={12} className="shrink-0" />
+                {t('Two transactions will be created')}
+              </span>
+              <span className="font-mono text-violet-200 font-semibold">13%</span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 pt-1 border-t border-violet-500/20 text-[11px]">
+              <div>
+                <span className="text-slate-400 block text-[10px] uppercase tracking-wider">{t('Purchase')}</span>
+                <span className="font-serif text-white font-medium">
+                  {tx.currency} {baseAmount.toFixed(2)}
+                  {isForeign && convertedAmount ? ` (~${targetCurrency} ${parseFloat(convertedAmount || 0).toFixed(2)})` : ''}
+                </span>
+              </div>
+              <div className="text-right">
+                <span className="text-slate-400 block text-[10px] uppercase tracking-wider">{t('IVA (13%)')}</span>
+                <span className="font-serif text-gold-400 font-bold">
+                  +{tx.currency} {calculatedIvaAmount.toFixed(2)}
+                  {isForeign && convertedIvaAmount ? ` (~${targetCurrency} ${convertedIvaAmount.toFixed(2)})` : ''}
+                </span>
+              </div>
+            </div>
+
+            <div className="pt-1.5 border-t border-violet-500/20 flex items-center justify-between gap-2">
+              <span className="text-[10px] text-slate-300">{t('IVA Category')}:</span>
+              <select 
+                value={ivaCategoryId} 
+                onChange={e => setIvaCategoryId(e.target.value)} 
+                className="w-1/2 p-1 text-[11px] bg-brand-950/80 border border-violet-500/30 rounded text-white appearance-none cursor-pointer"
+              >
+                <option value="">{t('Same category')}</option>
+                {categories.map(c => <option value={c.id} key={`iva_${c.id}`} className="bg-brand-900">{c.name}</option>)}
+              </select>
+            </div>
+
+            <div className="pt-1 flex justify-between items-center text-[10px] text-violet-200/90 font-medium">
+              <span>{t('Total charged to card')}:</span>
+              <span className="font-serif text-gold-300 font-bold text-xs">
+                {tx.currency} {totalAmount.toFixed(2)}
+                {isForeign && convertedAmount ? ` (~${targetCurrency} ${totalConvertedAmount.toFixed(2)})` : ''}
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
       )}
 
       <div className="flex justify-between items-center mt-2 border-t border-brand-600/30 pt-3">

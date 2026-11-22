@@ -71,7 +71,12 @@ exports.createTransaction = async (req, res) => {
       originalCurrency,
       exchangeRate,
       settlementStatus,
-      settledAt
+      settledAt,
+      extraIva,
+      ivaRate = 13,
+      ivaAmount,
+      ivaCategoryId,
+      ivaDescription
     } = req.body;
     
     // Verify account, destination account, or credit card belongs to user
@@ -107,6 +112,7 @@ exports.createTransaction = async (req, res) => {
       ? parseFloat(exchangeRate)
       : null;
     let parsedDestAmount = null;
+    let applyExtraIva = Boolean(extraIva);
 
     if (type === 'transfer') {
       if (!accountId || (!destinationAccountId && !creditCardId)) {
@@ -115,6 +121,7 @@ exports.createTransaction = async (req, res) => {
       if (destinationAccountId && accountId === destinationAccountId) {
         return res.status(400).json({ error: 'Cannot transfer to the same account' });
       }
+      applyExtraIva = false;
       parsedDestAmount = (destinationAmount !== undefined && destinationAmount !== null && !isNaN(parseFloat(destinationAmount)) && parseFloat(destinationAmount) > 0)
         ? parseFloat(destinationAmount)
         : parsedAmount;
@@ -129,7 +136,26 @@ exports.createTransaction = async (req, res) => {
       }
     }
 
+    const ratePercent = parseFloat(ivaRate) > 0 ? parseFloat(ivaRate) : 13;
+    const rateFactor = ratePercent / 100;
+
+    let finalIvaAmount = 0;
+    let finalIvaOriginalAmount = null;
+
+    if (applyExtraIva) {
+      if (ivaAmount && !isNaN(parseFloat(ivaAmount)) && parseFloat(ivaAmount) > 0) {
+        finalIvaAmount = parseFloat(ivaAmount);
+      } else {
+        finalIvaAmount = parseFloat((parsedAmount * rateFactor).toFixed(2));
+      }
+      if (originalAmount !== undefined && originalAmount !== null && !isNaN(parseFloat(originalAmount))) {
+        finalIvaOriginalAmount = parseFloat((parseFloat(originalAmount) * rateFactor).toFixed(2));
+      }
+    }
+
     let transaction;
+    let ivaTransaction = null;
+
     await prisma.$transaction(async (tx) => {
       transaction = await tx.transaction.create({
         data: {
@@ -151,6 +177,28 @@ exports.createTransaction = async (req, res) => {
         },
         include: { category: true, account: true, destinationAccount: true, creditCard: true }
       });
+
+      if (applyExtraIva && finalIvaAmount > 0) {
+        const defaultIvaDesc = `IVA (${ratePercent}%) - ${description}`;
+        ivaTransaction = await tx.transaction.create({
+          data: {
+            accountId: accountId || null,
+            creditCardId: creditCardId || null,
+            categoryId: ivaCategoryId || categoryId || null,
+            amount: finalIvaAmount,
+            originalAmount: finalIvaOriginalAmount,
+            originalCurrency: originalCurrency || null,
+            exchangeRate: finalExchangeRate,
+            settlementStatus: settlementStatus || 'SETTLED',
+            settledAt: settledAt ? new Date(settledAt) : (settlementStatus === 'SETTLED' || !settlementStatus ? new Date() : null),
+            date: date ? new Date(date) : undefined,
+            description: ivaDescription || defaultIvaDesc,
+            payee,
+            type: 'expense'
+          },
+          include: { category: true }
+        });
+      }
 
       // Update balance
       if (type === 'transfer' && accountId && destinationAccountId) {
@@ -174,15 +222,26 @@ exports.createTransaction = async (req, res) => {
           data: { balance: { decrement: Math.abs(parsedDestAmount) } }
         });
       } else {
+        const totalExpenseAmount = parsedAmount + (applyExtraIva ? finalIvaAmount : 0);
+
         if (accountId) {
-          const balanceChange = type === 'expense' ? -Math.abs(parsedAmount) : Math.abs(parsedAmount);
+          let balanceChange;
+          if (type === 'expense') {
+            balanceChange = -totalExpenseAmount;
+          } else {
+            balanceChange = Math.abs(parsedAmount) - (applyExtraIva ? finalIvaAmount : 0);
+          }
           await tx.account.update({
             where: { id: accountId },
             data: { balance: { increment: balanceChange } }
           });
         } else if (creditCardId) {
-          // CC expense increases balance
-          const balanceChange = type === 'expense' ? Math.abs(parsedAmount) : -Math.abs(parsedAmount);
+          let balanceChange;
+          if (type === 'expense') {
+            balanceChange = totalExpenseAmount;
+          } else {
+            balanceChange = -Math.abs(parsedAmount) + (applyExtraIva ? finalIvaAmount : 0);
+          }
           await tx.creditCard.update({
             where: { id: creditCardId },
             data: { balance: { increment: balanceChange } }
@@ -191,7 +250,7 @@ exports.createTransaction = async (req, res) => {
       }
     });
 
-    res.status(201).json(transaction);
+    res.status(201).json({ ...transaction, ivaTransaction });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Failed to create transaction' });
