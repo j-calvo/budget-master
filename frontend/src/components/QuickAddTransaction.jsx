@@ -1,10 +1,11 @@
 import React, { useState, useCallback } from 'react';
-import { Plus, X } from 'lucide-react';
+import { Plus, X, ArrowLeftRight } from 'lucide-react';
 import api from '../api';
 import { useSettings } from '../context/SettingsContext';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 import AmountInput from './AmountInput';
+import { getDefaultExchangeRate, convertWithRate, computeEffectiveRate } from '../lib/currencyUtils';
 
 export default function QuickAddTransaction() {
   const { t } = useTranslation();
@@ -14,14 +15,18 @@ export default function QuickAddTransaction() {
   const [accounts, setAccounts] = useState([]);
   const [creditCards, setCreditCards] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [ratesData, setRatesData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [extraIva, setExtraIva] = useState(false);
   const [formData, setFormData] = useState({
     amount: '',
+    destinationAmount: '',
+    exchangeRate: '',
     date: new Date().toISOString().split('T')[0],
     description: '',
     sourceId: '',
+    destinationId: '',
     categoryId: '',
     type: 'expense'
   });
@@ -33,14 +38,16 @@ export default function QuickAddTransaction() {
 
   const fetchFormData = useCallback(async () => {
     try {
-      const [accRes, catRes, ccRes] = await Promise.all([
+      const [accRes, catRes, ccRes, rateRes] = await Promise.all([
         api.get('/accounts'),
         api.get('/categories'),
-        api.get('/credit-cards')
+        api.get('/credit-cards'),
+        api.get('/currencies/rates').catch(() => ({ data: null }))
       ]);
       setAccounts(accRes.data);
       setCategories(catRes.data);
       setCreditCards(ccRes.data);
+      setRatesData(rateRes.data);
 
       const outOfBudgetCat = catRes.data.find(c => c.name.toLowerCase() === 'out of budget') || catRes.data[0];
       const defaultSource = accRes.data.length > 0 
@@ -69,7 +76,58 @@ export default function QuickAddTransaction() {
     setIsOpen(false);
     setSuccess(false);
     setExtraIva(false);
-    setFormData(prev => ({ ...prev, amount: '', description: '', type: 'expense' }));
+    setFormData(prev => ({ ...prev, amount: '', destinationAmount: '', exchangeRate: '', description: '', destinationId: '', type: 'expense' }));
+  };
+
+  const getTransferCurrencyInfo = (srcVal, dstVal) => {
+    const srcId = srcVal?.replace(/^account_/, '');
+    const srcAcc = accounts.find(a => a.id === srcId);
+    const isDestAcc = dstVal?.startsWith('account_');
+    const dstId = dstVal?.replace(/^(account_|card_)/, '');
+    const dstObj = isDestAcc ? accounts.find(a => a.id === dstId) : creditCards.find(c => c.id === dstId);
+    const srcCurrency = srcAcc?.currency || settings?.defaultCurrency || 'USD';
+    const dstCurrency = dstObj?.currency || srcCurrency;
+    const isCrossCurrency = srcCurrency !== dstCurrency;
+    const rateMeta = getDefaultExchangeRate(srcCurrency, dstCurrency, ratesData);
+    return { srcAcc, dstObj, srcCurrency, dstCurrency, isCrossCurrency, rateMeta };
+  };
+
+  const getDefaultDestinationForSource = (srcVal) => {
+    const srcId = srcVal?.replace(/^account_/, '');
+    const srcAcc = accounts.find(a => a.id === srcId);
+    const diffCurrAcc = accounts.find(a => a.id !== srcId && srcAcc && a.currency !== srcAcc.currency);
+    if (diffCurrAcc) return `account_${diffCurrAcc.id}`;
+    const otherAcc = accounts.find(a => a.id !== srcId);
+    if (otherAcc) return `account_${otherAcc.id}`;
+    if (creditCards.length > 0) return `card_${creditCards[0].id}`;
+    return '';
+  };
+
+  const switchTxType = (nextType) => {
+    if (nextType !== 'transfer') {
+      setFormData(prev => ({ ...prev, type: nextType }));
+      return;
+    }
+    setExtraIva(false);
+    const nextSourceId = formData.sourceId?.startsWith('account_')
+      ? formData.sourceId
+      : (accounts.length > 0 ? `account_${accounts[0].id}` : '');
+    const nextDestId = (formData.destinationId && formData.destinationId !== nextSourceId)
+      ? formData.destinationId
+      : getDefaultDestinationForSource(nextSourceId);
+    const { isCrossCurrency, rateMeta } = getTransferCurrencyInfo(nextSourceId, nextDestId);
+    const initialRate = isCrossCurrency ? String(rateMeta.rate) : '';
+    const nextDestAmt = isCrossCurrency && formData.amount
+      ? convertWithRate(formData.amount, initialRate, rateMeta.isMultiply)
+      : formData.amount;
+    setFormData(prev => ({
+      ...prev,
+      type: 'transfer',
+      sourceId: nextSourceId,
+      destinationId: nextDestId,
+      exchangeRate: initialRate,
+      destinationAmount: nextDestAmt
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -79,21 +137,51 @@ export default function QuickAddTransaction() {
       const isAccount = formData.sourceId.startsWith('account_');
       const realSourceId = formData.sourceId.replace(/^(account_|card_)/, '');
 
-      await api.post('/transactions', {
-        amount: parseFloat(formData.amount) || 0,
-        date: formData.date,
-        description: formData.description,
-        type: formData.type,
-        categoryId: formData.categoryId,
-        accountId: isAccount ? realSourceId : null,
-        creditCardId: !isAccount ? realSourceId : null,
-        extraIva: formData.type === 'expense' ? extraIva : false,
-        ivaRate: 13
-      });
+      if (formData.type === 'transfer') {
+        if (!isAccount || !formData.destinationId) {
+          setIsLoading(false);
+          return;
+        }
+        if (formData.sourceId === formData.destinationId) {
+          alert(t('Cannot transfer to the same account'));
+          setIsLoading(false);
+          return;
+        }
+        const isDestAccount = formData.destinationId.startsWith('account_');
+        const realDestId = formData.destinationId.replace(/^(account_|card_)/, '');
+        const { isCrossCurrency } = getTransferCurrencyInfo(formData.sourceId, formData.destinationId);
+        const parsedAmt = parseFloat(formData.amount) || 0;
+        const parsedDestAmt = isCrossCurrency ? (parseFloat(formData.destinationAmount) || 0) : parsedAmt;
+
+        await api.post('/transactions', {
+          amount: parsedAmt,
+          destinationAmount: parsedDestAmt,
+          exchangeRate: isCrossCurrency && formData.exchangeRate ? parseFloat(formData.exchangeRate) : null,
+          date: formData.date,
+          description: formData.description,
+          type: 'transfer',
+          categoryId: null,
+          accountId: realSourceId,
+          destinationAccountId: isDestAccount ? realDestId : null,
+          creditCardId: !isDestAccount ? realDestId : null
+        });
+      } else {
+        await api.post('/transactions', {
+          amount: parseFloat(formData.amount) || 0,
+          date: formData.date,
+          description: formData.description,
+          type: formData.type,
+          categoryId: formData.categoryId,
+          accountId: isAccount ? realSourceId : null,
+          creditCardId: !isAccount ? realSourceId : null,
+          extraIva: formData.type === 'expense' ? extraIva : false,
+          ivaRate: 13
+        });
+      }
 
       setSuccess(true);
       // Reset form for next entry
-      setFormData(prev => ({ ...prev, amount: '', description: '' }));
+      setFormData(prev => ({ ...prev, amount: '', destinationAmount: '', description: '' }));
       setExtraIva(false);
       
       // Auto-close after brief success feedback
@@ -109,11 +197,11 @@ export default function QuickAddTransaction() {
   };
 
   // Derive currency symbol from selected source
-  const getCurrencySymbol = () => {
+  const getCurrencySymbol = (codeOverride) => {
     const isAcc = formData.sourceId?.startsWith('account_');
     const srcId = formData.sourceId?.replace(/^(account_|card_)/, '');
     const activeSrc = isAcc ? accounts.find(a => a.id === srcId) : creditCards.find(c => c.id === srcId);
-    const code = activeSrc?.currency || settings?.defaultCurrency || 'USD';
+    const code = codeOverride || activeSrc?.currency || settings?.defaultCurrency || 'USD';
     
     // 1. Try to find the symbol in our global currencies list
     const currencyRecord = currencies.find(c => c.code === code);
@@ -201,95 +289,279 @@ export default function QuickAddTransaction() {
             ) : (
               <form onSubmit={handleSubmit} className="px-6 pb-6 pt-2 space-y-4">
                 {/* Type toggle */}
-                <div className="flex bg-brand-900/60 p-1 rounded-lg border border-brand-600/50">
+                <div className="flex bg-brand-900/60 p-1 rounded-lg border border-brand-600/50 gap-1">
                   <button 
                     type="button" 
-                    onClick={() => setFormData({...formData, type: 'expense'})} 
-                    className={`flex-1 py-2 rounded text-sm font-medium transition-all ${formData.type === 'expense' ? 'bg-brand-700 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'}`}
+                    onClick={() => switchTxType('expense')} 
+                    className={`flex-1 py-2 rounded text-xs sm:text-sm font-medium transition-all ${formData.type === 'expense' ? 'bg-brand-700 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'}`}
                   >
                     {t('Expense')}
                   </button>
                   <button 
                     type="button" 
-                    onClick={() => setFormData({...formData, type: 'income'})} 
-                    className={`flex-1 py-2 rounded text-sm font-medium transition-all ${formData.type === 'income' ? 'bg-gold-500/20 text-gold-400 shadow-md border border-gold-500/20' : 'text-slate-400 hover:text-slate-200'}`}
+                    onClick={() => switchTxType('income')} 
+                    className={`flex-1 py-2 rounded text-xs sm:text-sm font-medium transition-all ${formData.type === 'income' ? 'bg-gold-500/20 text-gold-400 shadow-md border border-gold-500/20' : 'text-slate-400 hover:text-slate-200'}`}
                   >
                     {t('Income')}
                   </button>
-                </div>
-
-                {/* Amount — large & prominent */}
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-[0.15em]">{t('Amount')}</label>
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-serif text-lg">{getCurrencySymbol()}</span>
-                    <AmountInput
-                      required
-                      value={formData.amount}
-                      onChange={e => setFormData({...formData, amount: e.target.value})}
-                      className="w-full pl-10 pr-4 py-3 bg-brand-900/50 border border-brand-600/50 rounded-xl focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white text-2xl font-serif transition-all"
-                      placeholder="0.00"
-                      autoFocus
-                    />
-                  </div>
-                </div>
-
-                {/* Description */}
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-[0.15em]">{t('Description')}</label>
-                  <input
-                    required
-                    type="text"
-                    value={formData.description}
-                    onChange={e => setFormData({...formData, description: e.target.value})}
-                    className="w-full px-4 py-2.5 bg-brand-900/50 border border-brand-600/50 rounded-xl focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all text-sm"
-                    placeholder={t('e.g. Weekly Groceries')}
-                  />
-                </div>
-
-                {/* Source + Category row */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-[0.15em]">{t('Source')}</label>
-                    <select
-                      value={formData.sourceId}
-                      onChange={e => setFormData({...formData, sourceId: e.target.value})}
-                      className="w-full px-3 py-2.5 bg-brand-900/50 border border-brand-600/50 rounded-xl focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all appearance-none cursor-pointer text-sm"
+                  {accounts.length > 0 && (accounts.length > 1 || creditCards.length > 0) && (
+                    <button 
+                      type="button" 
+                      onClick={() => switchTxType('transfer')} 
+                      className={`flex-1 py-2 rounded text-xs sm:text-sm font-medium transition-all whitespace-nowrap px-2 ${formData.type === 'transfer' ? 'bg-cyan-500/20 text-cyan-300 shadow-md border border-cyan-500/30' : 'text-slate-400 hover:text-slate-200'}`}
                     >
-                      {accounts.length > 0 && (
-                        <optgroup label={t("Accounts")} className="bg-brand-900 font-serif italic text-gold-400">
-                          {accounts.map(acc => <option key={`acc_${acc.id}`} value={`account_${acc.id}`} className="bg-brand-800 text-white font-sans not-italic">{acc.name}</option>)}
-                        </optgroup>
-                      )}
-                      {creditCards.length > 0 && (
-                        <optgroup label={t("Credit Cards")} className="bg-brand-900 font-serif italic text-gold-400">
-                          {creditCards.map(cc => <option key={`cc_${cc.id}`} value={`card_${cc.id}`} className="bg-brand-800 text-white font-sans not-italic">{cc.name}</option>)}
-                        </optgroup>
-                      )}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-[0.15em]">{t('Category')}</label>
-                    <select
-                      value={formData.categoryId}
-                      onChange={e => setFormData({...formData, categoryId: e.target.value})}
-                      className="w-full px-3 py-2.5 bg-brand-900/50 border border-brand-600/50 rounded-xl focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all appearance-none cursor-pointer text-sm"
-                    >
-                      {categories.map(cat => <option key={cat.id} value={cat.id} className="bg-brand-800">{cat.name}</option>)}
-                    </select>
-                  </div>
+                      {t('Transfer')}
+                    </button>
+                  )}
                 </div>
 
-                {/* Date */}
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-[0.15em]">{t('Date')}</label>
-                  <input
-                    type="date"
-                    value={formData.date}
-                    onChange={e => setFormData({...formData, date: e.target.value})}
-                    className="w-full px-4 py-2.5 bg-brand-900/50 border border-brand-600/50 rounded-xl focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all text-sm"
-                  />
-                </div>
+                {formData.type === 'transfer' ? (() => {
+                  const { srcCurrency, dstCurrency, isCrossCurrency, rateMeta } = getTransferCurrencyInfo(formData.sourceId, formData.destinationId);
+                  return (
+                    <>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-[0.15em]">{t('From Account')}</label>
+                          <select
+                            value={formData.sourceId}
+                            onChange={e => {
+                              const val = e.target.value;
+                              const nextDestId = formData.destinationId === val ? getDefaultDestinationForSource(val) : (formData.destinationId || getDefaultDestinationForSource(val));
+                              const info = getTransferCurrencyInfo(val, nextDestId);
+                              const nextRate = info.isCrossCurrency ? String(info.rateMeta.rate) : '';
+                              const nextDestAmt = info.isCrossCurrency
+                                ? (formData.amount ? convertWithRate(formData.amount, nextRate, info.rateMeta.isMultiply) : '')
+                                : formData.amount;
+                              setFormData({ ...formData, sourceId: val, destinationId: nextDestId, exchangeRate: nextRate, destinationAmount: nextDestAmt });
+                            }}
+                            className="w-full px-3 py-2.5 bg-brand-900/50 border border-brand-600/50 rounded-xl focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none text-white transition-all appearance-none cursor-pointer text-xs sm:text-sm"
+                          >
+                            {accounts.map(acc => (
+                              <option key={`q_src_${acc.id}`} value={`account_${acc.id}`} className="bg-brand-800">{acc.name} ({acc.currency})</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-[0.15em]">{t('To Account / Card')}</label>
+                          <select
+                            value={formData.destinationId}
+                            onChange={e => {
+                              const val = e.target.value;
+                              const info = getTransferCurrencyInfo(formData.sourceId, val);
+                              const nextRate = info.isCrossCurrency ? String(info.rateMeta.rate) : '';
+                              const nextDestAmt = info.isCrossCurrency
+                                ? (formData.amount ? convertWithRate(formData.amount, nextRate, info.rateMeta.isMultiply) : '')
+                                : formData.amount;
+                              setFormData({ ...formData, destinationId: val, exchangeRate: nextRate, destinationAmount: nextDestAmt });
+                            }}
+                            className="w-full px-3 py-2.5 bg-brand-900/50 border border-brand-600/50 rounded-xl focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none text-white transition-all appearance-none cursor-pointer text-xs sm:text-sm"
+                          >
+                            {accounts.filter(acc => `account_${acc.id}` !== formData.sourceId).length > 0 && (
+                              <optgroup label={t('Accounts')} className="bg-brand-900 font-serif italic text-gold-400">
+                                {accounts.filter(acc => `account_${acc.id}` !== formData.sourceId).map(acc => (
+                                  <option key={`q_dst_acc_${acc.id}`} value={`account_${acc.id}`} className="bg-brand-800 text-white font-sans not-italic">{acc.name} ({acc.currency})</option>
+                                ))}
+                              </optgroup>
+                            )}
+                            {creditCards.length > 0 && (
+                              <optgroup label={t('Credit Cards')} className="bg-brand-900 font-serif italic text-gold-400">
+                                {creditCards.map(cc => (
+                                  <option key={`q_dst_cc_${cc.id}`} value={`card_${cc.id}`} className="bg-brand-800 text-white font-sans not-italic">{cc.name} ({cc.currency})</option>
+                                ))}
+                              </optgroup>
+                            )}
+                          </select>
+                        </div>
+                      </div>
+
+                      {isCrossCurrency ? (
+                        <div className="space-y-3 p-3 bg-cyan-500/5 border border-cyan-500/20 rounded-xl">
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-[0.12em]">{t('Amount Sent')} ({srcCurrency})</label>
+                              <div className="relative">
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-serif">{getCurrencySymbol(srcCurrency)}</span>
+                                <AmountInput
+                                  required
+                                  value={formData.amount}
+                                  onChange={e => {
+                                    const val = e.target.value;
+                                    const nextDestAmt = parseFloat(formData.exchangeRate) > 0
+                                      ? convertWithRate(val, formData.exchangeRate, rateMeta.isMultiply)
+                                      : formData.destinationAmount;
+                                    setFormData({ ...formData, amount: val, destinationAmount: nextDestAmt });
+                                  }}
+                                  className="w-full pl-8 pr-3 py-2 bg-brand-900/60 border border-brand-600/50 rounded-xl focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none text-white text-lg font-serif transition-all"
+                                  placeholder="0.00"
+                                  autoFocus
+                                />
+                              </div>
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-[0.12em]">{t('Amount Received')} ({dstCurrency})</label>
+                              <div className="relative">
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400 font-serif">{getCurrencySymbol(dstCurrency)}</span>
+                                <AmountInput
+                                  required
+                                  value={formData.destinationAmount}
+                                  onChange={e => {
+                                    const val = e.target.value;
+                                    const nextRate = (parseFloat(formData.amount) > 0 && parseFloat(val) > 0)
+                                      ? computeEffectiveRate(formData.amount, val, rateMeta.isMultiply)
+                                      : formData.exchangeRate;
+                                    setFormData({ ...formData, destinationAmount: val, exchangeRate: nextRate });
+                                  }}
+                                  className="w-full pl-8 pr-3 py-2 bg-brand-900/60 border border-brand-600/50 rounded-xl focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-emerald-300 text-lg font-serif transition-all"
+                                  placeholder="0.00"
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between gap-2 pt-2 border-t border-cyan-500/15 text-xs">
+                            <span className="text-slate-400">{t('Exchange Rate')}:</span>
+                            <div className="flex items-center gap-1.5 font-mono">
+                              <span className="text-slate-300">1 {rateMeta.baseCurrency} =</span>
+                              <input
+                                type="number"
+                                step="0.0001"
+                                min="0"
+                                value={formData.exchangeRate}
+                                onChange={e => {
+                                  const val = e.target.value;
+                                  const nextDestAmt = (parseFloat(formData.amount) > 0 && parseFloat(val) > 0)
+                                    ? convertWithRate(formData.amount, val, rateMeta.isMultiply)
+                                    : formData.destinationAmount;
+                                  setFormData({ ...formData, exchangeRate: val, destinationAmount: nextDestAmt });
+                                }}
+                                className="w-20 px-2 py-1 bg-brand-950/80 border border-cyan-500/40 rounded text-right text-cyan-300 text-xs font-bold focus:outline-none focus:border-cyan-400"
+                                placeholder="0.00"
+                              />
+                              <span className="text-slate-300">{rateMeta.quoteCurrency}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-[0.15em]">{t('Amount')}</label>
+                          <div className="relative">
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-serif text-lg">{getCurrencySymbol(srcCurrency)}</span>
+                            <AmountInput
+                              required
+                              value={formData.amount}
+                              onChange={e => setFormData({ ...formData, amount: e.target.value, destinationAmount: e.target.value })}
+                              className="w-full pl-10 pr-4 py-3 bg-brand-900/50 border border-brand-600/50 rounded-xl focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none text-white text-2xl font-serif transition-all"
+                              placeholder="0.00"
+                              autoFocus
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-[0.15em]">{t('Description')}</label>
+                        <input
+                          required
+                          type="text"
+                          value={formData.description}
+                          onChange={e => setFormData({ ...formData, description: e.target.value })}
+                          className="w-full px-4 py-2.5 bg-brand-900/50 border border-brand-600/50 rounded-xl focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none text-white transition-all text-sm"
+                          placeholder={t('e.g. Currency Exchange CRC to USD')}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-[0.15em]">{t('Date')}</label>
+                        <input
+                          type="date"
+                          value={formData.date}
+                          onChange={e => setFormData({ ...formData, date: e.target.value })}
+                          className="w-full px-4 py-2.5 bg-brand-900/50 border border-brand-600/50 rounded-xl focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none text-white transition-all text-sm"
+                        />
+                      </div>
+
+                      <div className="p-2.5 bg-cyan-500/10 border border-cyan-500/20 rounded-xl text-[11px] text-cyan-200/90 flex items-center gap-2">
+                        <ArrowLeftRight size={13} className="text-cyan-400 shrink-0" />
+                        <span>{t('Transfers and currency exchanges do not affect your monthly budgets.')}</span>
+                      </div>
+                    </>
+                  );
+                })() : (
+                  <>
+                    {/* Amount — large & prominent */}
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-[0.15em]">{t('Amount')}</label>
+                      <div className="relative">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-serif text-lg">{getCurrencySymbol()}</span>
+                        <AmountInput
+                          required
+                          value={formData.amount}
+                          onChange={e => setFormData({...formData, amount: e.target.value})}
+                          className="w-full pl-10 pr-4 py-3 bg-brand-900/50 border border-brand-600/50 rounded-xl focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white text-2xl font-serif transition-all"
+                          placeholder="0.00"
+                          autoFocus
+                        />
+                      </div>
+                    </div>
+
+                    {/* Description */}
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-[0.15em]">{t('Description')}</label>
+                      <input
+                        required
+                        type="text"
+                        value={formData.description}
+                        onChange={e => setFormData({...formData, description: e.target.value})}
+                        className="w-full px-4 py-2.5 bg-brand-900/50 border border-brand-600/50 rounded-xl focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all text-sm"
+                        placeholder={t('e.g. Weekly Groceries')}
+                      />
+                    </div>
+
+                    {/* Source + Category row */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-[0.15em]">{t('Source')}</label>
+                        <select
+                          value={formData.sourceId}
+                          onChange={e => setFormData({...formData, sourceId: e.target.value})}
+                          className="w-full px-3 py-2.5 bg-brand-900/50 border border-brand-600/50 rounded-xl focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all appearance-none cursor-pointer text-sm"
+                        >
+                          {accounts.length > 0 && (
+                            <optgroup label={t("Accounts")} className="bg-brand-900 font-serif italic text-gold-400">
+                              {accounts.map(acc => <option key={`acc_${acc.id}`} value={`account_${acc.id}`} className="bg-brand-800 text-white font-sans not-italic">{acc.name}</option>)}
+                            </optgroup>
+                          )}
+                          {creditCards.length > 0 && (
+                            <optgroup label={t("Credit Cards")} className="bg-brand-900 font-serif italic text-gold-400">
+                              {creditCards.map(cc => <option key={`cc_${cc.id}`} value={`card_${cc.id}`} className="bg-brand-800 text-white font-sans not-italic">{cc.name}</option>)}
+                            </optgroup>
+                          )}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-[0.15em]">{t('Category')}</label>
+                        <select
+                          value={formData.categoryId}
+                          onChange={e => setFormData({...formData, categoryId: e.target.value})}
+                          className="w-full px-3 py-2.5 bg-brand-900/50 border border-brand-600/50 rounded-xl focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all appearance-none cursor-pointer text-sm"
+                        >
+                          {categories.map(cat => <option key={cat.id} value={cat.id} className="bg-brand-800">{cat.name}</option>)}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Date */}
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-[0.15em]">{t('Date')}</label>
+                      <input
+                        type="date"
+                        value={formData.date}
+                        onChange={e => setFormData({...formData, date: e.target.value})}
+                        className="w-full px-4 py-2.5 bg-brand-900/50 border border-brand-600/50 rounded-xl focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all text-sm"
+                      />
+                    </div>
+                  </>
+                )}
 
                 {/* Extra IVA (13%) option for expenses */}
                 {formData.type === 'expense' && (

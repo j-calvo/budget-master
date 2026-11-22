@@ -2,10 +2,10 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import api from '../api';
 import { useSettings } from '../context/SettingsContext';
 import { useTranslation } from 'react-i18next';
-import { Download, Upload, Search, SlidersHorizontal, ArrowUpDown, X, ChevronDown, CheckCircle2, Clock, Globe } from 'lucide-react';
+import { Download, Upload, Search, SlidersHorizontal, ArrowUpDown, ArrowLeftRight, X, ChevronDown, CheckCircle2, Clock, Globe } from 'lucide-react';
 import AmountInput from '../components/AmountInput';
 import InboxQueue from '../components/InboxQueue';
-import { formatCurrency } from '../lib/currencyUtils';
+import { formatCurrency, getDefaultExchangeRate, convertWithRate, computeEffectiveRate } from '../lib/currencyUtils';
 
 const API_URL = '/transactions';
 const ACCTS_URL = '/accounts';
@@ -31,15 +31,19 @@ export default function Transactions() {
   const [creditCards, setCreditCards] = useState([]);
   const [categories, setCategories] = useState([]);
   const [budgets, setBudgets] = useState([]);
+  const [ratesData, setRatesData] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [editingTx, setEditingTx] = useState(null);
   const [settlingTx, setSettlingTx] = useState(null);
   const [extraIvaModal, setExtraIvaModal] = useState(false);
   const [newTx, setNewTx] = useState({ 
     amount: '', 
+    destinationAmount: '',
+    exchangeRate: '',
     date: new Date().toISOString().split('T')[0], 
     description: '', 
     sourceId: '', 
+    destinationId: '',
     categoryId: '', 
     type: 'expense' 
   });
@@ -64,18 +68,20 @@ export default function Transactions() {
 
   const fetchData = async () => {
     try {
-      const [txRes, accRes, catRes, ccRes, budRes] = await Promise.all([
+      const [txRes, accRes, catRes, ccRes, budRes, rateRes] = await Promise.all([
         api.get(API_URL),
         api.get(ACCTS_URL),
         api.get(CATS_URL),
         api.get('/credit-cards'),
-        api.get('/budgets').catch(() => ({ data: [] }))
+        api.get('/budgets').catch(() => ({ data: [] })),
+        api.get('/currencies/rates').catch(() => ({ data: null }))
       ]);
       setTransactions(txRes.data);
       setAccounts(accRes.data);
       setCategories(catRes.data);
       setCreditCards(ccRes.data);
       setBudgets(budRes.data);
+      setRatesData(rateRes.data);
       
       const outOfBudgetCat = catRes.data.find(c => c.name.toLowerCase() === 'out of budget') || catRes.data[0];
       
@@ -142,7 +148,7 @@ export default function Transactions() {
     if (filterSource !== 'all') {
       if (filterSource.startsWith('account_')) {
         const accId = filterSource.replace('account_', '');
-        baseFiltered = baseFiltered.filter(tx => tx.accountId === accId);
+        baseFiltered = baseFiltered.filter(tx => tx.accountId === accId || tx.destinationAccountId === accId);
       } else if (filterSource.startsWith('card_')) {
         const cardId = filterSource.replace('card_', '');
         baseFiltered = baseFiltered.filter(tx => tx.creditCardId === cardId);
@@ -166,6 +172,7 @@ export default function Transactions() {
       baseFiltered = baseFiltered.filter(tx =>
         tx.description.toLowerCase().includes(q) ||
         (tx.account?.name || '').toLowerCase().includes(q) ||
+        (tx.destinationAccount?.name || '').toLowerCase().includes(q) ||
         (tx.creditCard?.name || '').toLowerCase().includes(q) ||
         (tx.category?.name || '').toLowerCase().includes(q)
       );
@@ -222,7 +229,7 @@ export default function Transactions() {
     if (filterSource !== 'all') {
       if (filterSource.startsWith('account_')) {
         const accId = filterSource.replace('account_', '');
-        filtered = filtered.filter(tx => tx.accountId === accId);
+        filtered = filtered.filter(tx => tx.accountId === accId || tx.destinationAccountId === accId);
       } else if (filterSource.startsWith('card_')) {
         const cardId = filterSource.replace('card_', '');
         filtered = filtered.filter(tx => tx.creditCardId === cardId);
@@ -250,6 +257,7 @@ export default function Transactions() {
       filtered = filtered.filter(tx =>
         tx.description.toLowerCase().includes(q) ||
         (tx.account?.name || '').toLowerCase().includes(q) ||
+        (tx.destinationAccount?.name || '').toLowerCase().includes(q) ||
         (tx.creditCard?.name || '').toLowerCase().includes(q) ||
         (tx.category?.name || '').toLowerCase().includes(q)
       );
@@ -317,23 +325,102 @@ export default function Transactions() {
     }
   };
 
+  const getTransferCurrencyInfo = (srcVal, dstVal) => {
+    const srcId = srcVal?.replace(/^account_/, '');
+    const srcAcc = accounts.find(a => a.id === srcId);
+    const isDestAcc = dstVal?.startsWith('account_');
+    const dstId = dstVal?.replace(/^(account_|card_)/, '');
+    const dstObj = isDestAcc ? accounts.find(a => a.id === dstId) : creditCards.find(c => c.id === dstId);
+    const srcCurrency = srcAcc?.currency || settings?.defaultCurrency || 'USD';
+    const dstCurrency = dstObj?.currency || srcCurrency;
+    const isCrossCurrency = srcCurrency !== dstCurrency;
+    const rateMeta = getDefaultExchangeRate(srcCurrency, dstCurrency, ratesData);
+    return { srcAcc, dstObj, srcCurrency, dstCurrency, isCrossCurrency, rateMeta };
+  };
+
+  const getDefaultDestinationForSource = (srcVal) => {
+    const srcId = srcVal?.replace(/^account_/, '');
+    const srcAcc = accounts.find(a => a.id === srcId);
+    const diffCurrAcc = accounts.find(a => a.id !== srcId && srcAcc && a.currency !== srcAcc.currency);
+    if (diffCurrAcc) return `account_${diffCurrAcc.id}`;
+    const otherAcc = accounts.find(a => a.id !== srcId);
+    if (otherAcc) return `account_${otherAcc.id}`;
+    if (creditCards.length > 0) return `card_${creditCards[0].id}`;
+    return '';
+  };
+
+  const switchTxType = (nextType) => {
+    if (nextType !== 'transfer') {
+      setNewTx(prev => ({ ...prev, type: nextType }));
+      return;
+    }
+    const nextSourceId = newTx.sourceId?.startsWith('account_')
+      ? newTx.sourceId
+      : (accounts.length > 0 ? `account_${accounts[0].id}` : '');
+    const nextDestId = (newTx.destinationId && newTx.destinationId !== nextSourceId)
+      ? newTx.destinationId
+      : getDefaultDestinationForSource(nextSourceId);
+    const { isCrossCurrency, rateMeta } = getTransferCurrencyInfo(nextSourceId, nextDestId);
+    const initialRate = isCrossCurrency ? String(rateMeta.rate) : '';
+    const nextDestAmt = isCrossCurrency && newTx.amount
+      ? convertWithRate(newTx.amount, initialRate, rateMeta.isMultiply)
+      : newTx.amount;
+    setNewTx(prev => ({
+      ...prev,
+      type: 'transfer',
+      sourceId: nextSourceId,
+      destinationId: nextDestId,
+      exchangeRate: initialRate,
+      destinationAmount: nextDestAmt
+    }));
+  };
+
   const handleCreateTx = async (e) => {
     e.preventDefault();
     try {
       const isAccount = newTx.sourceId.startsWith('account_');
       const realSourceId = newTx.sourceId.replace(/^(account_|card_)/, '');
 
-      const payload = {
-        amount: parseFloat(newTx.amount) || 0,
-        date: newTx.date,
-        description: newTx.description,
-        type: newTx.type,
-        categoryId: newTx.categoryId,
-        accountId: isAccount ? realSourceId : null,
-        creditCardId: !isAccount ? realSourceId : null,
-        extraIva: !editingTx && newTx.type === 'expense' ? extraIvaModal : false,
-        ivaRate: 13
-      };
+      let payload;
+      if (newTx.type === 'transfer') {
+        if (!isAccount || !newTx.destinationId) {
+          return;
+        }
+        if (newTx.sourceId === newTx.destinationId) {
+          alert(t('Cannot transfer to the same account'));
+          return;
+        }
+        const isDestAccount = newTx.destinationId.startsWith('account_');
+        const realDestId = newTx.destinationId.replace(/^(account_|card_)/, '');
+        const { isCrossCurrency } = getTransferCurrencyInfo(newTx.sourceId, newTx.destinationId);
+        const parsedAmt = parseFloat(newTx.amount) || 0;
+        const parsedDestAmt = isCrossCurrency ? (parseFloat(newTx.destinationAmount) || 0) : parsedAmt;
+
+        payload = {
+          amount: parsedAmt,
+          destinationAmount: parsedDestAmt,
+          exchangeRate: isCrossCurrency && newTx.exchangeRate ? parseFloat(newTx.exchangeRate) : null,
+          date: newTx.date,
+          description: newTx.description,
+          type: 'transfer',
+          categoryId: null,
+          accountId: realSourceId,
+          destinationAccountId: isDestAccount ? realDestId : null,
+          creditCardId: !isDestAccount ? realDestId : null
+        };
+      } else {
+        payload = {
+          amount: parseFloat(newTx.amount) || 0,
+          date: newTx.date,
+          description: newTx.description,
+          type: newTx.type,
+          categoryId: newTx.categoryId,
+          accountId: isAccount ? realSourceId : null,
+          creditCardId: !isAccount ? realSourceId : null,
+          extraIva: !editingTx && newTx.type === 'expense' ? extraIvaModal : false,
+          ivaRate: 13
+        };
+      }
       
       if (editingTx) {
         await api.put(`${API_URL}/${editingTx.id}`, payload);
@@ -344,7 +431,7 @@ export default function Transactions() {
       setShowModal(false);
       setEditingTx(null);
       setExtraIvaModal(false);
-      setNewTx(prev => ({ ...prev, amount: '', description: '', type: 'expense' }));
+      setNewTx(prev => ({ ...prev, amount: '', destinationAmount: '', exchangeRate: '', description: '', type: 'expense' }));
       fetchData();
     } catch (err) {
       console.error('Failed to create/edit tx', err);
@@ -354,12 +441,18 @@ export default function Transactions() {
   const handleEditClick = (tx) => {
     setEditingTx(tx);
     setExtraIvaModal(false);
+    const outOfBudgetCat = categories.find(c => c.name.toLowerCase() === 'out of budget') || categories[0];
     setNewTx({
       amount: tx.amount,
+      destinationAmount: tx.destinationAmount ?? tx.amount ?? '',
+      exchangeRate: tx.exchangeRate ?? '',
       date: tx.date ? tx.date.split('T')[0] : new Date().toISOString().split('T')[0],
       description: tx.description,
       sourceId: tx.accountId ? `account_${tx.accountId}` : `card_${tx.creditCardId}`,
-      categoryId: tx.categoryId,
+      destinationId: tx.type === 'transfer'
+        ? (tx.destinationAccountId ? `account_${tx.destinationAccountId}` : (tx.creditCardId ? `card_${tx.creditCardId}` : ''))
+        : '',
+      categoryId: tx.categoryId || outOfBudgetCat?.id || '',
       type: tx.type
     });
     setShowModal(true);
@@ -480,9 +573,12 @@ export default function Transactions() {
               const defaultSource = accounts.length > 0 ? `account_${accounts[0].id}` : `card_${creditCards[0].id}`;
               setNewTx({ 
                 amount: '', 
+                destinationAmount: '',
+                exchangeRate: '',
                 date: new Date().toISOString().split('T')[0], 
                 description: '', 
                 sourceId: defaultSource, 
+                destinationId: '',
                 categoryId: outOfBudgetCat?.id || '', 
                 type: 'expense' 
               });
@@ -628,6 +724,7 @@ export default function Transactions() {
                 <option value="all" className="bg-brand-800">{t('All Types')}</option>
                 <option value="expense" className="bg-brand-800">{t('Expense')}</option>
                 <option value="income" className="bg-brand-800">{t('Income')}</option>
+                <option value="transfer" className="bg-brand-800">{t('Transfer / Exchange')}</option>
               </select>
             </div>
 
@@ -794,20 +891,40 @@ export default function Transactions() {
             </div>
           ) : (
             <div className="divide-y divide-brand-600/30">
-              {filteredTransactions.map(tx => (
+              {filteredTransactions.map(tx => {
+                const isTransfer = tx.type === 'transfer';
+                const srcCur = tx.account?.currency || tx.creditCard?.currency || settings?.defaultCurrency || 'USD';
+                const dstCur = tx.destinationAccount?.currency || tx.creditCard?.currency || srcCur;
+                const isCrossTransfer = isTransfer && srcCur !== dstCur && tx.destinationAmount;
+                const destName = tx.destinationAccount?.name || tx.creditCard?.name;
+
+                return (
                 <div key={tx.id} className="p-4 md:py-3 flex flex-col md:grid md:grid-cols-6 md:gap-4 items-start md:items-center hover:bg-brand-600/20 transition-colors group">
                   {/* ════ MOBILE LAYOUT ════ */}
                   <div className="w-full md:hidden space-y-3">
                     <div className="flex justify-between items-start">
                       <div className="flex items-center gap-3">
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center font-serif italic text-lg shadow-inner shrink-0
-                          ${tx.type === 'expense' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' : 'bg-gold-500/10 text-gold-400 border border-gold-500/20'}`}>
-                          {tx.description.charAt(0).toUpperCase()}
+                          ${isTransfer
+                            ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20'
+                            : tx.type === 'expense'
+                              ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                              : 'bg-gold-500/10 text-gold-400 border border-gold-500/20'}`}>
+                          {isTransfer ? <ArrowLeftRight size={17} /> : tx.description.charAt(0).toUpperCase()}
                         </div>
                         <div>
                           <p className="font-medium text-slate-200 line-clamp-1">{tx.description}</p>
                           <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
-                            <span className="text-[10px] text-slate-500 uppercase tracking-widest">{tx.account?.name || tx.creditCard?.name}</span>
+                            <span className="text-[10px] text-slate-500 uppercase tracking-widest">
+                              {isTransfer
+                                ? `${tx.account?.name || ''} → ${destName || ''}`
+                                : (tx.account?.name || tx.creditCard?.name)}
+                            </span>
+                            {isTransfer && tx.exchangeRate && (
+                              <span className="text-[9px] text-cyan-400/80 font-mono">
+                                (@ {parseFloat(tx.exchangeRate.toFixed(4))})
+                              </span>
+                            )}
                             {tx.settlementStatus === 'PENDING_SETTLEMENT' && (
                               <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-1">
                                 <Clock size={10} /> {t('Est.')} {tx.originalCurrency} {tx.originalAmount}
@@ -822,10 +939,17 @@ export default function Transactions() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className={`font-serif tracking-wide text-lg ${tx.type === 'expense' ? 'text-slate-100' : 'text-gold-400 drop-shadow-[0_0_8px_rgba(212,175,55,0.3)]'}`}>
-                          {tx.type === 'expense' ? '-' : '+'}
-                          {formatCurrency(tx.amount, tx.account?.currency || tx.creditCard?.currency || settings?.defaultCurrency || 'USD', currencies, settings?.language)}
-                        </div>
+                        {isCrossTransfer ? (
+                          <div className="font-serif tracking-wide text-sm space-y-0.5">
+                            <div className="text-slate-300">- {formatCurrency(tx.amount, srcCur, currencies, settings?.language)}</div>
+                            <div className="text-emerald-400">→ + {formatCurrency(tx.destinationAmount, dstCur, currencies, settings?.language)}</div>
+                          </div>
+                        ) : (
+                          <div className={`font-serif tracking-wide text-lg ${isTransfer ? 'text-cyan-400' : tx.type === 'expense' ? 'text-slate-100' : 'text-gold-400 drop-shadow-[0_0_8px_rgba(212,175,55,0.3)]'}`}>
+                            {isTransfer ? '' : (tx.type === 'expense' ? '-' : '+')}
+                            {formatCurrency(tx.amount, srcCur, currencies, settings?.language)}
+                          </div>
+                        )}
                         <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-0.5 font-mono">
                           {formatDateSafe(tx.date, { month: 'short', day: 'numeric', year: '2-digit' })}
                         </p>
@@ -833,10 +957,17 @@ export default function Transactions() {
                     </div>
 
                     <div className="flex justify-between items-center pt-2 border-t border-brand-600/20">
-                      <span className="inline-flex items-center gap-1.5 px-2 py-1 bg-brand-900/50 border border-brand-600/40 text-slate-300 rounded text-[10px] font-medium tracking-wide">
-                        <div className="w-2 h-2 rounded-full shadow-inner" style={{ backgroundColor: tx.category?.color || '#64748b' }}></div>
-                        {tx.category?.name || 'Uncategorized'}
-                      </span>
+                      {isTransfer ? (
+                        <span className="inline-flex items-center gap-1.5 px-2 py-1 bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 rounded text-[10px] font-medium tracking-wide">
+                          <ArrowLeftRight size={11} />
+                          {tx.category?.name || t('Transfer / Exchange')}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 px-2 py-1 bg-brand-900/50 border border-brand-600/40 text-slate-300 rounded text-[10px] font-medium tracking-wide">
+                          <div className="w-2 h-2 rounded-full shadow-inner" style={{ backgroundColor: tx.category?.color || '#64748b' }}></div>
+                          {tx.category?.name || 'Uncategorized'}
+                        </span>
+                      )}
                       
                       <div className="flex items-center gap-3">
                         {tx.settlementStatus === 'PENDING_SETTLEMENT' && (
@@ -862,8 +993,12 @@ export default function Transactions() {
                   {/* ════ DESKTOP LAYOUT ════ */}
                   <div className="hidden md:flex items-center gap-3 col-span-2 min-w-0">
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center font-serif italic text-lg shadow-inner shrink-0
-                      ${tx.type === 'expense' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' : 'bg-gold-500/10 text-gold-400 border border-gold-500/20'}`}>
-                      {tx.description.charAt(0).toUpperCase()}
+                      ${isTransfer
+                        ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20'
+                        : tx.type === 'expense'
+                          ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                          : 'bg-gold-500/10 text-gold-400 border border-gold-500/20'}`}>
+                      {isTransfer ? <ArrowLeftRight size={17} /> : tx.description.charAt(0).toUpperCase()}
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
@@ -875,7 +1010,16 @@ export default function Transactions() {
                         )}
                       </div>
                       <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
-                        <span>{tx.account?.name || tx.creditCard?.name}</span>
+                        <span>
+                          {isTransfer
+                            ? `${tx.account?.name || ''} → ${destName || ''}`
+                            : (tx.account?.name || tx.creditCard?.name)}
+                        </span>
+                        {isTransfer && tx.exchangeRate && (
+                          <span className="text-[11px] text-cyan-400/80 font-mono">
+                            • @ {parseFloat(tx.exchangeRate.toFixed(4))}
+                          </span>
+                        )}
                         {tx.originalCurrency && (
                           <span className="text-[11px] text-slate-400 font-mono">
                             • {tx.originalCurrency} {tx.originalAmount} {tx.exchangeRate ? `(@ ${tx.exchangeRate.toFixed(4)})` : ''}
@@ -886,19 +1030,35 @@ export default function Transactions() {
                   </div>
 
                   <div className="hidden md:block">
-                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-brand-900/50 border border-brand-600/40 text-slate-300 rounded text-xs font-medium tracking-wide">
-                      <div className="w-2 h-2 rounded-full shadow-inner" style={{ backgroundColor: tx.category?.color || '#64748b' }}></div>
-                      {tx.category?.name || 'Uncategorized'}
-                    </span>
+                    {isTransfer ? (
+                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 rounded text-xs font-medium tracking-wide">
+                        <ArrowLeftRight size={11} />
+                        {tx.category?.name || t('Transfer / Exchange')}
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-brand-900/50 border border-brand-600/40 text-slate-300 rounded text-xs font-medium tracking-wide">
+                        <div className="w-2 h-2 rounded-full shadow-inner" style={{ backgroundColor: tx.category?.color || '#64748b' }}></div>
+                        {tx.category?.name || 'Uncategorized'}
+                      </span>
+                    )}
                   </div>
 
                   <div className="hidden md:block text-sm text-slate-400 uppercase tracking-wide">
                     {formatDateSafe(tx.date, { month: 'short', day: 'numeric', year: 'numeric' })}
                   </div>
 
-                  <div className={`hidden md:block text-right font-serif tracking-wide text-lg ${tx.type === 'expense' ? 'text-slate-300' : 'text-gold-400 drop-shadow-[0_0_5px_rgba(212,175,55,0.4)]'}`}>
-                    {tx.type === 'expense' ? '-' : '+'}
-                    {formatCurrency(tx.amount, tx.account?.currency || tx.creditCard?.currency || settings?.defaultCurrency || 'USD', currencies, settings?.language)}
+                  <div className="hidden md:block text-right font-serif tracking-wide">
+                    {isCrossTransfer ? (
+                      <div className="space-y-0.5">
+                        <div className="text-sm text-slate-300">- {formatCurrency(tx.amount, srcCur, currencies, settings?.language)}</div>
+                        <div className="text-base text-emerald-400">→ + {formatCurrency(tx.destinationAmount, dstCur, currencies, settings?.language)}</div>
+                      </div>
+                    ) : (
+                      <span className={`text-lg ${isTransfer ? 'text-cyan-400' : tx.type === 'expense' ? 'text-slate-300' : 'text-gold-400 drop-shadow-[0_0_5px_rgba(212,175,55,0.4)]'}`}>
+                        {isTransfer ? '' : (tx.type === 'expense' ? '-' : '+')}
+                        {formatCurrency(tx.amount, srcCur, currencies, settings?.language)}
+                      </span>
+                    )}
                   </div>
 
                   <div className="hidden md:flex justify-end items-center gap-2">
@@ -922,7 +1082,8 @@ export default function Transactions() {
                     </div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -939,79 +1100,255 @@ export default function Transactions() {
             </h2>
             
             <form onSubmit={handleCreateTx} className="space-y-5">
-              <div className="flex bg-brand-900/60 p-1.5 rounded-lg border border-brand-600/50">
-                <button type="button" onClick={() => setNewTx({...newTx, type: 'expense'})} className={`flex-1 py-1.5 rounded text-sm font-medium transition-all ${newTx.type === 'expense' ? 'bg-brand-700 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'}`}>{t('Expense')}</button>
-                <button type="button" onClick={() => setNewTx({...newTx, type: 'income'})} className={`flex-1 py-1.5 rounded text-sm font-medium transition-all ${newTx.type === 'income' ? 'bg-gold-500/20 text-gold-400 shadow-md border border-gold-500/20' : 'text-slate-400 hover:text-slate-200'}`}>{t('Income')}</button>
+              <div className="flex bg-brand-900/60 p-1.5 rounded-lg border border-brand-600/50 gap-1">
+                <button type="button" onClick={() => switchTxType('expense')} className={`flex-1 py-1.5 rounded text-xs sm:text-sm font-medium transition-all ${newTx.type === 'expense' ? 'bg-brand-700 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'}`}>{t('Expense')}</button>
+                <button type="button" onClick={() => switchTxType('income')} className={`flex-1 py-1.5 rounded text-xs sm:text-sm font-medium transition-all ${newTx.type === 'income' ? 'bg-gold-500/20 text-gold-400 shadow-md border border-gold-500/20' : 'text-slate-400 hover:text-slate-200'}`}>{t('Income')}</button>
+                {accounts.length > 0 && (accounts.length > 1 || creditCards.length > 0) && (
+                  <button type="button" onClick={() => switchTxType('transfer')} className={`flex-1 py-1.5 rounded text-xs sm:text-sm font-medium transition-all whitespace-nowrap px-2 ${newTx.type === 'transfer' ? 'bg-cyan-500/20 text-cyan-300 shadow-md border border-cyan-500/30' : 'text-slate-400 hover:text-slate-200'}`}>{t('Transfer / Exchange')}</button>
+                )}
               </div>
 
-              {(() => {
-                const isAcc = newTx.sourceId?.startsWith('account_');
-                const srcId = newTx.sourceId?.replace(/^(account_|card_)/, '');
-                const activeSrc = isAcc ? accounts.find(a => a.id === srcId) : creditCards.find(c => c.id === srcId);
-                const code = activeSrc?.currency || settings?.defaultCurrency || 'USD';
-                
-                // 1. Try to find the symbol in our currencies list
-                const currencyRecord = currencies.find(c => c.code === code);
-                const sym = currencyRecord?.symbol || (new Intl.NumberFormat(settings?.language || 'en-US', { style: 'currency', currency: code }).formatToParts(0).find(p => p.type === 'currency')?.value || '$');
+              {newTx.type === 'transfer' ? (() => {
+                const { srcCurrency, dstCurrency, isCrossCurrency, rateMeta } = getTransferCurrencyInfo(newTx.sourceId, newTx.destinationId);
+                const getSym = (code) => currencies.find(c => c.code === code)?.symbol || (new Intl.NumberFormat(settings?.language || 'en-US', { style: 'currency', currency: code }).formatToParts(0).find(p => p.type === 'currency')?.value || '$');
+                const srcSym = getSym(srcCurrency);
+                const dstSym = getSym(dstCurrency);
 
                 return (
-                  <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Amount')}</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-serif">{sym}</span>
-                      <AmountInput
-                        required
-                        value={newTx.amount}
-                        onChange={e => setNewTx({...newTx, amount: e.target.value})}
-                        className="w-full pl-8 pr-3 py-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif"
-                        placeholder="0.00"
-                      />
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('From Account')}</label>
+                        <select
+                          value={newTx.sourceId}
+                          onChange={e => {
+                            const val = e.target.value;
+                            const nextDestId = newTx.destinationId === val ? getDefaultDestinationForSource(val) : (newTx.destinationId || getDefaultDestinationForSource(val));
+                            const info = getTransferCurrencyInfo(val, nextDestId);
+                            const nextRate = info.isCrossCurrency ? String(info.rateMeta.rate) : '';
+                            const nextDestAmt = info.isCrossCurrency
+                              ? (newTx.amount ? convertWithRate(newTx.amount, nextRate, info.rateMeta.isMultiply) : '')
+                              : newTx.amount;
+                            setNewTx({ ...newTx, sourceId: val, destinationId: nextDestId, exchangeRate: nextRate, destinationAmount: nextDestAmt });
+                          }}
+                          className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none text-white transition-all appearance-none cursor-pointer text-sm"
+                        >
+                          {accounts.map(acc => (
+                            <option key={`src_${acc.id}`} value={`account_${acc.id}`} className="bg-brand-800">{acc.name} ({acc.currency})</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('To Account / Card')}</label>
+                        <select
+                          value={newTx.destinationId}
+                          onChange={e => {
+                            const val = e.target.value;
+                            const info = getTransferCurrencyInfo(newTx.sourceId, val);
+                            const nextRate = info.isCrossCurrency ? String(info.rateMeta.rate) : '';
+                            const nextDestAmt = info.isCrossCurrency
+                              ? (newTx.amount ? convertWithRate(newTx.amount, nextRate, info.rateMeta.isMultiply) : '')
+                              : newTx.amount;
+                            setNewTx({ ...newTx, destinationId: val, exchangeRate: nextRate, destinationAmount: nextDestAmt });
+                          }}
+                          className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none text-white transition-all appearance-none cursor-pointer text-sm"
+                        >
+                          {accounts.filter(acc => `account_${acc.id}` !== newTx.sourceId).length > 0 && (
+                            <optgroup label={t('Accounts')} className="bg-brand-900 font-serif italic text-gold-400">
+                              {accounts.filter(acc => `account_${acc.id}` !== newTx.sourceId).map(acc => (
+                                <option key={`dst_acc_${acc.id}`} value={`account_${acc.id}`} className="bg-brand-800 text-white font-sans not-italic">{acc.name} ({acc.currency})</option>
+                              ))}
+                            </optgroup>
+                          )}
+                          {creditCards.length > 0 && (
+                            <optgroup label={t('Credit Cards')} className="bg-brand-900 font-serif italic text-gold-400">
+                              {creditCards.map(cc => (
+                                <option key={`dst_cc_${cc.id}`} value={`card_${cc.id}`} className="bg-brand-800 text-white font-sans not-italic">{cc.name} ({cc.currency})</option>
+                              ))}
+                            </optgroup>
+                          )}
+                        </select>
+                      </div>
+                    </div>
+
+                    {isCrossCurrency ? (
+                      <div className="space-y-3 p-3.5 bg-cyan-500/5 border border-cyan-500/20 rounded-xl">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-[11px] font-medium text-slate-300 mb-1 uppercase tracking-wider">{t('Amount Sent')} ({srcCurrency})</label>
+                            <div className="relative">
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-serif">{srcSym}</span>
+                              <AmountInput
+                                required
+                                value={newTx.amount}
+                                onChange={e => {
+                                  const val = e.target.value;
+                                  const nextDestAmt = parseFloat(newTx.exchangeRate) > 0
+                                    ? convertWithRate(val, newTx.exchangeRate, rateMeta.isMultiply)
+                                    : newTx.destinationAmount;
+                                  setNewTx({ ...newTx, amount: val, destinationAmount: nextDestAmt });
+                                }}
+                                className="w-full pl-8 pr-3 py-2 bg-brand-900/60 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none text-white transition-all font-serif"
+                                placeholder="0.00"
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-medium text-slate-300 mb-1 uppercase tracking-wider">{t('Amount Received')} ({dstCurrency})</label>
+                            <div className="relative">
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400 font-serif">{dstSym}</span>
+                              <AmountInput
+                                required
+                                value={newTx.destinationAmount}
+                                onChange={e => {
+                                  const val = e.target.value;
+                                  const nextRate = (parseFloat(newTx.amount) > 0 && parseFloat(val) > 0)
+                                    ? computeEffectiveRate(newTx.amount, val, rateMeta.isMultiply)
+                                    : newTx.exchangeRate;
+                                  setNewTx({ ...newTx, destinationAmount: val, exchangeRate: nextRate });
+                                }}
+                                className="w-full pl-8 pr-3 py-2 bg-brand-900/60 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-emerald-300 transition-all font-serif"
+                                placeholder="0.00"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between gap-2 pt-2 border-t border-cyan-500/15 text-xs">
+                          <span className="text-slate-400">{t('Exchange Rate')}:</span>
+                          <div className="flex items-center gap-1.5 font-mono">
+                            <span className="text-slate-300">1 {rateMeta.baseCurrency} =</span>
+                            <input
+                              type="number"
+                              step="0.0001"
+                              min="0"
+                              value={newTx.exchangeRate}
+                              onChange={e => {
+                                const val = e.target.value;
+                                const nextDestAmt = (parseFloat(newTx.amount) > 0 && parseFloat(val) > 0)
+                                  ? convertWithRate(newTx.amount, val, rateMeta.isMultiply)
+                                  : newTx.destinationAmount;
+                                setNewTx({ ...newTx, exchangeRate: val, destinationAmount: nextDestAmt });
+                              }}
+                              className="w-24 px-2 py-1 bg-brand-950/80 border border-cyan-500/40 rounded text-right text-cyan-300 text-xs font-bold focus:outline-none focus:border-cyan-400"
+                              placeholder="0.00"
+                            />
+                            <span className="text-slate-300">{rateMeta.quoteCurrency}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Amount')}</label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-serif">{srcSym}</span>
+                          <AmountInput
+                            required
+                            value={newTx.amount}
+                            onChange={e => setNewTx({ ...newTx, amount: e.target.value, destinationAmount: e.target.value })}
+                            className="w-full pl-8 pr-3 py-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none text-white transition-all font-serif"
+                            placeholder="0.00"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Description')}</label>
+                        <input required type="text" value={newTx.description} onChange={e => setNewTx({ ...newTx, description: e.target.value })} className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none text-white transition-all" placeholder={t('e.g. Currency Exchange CRC to USD')} />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Date')}</label>
+                        <input
+                          required
+                          type="date"
+                          value={newTx.date}
+                          onChange={e => setNewTx({ ...newTx, date: e.target.value })}
+                          className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none text-white transition-all appearance-none cursor-pointer"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="p-2.5 bg-cyan-500/10 border border-cyan-500/20 rounded-lg text-xs text-cyan-200/90 flex items-center gap-2">
+                      <ArrowLeftRight size={14} className="text-cyan-400 shrink-0" />
+                      <span>{t('Transfers and currency exchanges do not affect your monthly budgets.')}</span>
                     </div>
                   </div>
                 );
-              })()}
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Description')}</label>
-                  <input required type="text" value={newTx.description} onChange={e => setNewTx({...newTx, description: e.target.value})} className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all" placeholder="e.g. Weekly Groceries" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Date')}</label>
-                  <input 
-                    required 
-                    type="date" 
-                    value={newTx.date} 
-                    onChange={e => setNewTx({...newTx, date: e.target.value})} 
-                    className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all appearance-none cursor-pointer" 
-                  />
-                </div>
-              </div>
+              })() : (
+                <>
+                  {(() => {
+                    const isAcc = newTx.sourceId?.startsWith('account_');
+                    const srcId = newTx.sourceId?.replace(/^(account_|card_)/, '');
+                    const activeSrc = isAcc ? accounts.find(a => a.id === srcId) : creditCards.find(c => c.id === srcId);
+                    const code = activeSrc?.currency || settings?.defaultCurrency || 'USD';
+                    
+                    // 1. Try to find the symbol in our currencies list
+                    const currencyRecord = currencies.find(c => c.code === code);
+                    const sym = currencyRecord?.symbol || (new Intl.NumberFormat(settings?.language || 'en-US', { style: 'currency', currency: code }).formatToParts(0).find(p => p.type === 'currency')?.value || '$');
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Source')}</label>
-                  <select value={newTx.sourceId} onChange={e => setNewTx({...newTx, sourceId: e.target.value})} className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all appearance-none cursor-pointer">
-                    {accounts.length > 0 && (
-                      <optgroup label={t("Accounts")} className="bg-brand-900 font-serif italic text-gold-400">
-                        {accounts.map(acc => <option key={`acc_${acc.id}`} value={`account_${acc.id}`} className="bg-brand-800 text-white font-sans not-italic">{acc.name}</option>)}
-                      </optgroup>
-                    )}
-                    {creditCards.length > 0 && (
-                      <optgroup label={t("Credit Cards")} className="bg-brand-900 font-serif italic text-gold-400">
-                        {creditCards.map(cc => <option key={`cc_${cc.id}`} value={`card_${cc.id}`} className="bg-brand-800 text-white font-sans not-italic">{cc.name}</option>)}
-                      </optgroup>
-                    )}
-                  </select>
-                </div>
+                    return (
+                      <div>
+                        <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Amount')}</label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-serif">{sym}</span>
+                          <AmountInput
+                            required
+                            value={newTx.amount}
+                            onChange={e => setNewTx({...newTx, amount: e.target.value})}
+                            className="w-full pl-8 pr-3 py-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all font-serif"
+                            placeholder="0.00"
+                          />
+                        </div>
+                      </div>
+                    );
+                  })()}
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Description')}</label>
+                      <input required type="text" value={newTx.description} onChange={e => setNewTx({...newTx, description: e.target.value})} className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all" placeholder="e.g. Weekly Groceries" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Date')}</label>
+                      <input 
+                        required 
+                        type="date" 
+                        value={newTx.date} 
+                        onChange={e => setNewTx({...newTx, date: e.target.value})} 
+                        className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all appearance-none cursor-pointer" 
+                      />
+                    </div>
+                  </div>
 
-                <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Budget / Category')}</label>
-                  <select value={newTx.categoryId} onChange={e => setNewTx({...newTx, categoryId: e.target.value})} className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all appearance-none cursor-pointer">
-                    {categories.map(cat => <option key={cat.id} value={cat.id} className="bg-brand-800">{cat.name}</option>)}
-                  </select>
-                </div>
-              </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Source')}</label>
+                      <select value={newTx.sourceId} onChange={e => setNewTx({...newTx, sourceId: e.target.value})} className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all appearance-none cursor-pointer">
+                        {accounts.length > 0 && (
+                          <optgroup label={t("Accounts")} className="bg-brand-900 font-serif italic text-gold-400">
+                            {accounts.map(acc => <option key={`acc_${acc.id}`} value={`account_${acc.id}`} className="bg-brand-800 text-white font-sans not-italic">{acc.name}</option>)}
+                          </optgroup>
+                        )}
+                        {creditCards.length > 0 && (
+                          <optgroup label={t("Credit Cards")} className="bg-brand-900 font-serif italic text-gold-400">
+                            {creditCards.map(cc => <option key={`cc_${cc.id}`} value={`card_${cc.id}`} className="bg-brand-800 text-white font-sans not-italic">{cc.name}</option>)}
+                          </optgroup>
+                        )}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Budget / Category')}</label>
+                      <select value={newTx.categoryId} onChange={e => setNewTx({...newTx, categoryId: e.target.value})} className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-gold-500 focus:border-gold-500 outline-none text-white transition-all appearance-none cursor-pointer">
+                        {categories.map(cat => <option key={cat.id} value={cat.id} className="bg-brand-800">{cat.name}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                </>
+              )}
 
               {/* Extra IVA 13% option for new expenses */}
               {!editingTx && newTx.type === 'expense' && (

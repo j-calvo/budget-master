@@ -3,7 +3,7 @@ import api from '../api';
 import { useSettings } from '../context/SettingsContext';
 import { useTranslation } from 'react-i18next';
 import AmountInput from '../components/AmountInput';
-import { formatCurrency as formatC } from '../lib/currencyUtils';
+import { formatCurrency as formatC, getDefaultExchangeRate, convertWithRate, computeEffectiveRate } from '../lib/currencyUtils';
 
 const API_URL = '/credit-cards';
 
@@ -13,11 +13,12 @@ export default function CreditCards() {
   const [cards, setCards] = useState([]);
   const [accounts, setAccounts] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [ratesData, setRatesData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentData, setPaymentData] = useState({
-    creditCardId: null, accountId: '', amount: '', date: new Date().toISOString().split('T')[0], categoryId: ''
+    creditCardId: null, accountId: '', amount: '', destinationAmount: '', exchangeRate: '', date: new Date().toISOString().split('T')[0], categoryId: ''
   });
   const [deleteData, setDeleteData] = useState({ id: null, name: null });
   const [formData, setFormData] = useState({ 
@@ -31,14 +32,16 @@ export default function CreditCards() {
 
   const fetchData = async () => {
     try {
-      const [cardRes, accRes, catRes] = await Promise.all([
+      const [cardRes, accRes, catRes, rateRes] = await Promise.all([
         api.get(API_URL),
         api.get('/accounts'),
-        api.get('/categories')
+        api.get('/categories'),
+        api.get('/currencies/rates').catch(() => ({ data: null }))
       ]);
       setCards(cardRes.data);
       setAccounts(accRes.data);
       setCategories(catRes.data);
+      setRatesData(rateRes.data);
       if (currencies.length > 0 && formData.currency === 'USD') {
         setFormData(p => ({ ...p, currency: currencies[0].code }));
       }
@@ -86,28 +89,41 @@ export default function CreditCards() {
 
   const openPaymentModal = (card) => {
     const defaultCat = categories.find(c => c.name.toLowerCase().includes('payment') || c.name.toLowerCase().includes('transfer'));
+    const defaultAcc = accounts.find(a => a.currency === card.currency) || accounts[0];
+    const isCross = defaultAcc && defaultAcc.currency !== card.currency;
+    const rateMeta = isCross ? getDefaultExchangeRate(defaultAcc.currency, card.currency, ratesData) : null;
     setPaymentData({
       creditCardId: card.id,
-      accountId: accounts.length > 0 ? accounts[0].id : '',
+      accountId: defaultAcc ? defaultAcc.id : '',
       amount: '',
+      destinationAmount: '',
+      exchangeRate: rateMeta ? String(rateMeta.rate) : '',
       date: new Date().toISOString().split('T')[0],
-      categoryId: defaultCat ? defaultCat.id : (categories.length > 0 ? categories[0].id : '')
+      categoryId: defaultCat ? defaultCat.id : ''
     });
     setShowPaymentModal(true);
   };
 
   const handleSubmitPayment = async (e) => {
     e.preventDefault();
-    if (!paymentData.accountId || !paymentData.categoryId) {
+    if (!paymentData.accountId) {
       alert(t('Please select a funding account and category.'));
       return;
     }
+    const selectedAcc = accounts.find(a => a.id === paymentData.accountId);
+    const selectedCard = cards.find(c => c.id === paymentData.creditCardId);
+    const isCross = selectedAcc && selectedCard && selectedAcc.currency !== selectedCard.currency;
+    const debitedAccountAmount = parseFloat(paymentData.amount) || 0;
+    const creditedCardAmount = isCross ? (parseFloat(paymentData.destinationAmount) || 0) : debitedAccountAmount;
+
     try {
       await api.post('/transactions', {
         accountId: paymentData.accountId,
         creditCardId: paymentData.creditCardId,
-        categoryId: paymentData.categoryId,
-        amount: parseFloat(paymentData.amount),
+        categoryId: paymentData.categoryId || null,
+        amount: debitedAccountAmount,
+        destinationAmount: creditedCardAmount,
+        exchangeRate: isCross && paymentData.exchangeRate ? parseFloat(paymentData.exchangeRate) : null,
         date: paymentData.date,
         description: 'Credit Card Payment',
         type: 'transfer'
@@ -385,53 +401,156 @@ export default function CreditCards() {
             </h2>
             
             <form onSubmit={handleSubmitPayment} className="space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('From Account')}</label>
-                <select 
-                  required
-                  value={paymentData.accountId} 
-                  onChange={e => setPaymentData({...paymentData, accountId: e.target.value})} 
-                  className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-white transition-all appearance-none cursor-pointer"
-                >
-                  {accounts.map(acc => <option key={acc.id} value={acc.id} className="bg-brand-800">{acc.name} - {formatCurrency(acc.balance, acc.currency)}</option>)}
-                  {accounts.length === 0 && <option value="">{t('No accounts available')}</option>}
-                </select>
-              </div>
+              {(() => {
+                const selectedAcc = accounts.find(a => a.id === paymentData.accountId);
+                const selectedCard = cards.find(c => c.id === paymentData.creditCardId);
+                const isCross = selectedAcc && selectedCard && selectedAcc.currency !== selectedCard.currency;
+                const rateMeta = isCross
+                  ? getDefaultExchangeRate(selectedAcc.currency, selectedCard.currency, ratesData)
+                  : null;
 
-              <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Amount')}</label>
-                <AmountInput 
-                  required 
-                  value={paymentData.amount} 
-                  onChange={e => setPaymentData({...paymentData, amount: e.target.value})} 
-                  className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-white transition-all font-serif" 
-                  placeholder="0.00" 
-                />
-              </div>
+                return (
+                  <>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('From Account')}</label>
+                      <select 
+                        required
+                        value={paymentData.accountId} 
+                        onChange={e => {
+                          const newAccId = e.target.value;
+                          const nextAcc = accounts.find(a => a.id === newAccId);
+                          const nextCross = nextAcc && selectedCard && nextAcc.currency !== selectedCard.currency;
+                          if (nextCross) {
+                            const nextMeta = getDefaultExchangeRate(nextAcc.currency, selectedCard.currency, ratesData);
+                            const rStr = String(nextMeta.rate);
+                            const nextAmt = paymentData.destinationAmount
+                              ? (nextMeta.isMultiply ? (parseFloat(paymentData.destinationAmount) / nextMeta.rate) : (parseFloat(paymentData.destinationAmount) * nextMeta.rate)).toFixed(2)
+                              : '';
+                            setPaymentData({ ...paymentData, accountId: newAccId, exchangeRate: rStr, amount: nextAmt });
+                          } else {
+                            setPaymentData({ ...paymentData, accountId: newAccId, exchangeRate: '', destinationAmount: paymentData.amount });
+                          }
+                        }} 
+                        className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-white transition-all appearance-none cursor-pointer"
+                      >
+                        {accounts.map(acc => <option key={acc.id} value={acc.id} className="bg-brand-800">{acc.name} ({acc.currency}) - {formatCurrency(acc.balance, acc.currency)}</option>)}
+                        {accounts.length === 0 && <option value="">{t('No accounts available')}</option>}
+                      </select>
+                    </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Date')}</label>
-                  <input 
-                    type="date" 
-                    required 
-                    value={paymentData.date} 
-                    onChange={e => setPaymentData({...paymentData, date: e.target.value})} 
-                    className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-slate-300 transition-all font-serif" 
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Category')}</label>
-                  <select 
-                    required
-                    value={paymentData.categoryId} 
-                    onChange={e => setPaymentData({...paymentData, categoryId: e.target.value})} 
-                    className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-white transition-all appearance-none cursor-pointer text-xs"
-                  >
-                    {categories.map(cat => <option key={cat.id} value={cat.id} className="bg-brand-800 truncate">{cat.name}</option>)}
-                  </select>
-                </div>
-              </div>
+                    {isCross ? (
+                      <div className="space-y-3 p-3 bg-cyan-500/5 border border-cyan-500/20 rounded-xl">
+                        <div>
+                          <label className="block text-[11px] font-medium text-slate-300 mb-1 uppercase tracking-wider">
+                            {t('Amount Credited to Card')} ({selectedCard.currency})
+                          </label>
+                          <AmountInput 
+                            required 
+                            value={paymentData.destinationAmount} 
+                            onChange={e => {
+                              const val = e.target.value;
+                              const r = parseFloat(paymentData.exchangeRate);
+                              let nextAccAmt = paymentData.amount;
+                              if (parseFloat(val) > 0 && r > 0) {
+                                nextAccAmt = (rateMeta.isMultiply ? (parseFloat(val) / r) : (parseFloat(val) * r)).toFixed(2);
+                              }
+                              setPaymentData({ ...paymentData, destinationAmount: val, amount: nextAccAmt });
+                            }} 
+                            className="w-full p-2.5 bg-brand-900/60 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-emerald-300 transition-all font-serif" 
+                            placeholder="0.00" 
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-medium text-slate-300 mb-1 uppercase tracking-wider">
+                            {t('Amount Debited from Account')} ({selectedAcc.currency})
+                          </label>
+                          <AmountInput 
+                            required 
+                            value={paymentData.amount} 
+                            onChange={e => {
+                              const val = e.target.value;
+                              let nextRate = paymentData.exchangeRate;
+                              let nextCardAmt = paymentData.destinationAmount;
+                              if (parseFloat(val) > 0 && parseFloat(paymentData.destinationAmount) > 0) {
+                                nextRate = computeEffectiveRate(val, paymentData.destinationAmount, rateMeta.isMultiply);
+                              } else if (parseFloat(val) > 0 && parseFloat(paymentData.exchangeRate) > 0) {
+                                nextCardAmt = convertWithRate(val, paymentData.exchangeRate, rateMeta.isMultiply);
+                              }
+                              setPaymentData({ ...paymentData, amount: val, exchangeRate: nextRate, destinationAmount: nextCardAmt });
+                            }} 
+                            className="w-full p-2.5 bg-brand-900/60 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none text-white transition-all font-serif" 
+                            placeholder="0.00" 
+                          />
+                        </div>
+
+                        <div className="flex items-center justify-between gap-2 pt-2 border-t border-cyan-500/15 text-xs">
+                          <span className="text-slate-400">{t('Exchange Rate')}:</span>
+                          <div className="flex items-center gap-1.5 font-mono">
+                            <span className="text-slate-300">1 {rateMeta.baseCurrency} =</span>
+                            <input
+                              type="number"
+                              step="0.0001"
+                              min="0"
+                              value={paymentData.exchangeRate}
+                              onChange={e => {
+                                const val = e.target.value;
+                                const r = parseFloat(val);
+                                let nextAccAmt = paymentData.amount;
+                                let nextCardAmt = paymentData.destinationAmount;
+                                if (parseFloat(paymentData.destinationAmount) > 0 && r > 0) {
+                                  nextAccAmt = (rateMeta.isMultiply ? (parseFloat(paymentData.destinationAmount) / r) : (parseFloat(paymentData.destinationAmount) * r)).toFixed(2);
+                                } else if (parseFloat(paymentData.amount) > 0 && r > 0) {
+                                  nextCardAmt = convertWithRate(paymentData.amount, val, rateMeta.isMultiply);
+                                }
+                                setPaymentData({ ...paymentData, exchangeRate: val, amount: nextAccAmt, destinationAmount: nextCardAmt });
+                              }}
+                              className="w-20 px-2 py-1 bg-brand-950/80 border border-cyan-500/40 rounded text-right text-cyan-300 text-xs font-bold focus:outline-none focus:border-cyan-400"
+                              placeholder="0.00"
+                            />
+                            <span className="text-slate-300">{rateMeta.quoteCurrency}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Amount')}</label>
+                        <AmountInput 
+                          required 
+                          value={paymentData.amount} 
+                          onChange={e => setPaymentData({...paymentData, amount: e.target.value, destinationAmount: e.target.value})} 
+                          className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-white transition-all font-serif" 
+                          placeholder="0.00" 
+                        />
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Date')}</label>
+                        <input 
+                          type="date" 
+                          required 
+                          value={paymentData.date} 
+                          onChange={e => setPaymentData({...paymentData, date: e.target.value})} 
+                          className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-slate-300 transition-all font-serif" 
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t('Category')}</label>
+                        <select 
+                          value={paymentData.categoryId} 
+                          onChange={e => setPaymentData({...paymentData, categoryId: e.target.value})} 
+                          className="w-full p-2.5 bg-brand-900/50 border border-brand-600/50 rounded-lg focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-white transition-all appearance-none cursor-pointer text-xs"
+                        >
+                          <option value="" className="bg-brand-800">{t('Transfer / Exchange')}</option>
+                          {categories.map(cat => <option key={cat.id} value={cat.id} className="bg-brand-800 truncate">{cat.name}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
 
               <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-brand-600/30">
                 <button type="button" onClick={() => setShowPaymentModal(false)} className="px-4 py-2 text-sm text-slate-400 hover:text-white transition-colors">{t('Cancel')}</button>

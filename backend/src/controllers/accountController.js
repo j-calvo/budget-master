@@ -173,7 +173,10 @@ exports.getAccountHistory = async (req, res) => {
     const [transactions, adjustments] = await Promise.all([
       prisma.transaction.findMany({
         where: {
-          accountId: id,
+          OR: [
+            { accountId: id },
+            { destinationAccountId: id }
+          ],
           date: { gte: startDate }
         },
         orderBy: { date: 'desc' }
@@ -192,9 +195,15 @@ exports.getAccountHistory = async (req, res) => {
     transactions.forEach(tx => {
       const dateStr = new Date(tx.date).toISOString().split('T')[0];
       if (!changesByDate[dateStr]) changesByDate[dateStr] = 0;
-      const change = (tx.type === 'expense' || tx.type === 'transfer') 
-        ? -Math.abs(tx.amount) 
-        : Math.abs(tx.amount);
+      let change = 0;
+      if (tx.accountId === id) {
+        change += (tx.type === 'expense' || tx.type === 'transfer')
+          ? -Math.abs(tx.amount)
+          : Math.abs(tx.amount);
+      }
+      if (tx.type === 'transfer' && tx.destinationAccountId === id) {
+        change += Math.abs(tx.destinationAmount ?? tx.amount);
+      }
       changesByDate[dateStr] += change;
     });
 

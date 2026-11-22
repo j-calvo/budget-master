@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api';
 import { useTranslation } from 'react-i18next';
-import { Globe, Percent } from 'lucide-react';
+import { Globe, ArrowLeftRight, Percent } from 'lucide-react';
+import { getDefaultExchangeRate, convertWithRate, computeEffectiveRate } from '../lib/currencyUtils';
 
 const DIGITAL_SERVICES_REGEX = /(steam|valve|playstation|psn|sony\s*inter|xbox|microsoft\*xbox|nintendo|netflix|spotify|disney|hbo|max\.com|apple\.com|itunes|google\s*\*(play|storage|services)|uber|airbnb|prime\s*video|amazon\s*digital|patreon|openai|chatgpt|dropbox|canva|crunchyroll)/i;
 
@@ -84,9 +85,13 @@ function PendingCard({ tx, categories, accounts, creditCards, ratesData, onAppro
   const { t } = useTranslation();
   const [categoryId, setCategoryId] = useState('');
   const [sourceId, setSourceId] = useState('');
+  const [destinationId, setDestinationId] = useState('');
   const [type, setType] = useState(tx.type || 'expense');
   const [description, setDescription] = useState(tx.merchantDescription);
   const [convertedAmount, setConvertedAmount] = useState('');
+  const [transferAmount, setTransferAmount] = useState(String(tx.amount || ''));
+  const [transferDestAmount, setTransferDestAmount] = useState('');
+  const [transferRate, setTransferRate] = useState('');
 
   // Extra IVA state (auto-checked if matched as a known digital service)
   const isDigitalService = DIGITAL_SERVICES_REGEX.test(tx.merchantDescription || '') || DIGITAL_SERVICES_REGEX.test(tx.rawBody || '');
@@ -133,7 +138,71 @@ function PendingCard({ tx, categories, accounts, creditCards, ratesData, onAppro
     }
   }, [accounts, creditCards, categories, sourceId, categoryId, tx.cardLast4, tx.currency]);
 
+  const getDefaultDestForSrc = (srcVal) => {
+    const sId = srcVal?.replace(/^account_/, '');
+    const sAcc = accounts.find(a => a.id === sId);
+    const diffCurrAcc = accounts.find(a => a.id !== sId && sAcc && a.currency !== sAcc.currency);
+    if (diffCurrAcc) return `account_${diffCurrAcc.id}`;
+    const otherAcc = accounts.find(a => a.id !== sId);
+    if (otherAcc) return `account_${otherAcc.id}`;
+    if (creditCards.length > 0) return `card_${creditCards[0].id}`;
+    return '';
+  };
+
+  const getTransferCurrencies = (srcVal, dstVal) => {
+    const sId = srcVal?.replace(/^account_/, '');
+    const srcAcc = accounts.find(a => a.id === sId);
+    const isDestAcc = dstVal?.startsWith('account_');
+    const dId = dstVal?.replace(/^(account_|card_)/, '');
+    const dstObj = isDestAcc ? accounts.find(a => a.id === dId) : creditCards.find(c => c.id === dId);
+    const srcCurrency = srcAcc?.currency || 'USD';
+    const dstCurrency = dstObj?.currency || srcCurrency;
+    const isCrossTransfer = srcCurrency !== dstCurrency;
+    const rateMeta = getDefaultExchangeRate(srcCurrency, dstCurrency, ratesData);
+    return { srcCurrency, dstCurrency, isCrossTransfer, rateMeta };
+  };
+
+  const initTransferFields = (srcVal, dstVal) => {
+    const { srcCurrency, dstCurrency, isCrossTransfer, rateMeta } = getTransferCurrencies(srcVal, dstVal);
+    const pendingAmt = parseFloat(tx.amount) || 0;
+    const pendingCur = (tx.currency || 'USD').toUpperCase();
+
+    if (!isCrossTransfer) {
+      setTransferRate('');
+      setTransferAmount(String(pendingAmt));
+      setTransferDestAmount(String(pendingAmt));
+      return;
+    }
+
+    const rStr = String(rateMeta.rate);
+    setTransferRate(rStr);
+    if (pendingCur === dstCurrency.toUpperCase() && pendingCur !== srcCurrency.toUpperCase()) {
+      setTransferDestAmount(pendingAmt.toFixed(2));
+      const invSrc = rateMeta.isMultiply ? (pendingAmt / rateMeta.rate) : (pendingAmt * rateMeta.rate);
+      setTransferAmount(invSrc.toFixed(2));
+    } else {
+      setTransferAmount(String(pendingAmt));
+      setTransferDestAmount(convertWithRate(pendingAmt, rStr, rateMeta.isMultiply));
+    }
+  };
+
+  const handleTypeChange = (nextType) => {
+    setType(nextType);
+    if (nextType === 'transfer') {
+      const nextSrc = sourceId.startsWith('account_')
+        ? sourceId
+        : (accounts.length > 0 ? `account_${accounts[0].id}` : '');
+      const nextDst = (destinationId && destinationId !== nextSrc)
+        ? destinationId
+        : getDefaultDestForSrc(nextSrc);
+      if (nextSrc && nextSrc !== sourceId) setSourceId(nextSrc);
+      setDestinationId(nextDst);
+      initTransferFields(nextSrc, nextDst);
+    }
+  };
+
   // Determine target currency
+  const isTransfer = type === 'transfer';
   const isAcc = sourceId.startsWith('account_');
   const realSourceId = sourceId.replace(/^(account_|card_)/, '');
   const selectedSource = isAcc
@@ -142,7 +211,8 @@ function PendingCard({ tx, categories, accounts, creditCards, ratesData, onAppro
 
   const targetCurrency = selectedSource?.currency || 'USD';
   const txCurrency = tx.currency || 'USD';
-  const isForeign = txCurrency.toUpperCase() !== targetCurrency.toUpperCase();
+  const isForeign = !isTransfer && txCurrency.toUpperCase() !== targetCurrency.toUpperCase();
+  const transferInfo = getTransferCurrencies(sourceId, destinationId);
 
   // Calculate estimated converted amount when foreign
   useEffect(() => {
@@ -178,6 +248,36 @@ function PendingCard({ tx, categories, accounts, creditCards, ratesData, onAppro
   const totalConvertedAmount = isForeign && convertedAmount ? parseFloat((parseFloat(convertedAmount) + convertedIvaAmount).toFixed(2)) : 0;
 
   const approve = () => {
+    if (isTransfer) {
+      if (!isAcc || !destinationId) {
+        alert(t('Please select a source and destination account.'));
+        return;
+      }
+      if (sourceId === destinationId) {
+        alert(t('Cannot transfer to the same account'));
+        return;
+      }
+      const isDestAcc = destinationId.startsWith('account_');
+      const realDestId = destinationId.replace(/^(account_|card_)/, '');
+      const parsedSrcAmt = parseFloat(transferAmount) || tx.amount;
+      const parsedDstAmt = transferInfo.isCrossTransfer
+        ? (parseFloat(transferDestAmount) || parsedSrcAmt)
+        : parsedSrcAmt;
+
+      onApprove(tx.id, {
+        type: 'transfer',
+        description,
+        categoryId: null,
+        accountId: realSourceId,
+        destinationAccountId: isDestAcc ? realDestId : null,
+        creditCardId: !isDestAcc ? realDestId : null,
+        amount: parsedSrcAmt,
+        destinationAmount: parsedDstAmt,
+        exchangeRate: transferInfo.isCrossTransfer && transferRate ? parseFloat(transferRate) : null
+      });
+      return;
+    }
+
     if (!categoryId || !sourceId) {
       alert(t('Please select a category and source.'));
       return;
@@ -220,7 +320,7 @@ function PendingCard({ tx, categories, accounts, creditCards, ratesData, onAppro
 
   return (
     <div className="glass-card p-4 border border-brand-600/30 flex flex-col gap-3 relative overflow-hidden">
-      <div className={`absolute top-0 left-0 w-1 h-full ${isForeign ? 'bg-amber-500' : 'bg-gold-500/80'}`}></div>
+      <div className={`absolute top-0 left-0 w-1 h-full ${isTransfer ? 'bg-cyan-500' : isForeign ? 'bg-amber-500' : 'bg-gold-500/80'}`}></div>
       <div className="flex justify-between items-start">
         <div className="flex-1 min-w-0 pr-2">
           <input 
@@ -241,20 +341,139 @@ function PendingCard({ tx, categories, accounts, creditCards, ratesData, onAppro
       </div>
       
       <div className="flex gap-2">
-        <select value={type} onChange={e => setType(e.target.value)} className="w-1/3 p-1.5 text-xs bg-brand-900/50 border border-brand-600/50 rounded text-white appearance-none cursor-pointer">
+        <select value={type} onChange={e => handleTypeChange(e.target.value)} className="w-1/3 p-1.5 text-xs bg-brand-900/50 border border-brand-600/50 rounded text-white appearance-none cursor-pointer">
           <option value="expense" className="bg-brand-800">{t('Expense')}</option>
           <option value="income" className="bg-brand-800">{t('Income')}</option>
+          {accounts.length > 0 && (accounts.length > 1 || creditCards.length > 0) && (
+            <option value="transfer" className="bg-brand-800">{t('Transfer / Exchange')}</option>
+          )}
         </select>
-        <select value={sourceId} onChange={e => setSourceId(e.target.value)} className="w-2/3 p-1.5 text-xs bg-brand-900/50 border border-brand-600/50 rounded text-white appearance-none cursor-pointer">
-           {accounts.length > 0 && <optgroup label={t("Accounts")} className="bg-brand-900 text-gold-400">{accounts.map(a => <option value={`account_${a.id}`} key={`acc_${a.id}`} className="bg-brand-800 text-white">{a.name} ({a.currency})</option>)}</optgroup>}
-           {creditCards.length > 0 && <optgroup label={t("Credit Cards")} className="bg-brand-900 text-gold-400">{creditCards.map(c => <option value={`card_${c.id}`} key={`cc_${c.id}`} className="bg-brand-800 text-white">{c.name} ({c.currency})</option>)}</optgroup>}
-        </select>
+        {isTransfer ? (
+          <select
+            value={sourceId}
+            onChange={e => {
+              const val = e.target.value;
+              const nextDst = destinationId === val ? getDefaultDestForSrc(val) : (destinationId || getDefaultDestForSrc(val));
+              setSourceId(val);
+              if (nextDst !== destinationId) setDestinationId(nextDst);
+              initTransferFields(val, nextDst);
+            }}
+            className="w-2/3 p-1.5 text-xs bg-brand-900/50 border border-cyan-500/40 rounded text-white appearance-none cursor-pointer"
+            title={t('From Account')}
+          >
+            {accounts.map(a => <option value={`account_${a.id}`} key={`t_src_${a.id}`} className="bg-brand-800 text-white">{t('From')}: {a.name} ({a.currency})</option>)}
+          </select>
+        ) : (
+          <select value={sourceId} onChange={e => setSourceId(e.target.value)} className="w-2/3 p-1.5 text-xs bg-brand-900/50 border border-brand-600/50 rounded text-white appearance-none cursor-pointer">
+             {accounts.length > 0 && <optgroup label={t("Accounts")} className="bg-brand-900 text-gold-400">{accounts.map(a => <option value={`account_${a.id}`} key={`acc_${a.id}`} className="bg-brand-800 text-white">{a.name} ({a.currency})</option>)}</optgroup>}
+             {creditCards.length > 0 && <optgroup label={t("Credit Cards")} className="bg-brand-900 text-gold-400">{creditCards.map(c => <option value={`card_${c.id}`} key={`cc_${c.id}`} className="bg-brand-800 text-white">{c.name} ({c.currency})</option>)}</optgroup>}
+          </select>
+        )}
       </div>
 
-      <select value={categoryId} onChange={e => setCategoryId(e.target.value)} className="w-full p-1.5 text-xs bg-brand-900/50 border border-brand-600/50 rounded text-white appearance-none cursor-pointer">
-        <option value="" disabled className="bg-brand-800">{t('Select Category')}</option>
-        {categories.map(c => <option value={c.id} key={c.id} className="bg-brand-800">{c.name}</option>)}
-      </select>
+      {isTransfer ? (
+        <div className="space-y-2">
+          <select
+            value={destinationId}
+            onChange={e => {
+              const val = e.target.value;
+              setDestinationId(val);
+              initTransferFields(sourceId, val);
+            }}
+            className="w-full p-1.5 text-xs bg-brand-900/50 border border-cyan-500/40 rounded text-white appearance-none cursor-pointer"
+          >
+            <option value="" disabled className="bg-brand-800">{t('To Account / Card')}</option>
+            {accounts.filter(a => `account_${a.id}` !== sourceId).length > 0 && (
+              <optgroup label={t("Accounts")} className="bg-brand-900 text-gold-400">
+                {accounts.filter(a => `account_${a.id}` !== sourceId).map(a => (
+                  <option value={`account_${a.id}`} key={`t_dst_acc_${a.id}`} className="bg-brand-800 text-white">{t('To')}: {a.name} ({a.currency})</option>
+                ))}
+              </optgroup>
+            )}
+            {creditCards.length > 0 && (
+              <optgroup label={t("Credit Cards")} className="bg-brand-900 text-gold-400">
+                {creditCards.map(c => (
+                  <option value={`card_${c.id}`} key={`t_dst_cc_${c.id}`} className="bg-brand-800 text-white">{t('To')}: {c.name} ({c.currency})</option>
+                ))}
+              </optgroup>
+            )}
+          </select>
+
+          {transferInfo.isCrossTransfer ? (
+            <div className="p-2.5 bg-cyan-500/10 border border-cyan-500/30 rounded-lg text-xs space-y-2 animate-in fade-in duration-200">
+              <div className="flex justify-between items-center text-cyan-300 font-medium text-[11px]">
+                <span className="flex items-center gap-1">
+                  <ArrowLeftRight size={12} />
+                  {t('Transfer / Exchange')}
+                </span>
+                <span className="font-mono">{transferInfo.srcCurrency} &rarr; {transferInfo.dstCurrency}</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[10px] text-slate-400 block mb-0.5">{t('Amount Sent')} ({transferInfo.srcCurrency})</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={transferAmount}
+                    onChange={e => {
+                      const val = e.target.value;
+                      setTransferAmount(val);
+                      if (parseFloat(transferRate) > 0) {
+                        setTransferDestAmount(convertWithRate(val, transferRate, transferInfo.rateMeta.isMultiply));
+                      }
+                    }}
+                    className="w-full px-2 py-1 bg-brand-950/80 border border-cyan-500/30 rounded text-right text-white text-xs font-mono font-bold focus:outline-none focus:border-cyan-400"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] text-slate-400 block mb-0.5">{t('Amount Received')} ({transferInfo.dstCurrency})</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={transferDestAmount}
+                    onChange={e => {
+                      const val = e.target.value;
+                      setTransferDestAmount(val);
+                      if (parseFloat(transferAmount) > 0 && parseFloat(val) > 0) {
+                        setTransferRate(computeEffectiveRate(transferAmount, val, transferInfo.rateMeta.isMultiply));
+                      }
+                    }}
+                    className="w-full px-2 py-1 bg-brand-950/80 border border-emerald-500/30 rounded text-right text-emerald-300 text-xs font-mono font-bold focus:outline-none focus:border-emerald-400"
+                  />
+                </div>
+              </div>
+              <div className="flex items-center justify-between gap-2 pt-1 border-t border-cyan-500/20 text-[11px]">
+                <span className="text-slate-400">1 {transferInfo.rateMeta.baseCurrency} =</span>
+                <div className="flex items-center gap-1 font-mono">
+                  <input
+                    type="number"
+                    step="0.0001"
+                    value={transferRate}
+                    onChange={e => {
+                      const val = e.target.value;
+                      setTransferRate(val);
+                      if (parseFloat(transferAmount) > 0 && parseFloat(val) > 0) {
+                        setTransferDestAmount(convertWithRate(transferAmount, val, transferInfo.rateMeta.isMultiply));
+                      }
+                    }}
+                    className="w-20 px-1.5 py-0.5 bg-brand-950/80 border border-cyan-500/30 rounded text-right text-cyan-300 text-xs font-bold focus:outline-none focus:border-cyan-400"
+                  />
+                  <span className="text-slate-300">{transferInfo.rateMeta.quoteCurrency}</span>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <p className="text-[10px] text-cyan-300/80 italic px-1">
+              {t('Transfers and currency exchanges do not affect your monthly budgets.')}
+            </p>
+          )}
+        </div>
+      ) : (
+        <select value={categoryId} onChange={e => setCategoryId(e.target.value)} className="w-full p-1.5 text-xs bg-brand-900/50 border border-brand-600/50 rounded text-white appearance-none cursor-pointer">
+          <option value="" disabled className="bg-brand-800">{t('Select Category')}</option>
+          {categories.map(c => <option value={c.id} key={c.id} className="bg-brand-800">{c.name}</option>)}
+        </select>
+      )}
 
       {/* Foreign currency preview & conversion helper */}
       {isForeign && (
@@ -288,6 +507,7 @@ function PendingCard({ tx, categories, accounts, creditCards, ratesData, onAppro
       )}
 
       {/* Extra IVA (13%) section */}
+      {!isTransfer && (
       <div className="pt-1.5 border-t border-brand-600/30 space-y-2">
         <label className="flex items-center justify-between cursor-pointer group select-none">
           <div className="flex items-center gap-2">
@@ -362,6 +582,7 @@ function PendingCard({ tx, categories, accounts, creditCards, ratesData, onAppro
           </div>
         )}
       </div>
+      )}
 
       <div className="flex justify-between items-center mt-2 border-t border-brand-600/30 pt-3">
         <button onClick={() => onDiscard(tx.id)} className="text-xs text-rose-400 uppercase font-bold hover:text-rose-300 transition-colors">{t('Discard')}</button>
