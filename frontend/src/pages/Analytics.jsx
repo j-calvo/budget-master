@@ -227,14 +227,19 @@ export default function Analytics() {
 
         // 1. Roll back transactions that happened AFTER the end of this month
         transactions.forEach(tx => {
-          if (tx.accountId !== acc.id) return;
+          if (tx.accountId !== acc.id && tx.destinationAccountId !== acc.id) return;
           const txDate = new Date(tx.date);
           if (txDate > m.endOfMonthDate) {
             // Revert transaction effect on balance
-            if (tx.type === 'expense') {
-              projectedBalance += tx.amount; // Add back expenses
-            } else if (tx.type === 'income') {
-              projectedBalance -= tx.amount; // Subtract incomes
+            if (tx.accountId === acc.id) {
+              if (tx.type === 'expense' || tx.type === 'transfer') {
+                projectedBalance += tx.amount; // Add back outgoing expenses/transfers
+              } else if (tx.type === 'income') {
+                projectedBalance -= tx.amount; // Subtract incomes
+              }
+            }
+            if (tx.type === 'transfer' && tx.destinationAccountId === acc.id) {
+              projectedBalance -= (tx.destinationAmount ?? tx.amount); // Subtract incoming transfers
             }
           }
         });

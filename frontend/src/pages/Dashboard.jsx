@@ -7,7 +7,7 @@ import {
 } from 'recharts';
 import FinancialTimeline from '../components/FinancialTimeline';
 import { formatCurrency } from '../lib/currencyUtils';
-import { Info } from 'lucide-react';
+import { Info, ArrowLeftRight } from 'lucide-react';
 
 export default function Dashboard() {
   const { settings, currencies, isLoading: settingsLoading } = useSettings();
@@ -620,13 +620,18 @@ export default function Dashboard() {
             ) : (
               <div className="space-y-4 flex-1">
                 {recentTransactions.map(tx => {
+                  const isTransfer = tx.type === 'transfer';
                   const isExpense = tx.type === 'expense';
+                  const srcCur = tx.account?.currency || tx.creditCard?.currency || settings?.defaultCurrency || 'USD';
+                  const dstCur = tx.destinationAccount?.currency || tx.creditCard?.currency || srcCur;
+                  const isCrossTransfer = isTransfer && srcCur !== dstCur && tx.destinationAmount;
+                  const destName = tx.destinationAccount?.name || tx.creditCard?.name;
                   return (
                     <div key={tx.id} className="flex justify-between items-start gap-3 group cursor-default">
                       <div className="flex items-center gap-3 min-w-0">
                         <div className={`w-9 h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center font-serif italic text-base md:text-lg shadow-inner shrink-0
-                          ${isExpense ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' : 'bg-gold-500/10 text-gold-400 border border-gold-500/20'}`}>
-                          {tx.description.charAt(0).toUpperCase()}
+                          ${isTransfer ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20' : isExpense ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' : 'bg-gold-500/10 text-gold-400 border border-gold-500/20'}`}>
+                          {isTransfer ? <ArrowLeftRight className="w-4 h-4" /> : tx.description.charAt(0).toUpperCase()}
                         </div>
                         <div className="min-w-0">
                           <p className="font-medium text-slate-200 text-sm truncate group-hover:text-white transition-colors">{tx.description}</p>
@@ -636,14 +641,21 @@ export default function Dashboard() {
                               return new Date(y, m - 1, d).toLocaleDateString(settings?.language || 'en-US', { month: 'short', day: 'numeric' });
                             })()}
                             <span className="mx-1 opacity-30">•</span>
-                            {tx.account?.name || tx.creditCard?.name}
+                            {isTransfer ? `${tx.account?.name || ''} → ${destName || ''}` : (tx.account?.name || tx.creditCard?.name)}
                           </p>
                         </div>
                       </div>
                       <div className="text-right shrink-0">
-                        <p className={`font-serif text-sm md:text-base tracking-wide ${isExpense ? 'text-slate-300' : 'text-gold-400 drop-shadow-[0_0_5px_rgba(212,175,55,0.4)]'}`}>
-                          {isExpense ? '-' : '+'}{displayCurrency(tx.amount, tx.account?.currency || tx.creditCard?.currency)}
-                        </p>
+                        {isCrossTransfer ? (
+                          <div className="font-serif text-xs md:text-sm tracking-wide">
+                            <p className="text-slate-400">-{displayCurrency(tx.amount, srcCur)}</p>
+                            <p className="text-emerald-400">+{displayCurrency(tx.destinationAmount, dstCur)}</p>
+                          </div>
+                        ) : (
+                          <p className={`font-serif text-sm md:text-base tracking-wide ${isTransfer ? 'text-cyan-400' : isExpense ? 'text-slate-300' : 'text-gold-400 drop-shadow-[0_0_5px_rgba(212,175,55,0.4)]'}`}>
+                            {isTransfer ? '' : (isExpense ? '-' : '+')}{displayCurrency(tx.amount, srcCur)}
+                          </p>
+                        )}
                       </div>
                     </div>
                   );

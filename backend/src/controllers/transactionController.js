@@ -10,12 +10,14 @@ exports.getTransactions = async (req, res) => {
       where: {
         OR: [
           { account: { familyId: req.user.familyId } },
+          { destinationAccount: { familyId: req.user.familyId } },
           { creditCard: { familyId: req.user.familyId } }
         ]
       },
       include: {
         category: true,
         account: true,
+        destinationAccount: true,
         creditCard: true
       },
       orderBy: { date: 'desc' }
@@ -34,12 +36,13 @@ exports.getTransactionById = async (req, res) => {
       include: {
         category: true,
         account: true,
+        destinationAccount: true,
         creditCard: true
       }
     });
 
     if (!transaction) return res.status(404).json({ error: 'Transaction not found' });
-    const familyId = transaction.accountId ? transaction.account?.familyId : transaction.creditCard?.familyId;
+    const familyId = transaction.account?.familyId || transaction.destinationAccount?.familyId || transaction.creditCard?.familyId;
     
     if (familyId !== req.user.familyId) {
       return res.status(404).json({ error: 'Transaction not found or unauthorized' });
@@ -55,9 +58,11 @@ exports.createTransaction = async (req, res) => {
   try {
     const {
       accountId,
+      destinationAccountId,
       creditCardId,
       categoryId,
       amount,
+      destinationAmount,
       date,
       description,
       payee,
@@ -69,13 +74,19 @@ exports.createTransaction = async (req, res) => {
       settledAt
     } = req.body;
     
-    // Verify account or credit card belongs to user
+    // Verify account, destination account, or credit card belongs to user
     let account = null;
+    let destinationAccount = null;
     let card = null;
     
     if (accountId) {
       account = await prisma.account.findUnique({ where: { id: accountId } });
       if (!account || account.familyId !== req.user.familyId) return res.status(403).json({ error: 'Unauthorized or account not found' });
+    }
+
+    if (destinationAccountId) {
+      destinationAccount = await prisma.account.findUnique({ where: { id: destinationAccountId } });
+      if (!destinationAccount || destinationAccount.familyId !== req.user.familyId) return res.status(403).json({ error: 'Unauthorized or destination account not found' });
     }
     
     if (creditCardId) {
@@ -88,52 +99,97 @@ exports.createTransaction = async (req, res) => {
     }
 
     const parsedAmount = parseFloat(amount);
-    const transaction = await prisma.transaction.create({
-      data: {
-        accountId,
-        creditCardId,
-        categoryId,
-        amount: parsedAmount,
-        originalAmount: originalAmount !== undefined && originalAmount !== null ? parseFloat(originalAmount) : null,
-        originalCurrency: originalCurrency || null,
-        exchangeRate: exchangeRate !== undefined && exchangeRate !== null ? parseFloat(exchangeRate) : null,
-        settlementStatus: settlementStatus || 'SETTLED',
-        settledAt: settledAt ? new Date(settledAt) : (settlementStatus === 'SETTLED' ? new Date() : null),
-        date: date ? new Date(date) : undefined,
-        description,
-        payee,
-        type
-      },
-      include: { category: true }
-    });
-    
-    // Update balance
-    if (type === 'transfer' && accountId && creditCardId) {
-      // Direct transfer (Credit Card Payment)
-      await prisma.account.update({
-        where: { id: accountId },
-        data: { balance: { decrement: parsedAmount } }
-      });
-      await prisma.creditCard.update({
-        where: { id: creditCardId },
-        data: { balance: { decrement: parsedAmount } }
-      });
-    } else {
-      if (accountId) {
-        const balanceChange = type === 'expense' ? -Math.abs(parsedAmount) : Math.abs(parsedAmount);
-        await prisma.account.update({
-          where: { id: accountId },
-          data: { balance: { increment: balanceChange } }
-        });
-      } else if (creditCardId) {
-        // CC expense increases balance
-        const balanceChange = type === 'expense' ? Math.abs(parsedAmount) : -Math.abs(parsedAmount);
-        await prisma.creditCard.update({
-          where: { id: creditCardId },
-          data: { balance: { increment: balanceChange } }
-        });
+    if (isNaN(parsedAmount)) {
+      return res.status(400).json({ error: 'Invalid amount' });
+    }
+
+    let finalExchangeRate = exchangeRate !== undefined && exchangeRate !== null && exchangeRate !== ''
+      ? parseFloat(exchangeRate)
+      : null;
+    let parsedDestAmount = null;
+
+    if (type === 'transfer') {
+      if (!accountId || (!destinationAccountId && !creditCardId)) {
+        return res.status(400).json({ error: 'Transfers require a source account and a destination account or credit card' });
+      }
+      if (destinationAccountId && accountId === destinationAccountId) {
+        return res.status(400).json({ error: 'Cannot transfer to the same account' });
+      }
+      parsedDestAmount = (destinationAmount !== undefined && destinationAmount !== null && !isNaN(parseFloat(destinationAmount)) && parseFloat(destinationAmount) > 0)
+        ? parseFloat(destinationAmount)
+        : parsedAmount;
+
+      const srcCurrency = account?.currency || 'USD';
+      const dstCurrency = destinationAccount?.currency || card?.currency || srcCurrency;
+      if (srcCurrency !== dstCurrency && !finalExchangeRate && parsedAmount > 0 && parsedDestAmount > 0) {
+        const rawRate = parsedAmount >= parsedDestAmount
+          ? (parsedAmount / parsedDestAmount)
+          : (parsedDestAmount / parsedAmount);
+        finalExchangeRate = parseFloat(rawRate.toFixed(6));
       }
     }
+
+    let transaction;
+    await prisma.$transaction(async (tx) => {
+      transaction = await tx.transaction.create({
+        data: {
+          accountId: accountId || null,
+          destinationAccountId: type === 'transfer' ? (destinationAccountId || null) : null,
+          creditCardId: creditCardId || null,
+          categoryId: categoryId || null,
+          amount: parsedAmount,
+          destinationAmount: type === 'transfer' ? parsedDestAmount : null,
+          originalAmount: originalAmount !== undefined && originalAmount !== null ? parseFloat(originalAmount) : null,
+          originalCurrency: originalCurrency || null,
+          exchangeRate: finalExchangeRate,
+          settlementStatus: settlementStatus || 'SETTLED',
+          settledAt: settledAt ? new Date(settledAt) : (settlementStatus === 'SETTLED' || !settlementStatus ? new Date() : null),
+          date: date ? new Date(date) : undefined,
+          description,
+          payee,
+          type
+        },
+        include: { category: true, account: true, destinationAccount: true, creditCard: true }
+      });
+
+      // Update balance
+      if (type === 'transfer' && accountId && destinationAccountId) {
+        // Account-to-account transfer / currency exchange
+        await tx.account.update({
+          where: { id: accountId },
+          data: { balance: { decrement: Math.abs(parsedAmount) } }
+        });
+        await tx.account.update({
+          where: { id: destinationAccountId },
+          data: { balance: { increment: Math.abs(parsedDestAmount) } }
+        });
+      } else if (type === 'transfer' && accountId && creditCardId) {
+        // Direct transfer (Credit Card Payment, supports cross-currency)
+        await tx.account.update({
+          where: { id: accountId },
+          data: { balance: { decrement: Math.abs(parsedAmount) } }
+        });
+        await tx.creditCard.update({
+          where: { id: creditCardId },
+          data: { balance: { decrement: Math.abs(parsedDestAmount) } }
+        });
+      } else {
+        if (accountId) {
+          const balanceChange = type === 'expense' ? -Math.abs(parsedAmount) : Math.abs(parsedAmount);
+          await tx.account.update({
+            where: { id: accountId },
+            data: { balance: { increment: balanceChange } }
+          });
+        } else if (creditCardId) {
+          // CC expense increases balance
+          const balanceChange = type === 'expense' ? Math.abs(parsedAmount) : -Math.abs(parsedAmount);
+          await tx.creditCard.update({
+            where: { id: creditCardId },
+            data: { balance: { increment: balanceChange } }
+          });
+        }
+      }
+    });
 
     res.status(201).json(transaction);
   } catch (error) {
@@ -147,12 +203,14 @@ exports.updateTransaction = async (req, res) => {
     const { id } = req.params;
     const {
       amount,
+      destinationAmount,
       date,
       description,
       payee,
       categoryId,
       type,
       accountId,
+      destinationAccountId,
       creditCardId,
       originalAmount,
       originalCurrency,
@@ -164,20 +222,26 @@ exports.updateTransaction = async (req, res) => {
     // Fetch old to reverse balance impact
     const oldTx = await prisma.transaction.findUnique({
       where: { id },
-      include: { account: true, creditCard: true }
+      include: { account: true, destinationAccount: true, creditCard: true }
     });
 
     if (!oldTx) return res.status(404).json({ error: 'Transaction not found' });
-    const familyId = oldTx.accountId ? oldTx.account?.familyId : oldTx.creditCard?.familyId;
+    const familyId = oldTx.account?.familyId || oldTx.destinationAccount?.familyId || oldTx.creditCard?.familyId;
     if (familyId !== req.user.familyId) return res.status(403).json({ error: 'Unauthorized' });
 
-    // Verify new source
+    // Verify new source and destination
     let account = null;
+    let destinationAccount = null;
     let card = null;
 
     if (accountId) {
       account = await prisma.account.findUnique({ where: { id: accountId } });
       if (!account || account.familyId !== req.user.familyId) return res.status(403).json({ error: 'Unauthorized account' });
+    }
+
+    if (destinationAccountId) {
+      destinationAccount = await prisma.account.findUnique({ where: { id: destinationAccountId } });
+      if (!destinationAccount || destinationAccount.familyId !== req.user.familyId) return res.status(403).json({ error: 'Unauthorized destination account' });
     }
     
     if (creditCardId) {
@@ -189,94 +253,150 @@ exports.updateTransaction = async (req, res) => {
       return res.status(400).json({ error: 'Must provide accountId or creditCardId' });
     }
 
-    // Revert old balance
-    if (oldTx.type === 'transfer' && oldTx.accountId && oldTx.creditCardId) {
-       await prisma.account.update({
-         where: { id: oldTx.accountId },
-         data: { balance: { increment: Math.abs(oldTx.amount) } }
-       });
-       await prisma.creditCard.update({
-         where: { id: oldTx.creditCardId },
-         data: { balance: { increment: Math.abs(oldTx.amount) } }
-       });
-    } else {
-      if (oldTx.accountId) {
-        const oldBalanceChange = oldTx.type === 'expense' ? Math.abs(oldTx.amount) : -Math.abs(oldTx.amount);
-        await prisma.account.update({
-          where: { id: oldTx.accountId },
-          data: { balance: { increment: oldBalanceChange } }
-        });
-      } else if (oldTx.creditCardId) {
-        const oldBalanceChange = oldTx.type === 'expense' ? -Math.abs(oldTx.amount) : Math.abs(oldTx.amount);
-        await prisma.creditCard.update({
-          where: { id: oldTx.creditCardId },
-          data: { balance: { increment: oldBalanceChange } }
-        });
-      }
-    }
-
     const parsedAmount = parseFloat(amount);
-    const updateData = {
-      amount: parsedAmount,
-      date: date ? new Date(date) : undefined,
-      description,
-      payee,
-      categoryId,
-      type,
-      accountId: accountId || null,
-      creditCardId: creditCardId || null
-    };
-
-    if (originalAmount !== undefined) {
-      updateData.originalAmount = originalAmount !== null ? parseFloat(originalAmount) : null;
-    }
-    if (originalCurrency !== undefined) {
-      updateData.originalCurrency = originalCurrency || null;
-    }
-    if (exchangeRate !== undefined) {
-      updateData.exchangeRate = exchangeRate !== null ? parseFloat(exchangeRate) : null;
-    }
-    if (settlementStatus !== undefined) {
-      updateData.settlementStatus = settlementStatus;
-    }
-    if (settledAt !== undefined) {
-      updateData.settledAt = settledAt ? new Date(settledAt) : null;
+    if (isNaN(parsedAmount)) {
+      return res.status(400).json({ error: 'Invalid amount' });
     }
 
-    const transaction = await prisma.transaction.update({
-      where: { id },
-      data: updateData,
-      include: { category: true }
-    });
+    let parsedDestAmount = null;
+    let finalExchangeRate = exchangeRate !== undefined
+      ? (exchangeRate !== null && exchangeRate !== '' ? parseFloat(exchangeRate) : null)
+      : undefined;
 
-    // Apply new balance
-    if (type === 'transfer' && accountId && creditCardId) {
-      await prisma.account.update({
-        where: { id: accountId },
-        data: { balance: { decrement: parsedAmount } }
-      });
-      await prisma.creditCard.update({
-        where: { id: creditCardId },
-        data: { balance: { decrement: parsedAmount } }
-      });
-    } else {
-      if (accountId) {
-        const newBalanceChange = type === 'expense' ? -Math.abs(parsedAmount) : Math.abs(parsedAmount);
-        await prisma.account.update({
-          where: { id: accountId },
-          data: { balance: { increment: newBalanceChange } }
-        });
-      } else if (creditCardId) {
-        const newBalanceChange = type === 'expense' ? Math.abs(parsedAmount) : -Math.abs(parsedAmount);
-        await prisma.creditCard.update({
-          where: { id: creditCardId },
-          data: { balance: { increment: newBalanceChange } }
-        });
+    if (type === 'transfer') {
+      if (!accountId || (!destinationAccountId && !creditCardId)) {
+        return res.status(400).json({ error: 'Transfers require a source account and a destination account or credit card' });
+      }
+      if (destinationAccountId && accountId === destinationAccountId) {
+        return res.status(400).json({ error: 'Cannot transfer to the same account' });
+      }
+      parsedDestAmount = (destinationAmount !== undefined && destinationAmount !== null && !isNaN(parseFloat(destinationAmount)) && parseFloat(destinationAmount) > 0)
+        ? parseFloat(destinationAmount)
+        : parsedAmount;
+
+      const srcCurrency = account?.currency || 'USD';
+      const dstCurrency = destinationAccount?.currency || card?.currency || srcCurrency;
+      if (srcCurrency !== dstCurrency && !finalExchangeRate && parsedAmount > 0 && parsedDestAmount > 0) {
+        const rawRate = parsedAmount >= parsedDestAmount
+          ? (parsedAmount / parsedDestAmount)
+          : (parsedDestAmount / parsedAmount);
+        finalExchangeRate = parseFloat(rawRate.toFixed(6));
+      } else if (srcCurrency === dstCurrency && finalExchangeRate === undefined) {
+        finalExchangeRate = null;
       }
     }
+
+    let transaction;
+    await prisma.$transaction(async (tx) => {
+      // Revert old balance
+      if (oldTx.type === 'transfer' && oldTx.accountId && oldTx.destinationAccountId) {
+        await tx.account.update({
+          where: { id: oldTx.accountId },
+          data: { balance: { increment: Math.abs(oldTx.amount) } }
+        });
+        await tx.account.update({
+          where: { id: oldTx.destinationAccountId },
+          data: { balance: { decrement: Math.abs(oldTx.destinationAmount ?? oldTx.amount) } }
+        });
+      } else if (oldTx.type === 'transfer' && oldTx.accountId && oldTx.creditCardId) {
+        await tx.account.update({
+          where: { id: oldTx.accountId },
+          data: { balance: { increment: Math.abs(oldTx.amount) } }
+        });
+        await tx.creditCard.update({
+          where: { id: oldTx.creditCardId },
+          data: { balance: { increment: Math.abs(oldTx.destinationAmount ?? oldTx.amount) } }
+        });
+      } else {
+        if (oldTx.accountId) {
+          const oldBalanceChange = oldTx.type === 'expense' ? Math.abs(oldTx.amount) : -Math.abs(oldTx.amount);
+          await tx.account.update({
+            where: { id: oldTx.accountId },
+            data: { balance: { increment: oldBalanceChange } }
+          });
+        } else if (oldTx.creditCardId) {
+          const oldBalanceChange = oldTx.type === 'expense' ? -Math.abs(oldTx.amount) : Math.abs(oldTx.amount);
+          await tx.creditCard.update({
+            where: { id: oldTx.creditCardId },
+            data: { balance: { increment: oldBalanceChange } }
+          });
+        }
+      }
+
+      const updateData = {
+        amount: parsedAmount,
+        destinationAmount: type === 'transfer' ? parsedDestAmount : null,
+        date: date ? new Date(date) : undefined,
+        description,
+        payee,
+        categoryId: categoryId || null,
+        type,
+        accountId: accountId || null,
+        destinationAccountId: type === 'transfer' ? (destinationAccountId || null) : null,
+        creditCardId: creditCardId || null
+      };
+
+      if (originalAmount !== undefined) {
+        updateData.originalAmount = originalAmount !== null ? parseFloat(originalAmount) : null;
+      }
+      if (originalCurrency !== undefined) {
+        updateData.originalCurrency = originalCurrency || null;
+      }
+      if (finalExchangeRate !== undefined) {
+        updateData.exchangeRate = finalExchangeRate;
+      }
+      if (settlementStatus !== undefined) {
+        updateData.settlementStatus = settlementStatus;
+      }
+      if (settledAt !== undefined) {
+        updateData.settledAt = settledAt ? new Date(settledAt) : null;
+      }
+
+      transaction = await tx.transaction.update({
+        where: { id },
+        data: updateData,
+        include: { category: true, account: true, destinationAccount: true, creditCard: true }
+      });
+
+      // Apply new balance
+      if (type === 'transfer' && accountId && destinationAccountId) {
+        await tx.account.update({
+          where: { id: accountId },
+          data: { balance: { decrement: Math.abs(parsedAmount) } }
+        });
+        await tx.account.update({
+          where: { id: destinationAccountId },
+          data: { balance: { increment: Math.abs(parsedDestAmount) } }
+        });
+      } else if (type === 'transfer' && accountId && creditCardId) {
+        await tx.account.update({
+          where: { id: accountId },
+          data: { balance: { decrement: Math.abs(parsedAmount) } }
+        });
+        await tx.creditCard.update({
+          where: { id: creditCardId },
+          data: { balance: { decrement: Math.abs(parsedDestAmount) } }
+        });
+      } else {
+        if (accountId) {
+          const newBalanceChange = type === 'expense' ? -Math.abs(parsedAmount) : Math.abs(parsedAmount);
+          await tx.account.update({
+            where: { id: accountId },
+            data: { balance: { increment: newBalanceChange } }
+          });
+        } else if (creditCardId) {
+          const newBalanceChange = type === 'expense' ? Math.abs(parsedAmount) : -Math.abs(parsedAmount);
+          await tx.creditCard.update({
+            where: { id: creditCardId },
+            data: { balance: { increment: newBalanceChange } }
+          });
+        }
+      }
+    });
 
     res.json(transaction);
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: 'Failed to update transaction' });
   }
 };
@@ -287,40 +407,51 @@ exports.deleteTransaction = async (req, res) => {
     
     const transaction = await prisma.transaction.findUnique({
       where: { id },
-      include: { account: true, creditCard: true }
+      include: { account: true, destinationAccount: true, creditCard: true }
     });
 
     if (!transaction) return res.status(404).json({ error: 'Transaction not found' });
-    const familyId = transaction.accountId ? transaction.account?.familyId : transaction.creditCard?.familyId;
+    const familyId = transaction.account?.familyId || transaction.destinationAccount?.familyId || transaction.creditCard?.familyId;
     if (familyId !== req.user.familyId) return res.status(403).json({ error: 'Unauthorized' });
 
-    await prisma.transaction.delete({ where: { id } });
+    await prisma.$transaction(async (tx) => {
+      await tx.transaction.delete({ where: { id } });
 
-    // Revert balance
-    if (transaction.type === 'transfer' && transaction.accountId && transaction.creditCardId) {
-      await prisma.account.update({
-        where: { id: transaction.accountId },
-        data: { balance: { increment: Math.abs(transaction.amount) } }
-      });
-      await prisma.creditCard.update({
-        where: { id: transaction.creditCardId },
-        data: { balance: { increment: Math.abs(transaction.amount) } }
-      });
-    } else {
-      if (transaction.accountId) {
-        const revertChange = transaction.type === 'expense' ? Math.abs(transaction.amount) : -Math.abs(transaction.amount);
-        await prisma.account.update({
+      // Revert balance
+      if (transaction.type === 'transfer' && transaction.accountId && transaction.destinationAccountId) {
+        await tx.account.update({
           where: { id: transaction.accountId },
-          data: { balance: { increment: revertChange } }
+          data: { balance: { increment: Math.abs(transaction.amount) } }
         });
-      } else if (transaction.creditCardId) {
-        const revertChange = transaction.type === 'expense' ? -Math.abs(transaction.amount) : Math.abs(transaction.amount);
-        await prisma.creditCard.update({
+        await tx.account.update({
+          where: { id: transaction.destinationAccountId },
+          data: { balance: { decrement: Math.abs(transaction.destinationAmount ?? transaction.amount) } }
+        });
+      } else if (transaction.type === 'transfer' && transaction.accountId && transaction.creditCardId) {
+        await tx.account.update({
+          where: { id: transaction.accountId },
+          data: { balance: { increment: Math.abs(transaction.amount) } }
+        });
+        await tx.creditCard.update({
           where: { id: transaction.creditCardId },
-          data: { balance: { increment: revertChange } }
+          data: { balance: { increment: Math.abs(transaction.destinationAmount ?? transaction.amount) } }
         });
+      } else {
+        if (transaction.accountId) {
+          const revertChange = transaction.type === 'expense' ? Math.abs(transaction.amount) : -Math.abs(transaction.amount);
+          await tx.account.update({
+            where: { id: transaction.accountId },
+            data: { balance: { increment: revertChange } }
+          });
+        } else if (transaction.creditCardId) {
+          const revertChange = transaction.type === 'expense' ? -Math.abs(transaction.amount) : Math.abs(transaction.amount);
+          await tx.creditCard.update({
+            where: { id: transaction.creditCardId },
+            data: { balance: { increment: revertChange } }
+          });
+        }
       }
-    }
+    });
 
     res.json({ success: true });
   } catch (error) {
@@ -334,10 +465,11 @@ exports.exportTransactions = async (req, res) => {
       where: { 
         OR: [
           { account: { familyId: req.user.familyId } },
+          { destinationAccount: { familyId: req.user.familyId } },
           { creditCard: { familyId: req.user.familyId } }
         ]
       },
-      include: { category: true, account: true, creditCard: true },
+      include: { category: true, account: true, destinationAccount: true, creditCard: true },
       orderBy: { date: 'desc' }
     });
 
@@ -346,9 +478,13 @@ exports.exportTransactions = async (req, res) => {
       Date: new Date(tx.date).toISOString().split('T')[0],
       Description: tx.description,
       Amount: tx.amount,
+      DestinationAmount: tx.destinationAmount ?? '',
+      ExchangeRate: tx.exchangeRate ?? '',
       Type: tx.type,
-      Account: tx.account ? tx.account.name : (tx.creditCard ? tx.creditCard.name : ''),
-      Category: tx.category?.name || 'Uncategorized',
+      Account: tx.type === 'transfer'
+        ? `${tx.account?.name || ''} -> ${tx.destinationAccount?.name || tx.creditCard?.name || ''}`
+        : (tx.account ? tx.account.name : (tx.creditCard ? tx.creditCard.name : '')),
+      Category: tx.category?.name || (tx.type === 'transfer' ? 'Transfer / Exchange' : 'Uncategorized'),
       Payee: tx.payee || ''
     }));
 

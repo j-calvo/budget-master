@@ -142,6 +142,7 @@ exports.getBudgets = async (req, res) => {
     const defaultCurrency = settings?.defaultCurrency || 'CRC';
     const spendingMap = {}; // key: categoryId-currency
     allTransactions.forEach(tx => {
+      if (!tx.categoryId || !tx.category) return;
       const currency = tx.account?.currency || tx.creditCard?.currency || defaultCurrency;
       const key = `${tx.categoryId}-${currency}`;
       if (!spendingMap[key]) {

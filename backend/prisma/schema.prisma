@@ -71,9 +71,10 @@ model Account {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   
-  family       Family        @relation(fields: [familyId], references: [id], onDelete: Cascade)
-  transactions Transaction[]
-  adjustments  AccountAdjustment[]
+  family               Family              @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  transactions         Transaction[]
+  destinationTransfers Transaction[]       @relation("DestinationAccount")
+  adjustments          AccountAdjustment[]
 }
 
 model CreditCard {
@@ -112,26 +113,29 @@ model Category {
 }
 
 model Transaction {
-  id               String    @id @default(uuid())
-  accountId        String?
-  creditCardId     String?
-  categoryId       String
-  amount           Float
-  originalAmount   Float?
-  originalCurrency String?
-  exchangeRate     Float?
-  settlementStatus String    @default("SETTLED") // SETTLED, PENDING_SETTLEMENT
-  settledAt        DateTime?
-  date             DateTime  @default(now())
-  description      String
-  payee            String?
-  type             String   // income, expense, transfer
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  id                   String    @id @default(uuid())
+  accountId            String?
+  destinationAccountId String?
+  creditCardId         String?
+  categoryId           String?
+  amount               Float
+  destinationAmount    Float?
+  originalAmount       Float?
+  originalCurrency     String?
+  exchangeRate         Float?
+  settlementStatus     String    @default("SETTLED") // SETTLED, PENDING_SETTLEMENT
+  settledAt            DateTime?
+  date                 DateTime  @default(now())
+  description          String
+  payee                String?
+  type                 String   // income, expense, transfer
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
   
-  account    Account?    @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  creditCard CreditCard? @relation(fields: [creditCardId], references: [id], onDelete: Cascade)
-  category   Category    @relation(fields: [categoryId], references: [id])
+  account            Account?    @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  destinationAccount Account?    @relation("DestinationAccount", fields: [destinationAccountId], references: [id], onDelete: SetNull)
+  creditCard         CreditCard? @relation(fields: [creditCardId], references: [id], onDelete: Cascade)
+  category           Category?   @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 }
 
 model Budget {
